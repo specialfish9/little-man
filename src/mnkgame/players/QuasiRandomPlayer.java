@@ -20,9 +20,10 @@
  *  along with this file.  If not, see <https://www.gnu.org/licenses/>.
  */
 
-package mnkgame;
+package mnkgame.players;
 
 import java.util.Random;
+import mnkgame.*;
 
 /**
  * Software player only a bit smarter than random.

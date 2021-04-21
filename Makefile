@@ -3,17 +3,22 @@ JCFLAGS = -cp src -d build
 JC = javac
 JVM= java 
 CLASSES=$(wildcard *.java)
+
 PKG=mnkgame
 MAIN=$(PKG).MNKGame 
-SIZE=3
+PLAYERS=$(PKG).players
+SIZE:=3
+PLAYER:=QuasiRandomPlayer
 
 .SUFFIXES: .java .class
+.PHONY: build
+
 random: build
-	$(JVM) $(JVMFLAGS) $(MAIN) $(SIZE) $(SIZE) $(SIZE) $(PKG).RandomPlayer
+	$(JVM) $(JVMFLAGS) $(MAIN) $(SIZE) $(SIZE) $(SIZE) $(PLAYERS).$(PLAYER)
 
 build: $(CLASSES)
-	mkdir build
-	$(JC) $(JCFLAGS) src/mnkgame/*.java
+	mkdir -p build
+	$(JC) $(JCFLAGS) src/mnkgame/*.java src/mnkgame/players/*.java
 
 clean:
 	rm -rf build
