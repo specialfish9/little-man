@@ -18,7 +18,7 @@ random: build
 
 build: $(CLASSES)
 	mkdir -p build
-	$(JC) $(JCFLAGS) src/mnkgame/*.java src/mnkgame/players/*.java
+	$(JC) $(JCFLAGS) src/gametree/*.java src/mnkgame/*.java src/mnkgame/players/*.java
 
 clean:
 	rm -rf build
