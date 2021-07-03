@@ -170,6 +170,9 @@ public class MNKGame extends JFrame {
 						B.markCell(c.i,c.j);
 					} else {
 						System.err.println(ComPlayer[curr].playerName() + "  selected an illegal move!");
+            for (StackTraceElement ste : Thread.currentThread().getStackTrace()) {
+                System.out.println(ste);
+            }
 						System.exit(1);
        		}
 				}
