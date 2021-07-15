@@ -10,7 +10,7 @@ import mnkgame.*;
  *   the enemy to be smart)
  * - 
  */
-public class AlbertEinstein implements MNKPlayer {
+public class BertrandRussell implements MNKPlayer {
   private final int RANK_CONSTANT = 10;
   private final int HALT = Integer.MIN_VALUE+1;
   private MNKCellState ME;
@@ -29,38 +29,38 @@ public class AlbertEinstein implements MNKPlayer {
     return (System.currentTimeMillis()-start_time)/1000.0 > timeout*(99.0/100.0);
   }
 
-  private int rank_board(MinimaxBoard b, Action action, int moves) {
+  private int rank_board(MinimaxBoard board, Action action, int moves, int a, int b) {
     if((moves % 2 == 0 && should_halt()))
       return HALT; // TODO: change logic, use another way to stop the execution
 
-    if(b.gameState() == MY_WIN)
+    if(board.gameState() == MY_WIN)
       return RANK_CONSTANT / moves;
-    else if(b.gameState() == OTHER_WIN)
+    else if(board.gameState() == OTHER_WIN)
       return -(moves * RANK_CONSTANT);
-    else if(b.gameState() == MNKGameState.DRAW)
+    else if(board.gameState() == MNKGameState.DRAW)
       return 0;
 
     int best = action == Action.MAXIMIZE ? Integer.MIN_VALUE : Integer.MAX_VALUE;
-    for(MNKCell c : b.getFreeCells()) {
-      b.markCell(c);
-      int rank = rank_board(b, action == Action.MAXIMIZE ? Action.MINIMIZE
-        : Action.MAXIMIZE, moves+1);
-      b.unmarkCell();
+    for(MNKCell c : board.getFreeCells()) {
+      board.markCell(c);
+      int rank = rank_board(board, action == Action.MAXIMIZE ? Action.MINIMIZE
+        : Action.MAXIMIZE, moves+1, a, b);
+      board.unmarkCell();
 
-      if(action == Action.MAXIMIZE) {
+      if(action == Action.MAXIMIZE && rank > best) {
         // during our turn take the best viable move
-        if(rank > best)
-          best = rank;
-      } else {
+        best = a = rank;
+      } else if(rank < best){
         // during the opponent's turn we assume he takes the smartest move
-        if(rank < best)
-          best = rank;
+        best = b = rank;
       }
+
+      if(b < a)
+        break;
     }
     return best;
   }
 
-  // Alber(t) Einstein
   public MNKCell minimax(MinimaxBoard b) {
     if(b.getMarkedCells().length == 0)
       return new MNKCell(N/2, M/2, ME);
@@ -69,7 +69,7 @@ public class AlbertEinstein implements MNKPlayer {
     MNKCell best_cell = null; 
     for(MNKCell c : b.getFreeCells()) {
       b.markCell(c);
-      int rank = rank_board(b, Action.MINIMIZE, 1);
+      int rank = rank_board(b, Action.MINIMIZE, 1, Integer.MIN_VALUE, Integer.MAX_VALUE);
       b.unmarkCell();
       if(rank == HALT)
         return b.getFreeCells()[0]; // TODO: rethink
@@ -105,6 +105,6 @@ public class AlbertEinstein implements MNKPlayer {
   }
 
 	public String playerName() {
-		return "Albert Einstein";
+		return "Bertrand Russell";
 	}
 }

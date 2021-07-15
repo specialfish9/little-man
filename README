@@ -30,3 +30,9 @@ MNKPlayerTester application:
 
 
 	java -cp ".." mnkgame.MNKPlayerTester 5 5 4 mnkgame.RandomPlayer mnkgame.QuasiRandomPlayer -v -t 1 -r 10
+
+
+
+
+
+https://cis.temple.edu/~vasilis/Courses/CIS603/Lectures/l7.html
