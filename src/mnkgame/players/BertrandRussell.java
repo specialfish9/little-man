@@ -3,12 +3,7 @@ package mnkgame.players;
 import mnkgame.*;
 
 /*
- * MiniMax player
- * Ideas:
- * - Generate the GameTree in place using the methods from MNKBoard, stopping
- *   when we find an enemy move which proves to be closing. (we always expect
- *   the enemy to be smart)
- * - 
+ * AlphaBeta player
  */
 public class BertrandRussell implements MNKPlayer {
   private final int RANK_CONSTANT = 10;
