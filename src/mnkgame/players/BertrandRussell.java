@@ -34,16 +34,6 @@ public class BertrandRussell implements MNKPlayer {
     MINIMIZE, MAXIMIZE
   }
 
-  private void print_board(MNKBoard b) {
-    for(int i = 0; i < M; i++) {
-      for(int j = 0; j < N; j++) {
-        MNKCellState state = b.cellState(i, j);
-        System.out.print(state == MNKCellState.P1 ? "X" : (state == MNKCellState.P2 ? "O" : "-"));
-      }
-      System.out.println("");
-    }
-  }
-
   private static Action opposite(Action a) {
     return a == Action.MAXIMIZE ? Action.MINIMIZE : Action.MAXIMIZE;
   }
@@ -54,12 +44,12 @@ public class BertrandRussell implements MNKPlayer {
   }
 
   private Pair<Integer, MNKCell> minimax(MinimaxBoard board, Action action, int depth, int a, int b) {
+    if(should_halt())
+      return new Pair<>(HALT, board.getFreeCells()[0]);
+
     // handle the first move by placin ourselves at the center, which is the best postition for any mnk
     if(board.getMarkedCells().length == 0)
       return new Pair<>(Integer.MAX_VALUE, new MNKCell(N/2, M/2, ME));
-
-    if((depth % 2 == 0 && should_halt()))
-      return new Pair<>(HALT, board.getFreeCells()[0]);
 
     if(board.gameState() == MY_WIN)
       return new Pair<>(RANK_CONSTANT / depth, null);
@@ -91,29 +81,29 @@ public class BertrandRussell implements MNKPlayer {
     return new Pair<>(best, best_cell);
   }
 
-	public void initPlayer(int M, int N, int K, boolean first, int timeout_in_secs) {
+  public void initPlayer(int M, int N, int K, boolean first, int timeout_in_secs) {
     this.M = M;
     this.N = N;
     this.K = K;
     this.timeout = timeout_in_secs;
 
-		MY_WIN   = first ? MNKGameState.WINP1 : MNKGameState.WINP2; 
-		OTHER_WIN = first ? MNKGameState.WINP2 : MNKGameState.WINP1;
+    MY_WIN   = first ? MNKGameState.WINP1 : MNKGameState.WINP2; 
+    OTHER_WIN = first ? MNKGameState.WINP2 : MNKGameState.WINP1;
     ME = first ? MNKCellState.P1 : MNKCellState.P2;
     b = new MinimaxBoard(M, N, K);
   }
 
-	public MNKCell selectCell(MNKCell[] FC, MNKCell[] MC) {
+  public MNKCell selectCell(MNKCell[] FC, MNKCell[] MC) {
     start_time = System.currentTimeMillis();
     if(MC.length > 0)
-			b.markCell(MC[MC.length-1]); // keep track of the opponent's marks
+      b.markCell(MC[MC.length-1]); // keep track of the opponent's marks
 
     Pair<Integer, MNKCell> result = minimax(b, Action.MAXIMIZE, 0, Integer.MIN_VALUE, Integer.MAX_VALUE);
     b.markCell(result.second);
     return result.second;
   }
 
-	public String playerName() {
-		return "Bertrand Russell";
-	}
+  public String playerName() {
+    return "Bertrand Russell";
+  }
 }
