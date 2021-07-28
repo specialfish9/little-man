@@ -11,8 +11,8 @@ import mnkgame.*;
  * - 
  */
 public class BertrandRussell implements MNKPlayer {
-  private final int RANK_CONSTANT = 10;
-  private final int HALT = Integer.MIN_VALUE+1;
+  private final double RANK_CONSTANT = 10;
+  private final double HALT = Double.MIN_VALUE+1;
   private MNKCellState ME;
   private MNKGameState MY_WIN, OTHER_WIN;
 
@@ -43,26 +43,26 @@ public class BertrandRussell implements MNKPlayer {
     return (System.currentTimeMillis()-start_time)/1000.0 > timeout*(99.0/100.0);
   }
 
-  private Pair<Integer, MNKCell> minimax(MinimaxBoard board, Action action, int depth, int a, int b) {
-    if(should_halt())
-      return new Pair<>(HALT, board.getFreeCells()[0]);
-
+  private Pair<Double, MNKCell> minimax(MinimaxBoard board, Action action, int depth, double a, double b) {
     // handle the first move by placin ourselves at the center, which is the best postition for any mnk
     if(board.getMarkedCells().length == 0)
-      return new Pair<>(Integer.MAX_VALUE, new MNKCell(N/2, M/2, ME));
+      return new Pair<>(Double.MAX_VALUE, new MNKCell(N/2, M/2, ME));
 
     if(board.gameState() == MY_WIN)
       return new Pair<>(RANK_CONSTANT / depth, null);
     else if(board.gameState() == OTHER_WIN)
       return new Pair<>(-(depth * RANK_CONSTANT), null);
     else if(board.gameState() == MNKGameState.DRAW)
-      return new Pair<>(0, null);
+      return new Pair<>(0d, null);
 
-    int best = action == Action.MAXIMIZE ? Integer.MIN_VALUE : Integer.MAX_VALUE;
+    if(should_halt())
+      return new Pair<>(HALT, board.getFreeCells()[0]);
+
+    double best = action == Action.MAXIMIZE ? Double.MIN_VALUE : Double.MAX_VALUE;
     MNKCell best_cell = null;
     for(MNKCell c : board.getFreeCells()) {
       board.markCell(c);
-      Pair<Integer, MNKCell> rank = minimax(board, opposite(action), depth+1, a, b);
+      Pair<Double, MNKCell> rank = minimax(board, opposite(action), depth+1, a, b);
       board.unmarkCell();
 
       if(action == Action.MAXIMIZE && rank.first > best) {
@@ -98,7 +98,7 @@ public class BertrandRussell implements MNKPlayer {
     if(MC.length > 0)
       b.markCell(MC[MC.length-1]); // keep track of the opponent's marks
 
-    Pair<Integer, MNKCell> result = minimax(b, Action.MAXIMIZE, 0, Integer.MIN_VALUE, Integer.MAX_VALUE);
+    Pair<Double, MNKCell> result = minimax(b, Action.MAXIMIZE, 0, Double.MIN_VALUE, Double.MAX_VALUE);
     b.markCell(result.second);
     return result.second;
   }
