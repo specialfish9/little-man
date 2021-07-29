@@ -10,8 +10,8 @@ MAIN=$(PKG).MNKGame
 PLAYERS=$(PKG).players
 SIZE:=4
 REPS:=5
-BEST:=BertrandRussell
-OLD:=AlbertEinstein
+BEST:=AlbertEinstein
+OLD:=Zarathustra
 
 .SUFFIXES: .java .class
 .PHONY: build
@@ -33,6 +33,9 @@ constrained1: build
 
 albert: build
 	$(JVM) $(JVMFLAGS) $(MAIN) $(SIZE) $(SIZE) $(SIZE) $(PLAYERS).AlbertEinstein
+
+zara: build
+	$(JVM) $(JVMFLAGS) $(MAIN) $(SIZE) $(SIZE) $(SIZE) $(PLAYERS).Zarathustra
 
 random: build
 	$(JVM) $(JVMFLAGS) $(MAIN) $(SIZE) $(SIZE) $(SIZE) $(PLAYERS).QuasiRandomPlayer
