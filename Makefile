@@ -11,8 +11,8 @@ PLAYERS=$(PKG).players
 SIZE:=4
 K:=3
 REPS:=5
-BEST:=BertrandRussell
-OLD:=AlbertEinstein
+BEST:=CharlesDarwin
+OLD:=BertrandRussell
 
 .SUFFIXES: .java .class
 .PHONY: build
