@@ -12,7 +12,7 @@ import mnkgame.*;
 public class CharlesDarwin implements MNKPlayer {
   private final double RANK_CONSTANT = 10;
   private final double HALT = Double.MIN_VALUE+1;
-  private MNKCellState ME;
+  private MNKCellState ME, ENEMY;
   private MNKGameState MY_WIN, OTHER_WIN;
 
   private int M, N, K;
@@ -42,6 +42,20 @@ public class CharlesDarwin implements MNKPlayer {
     return (System.currentTimeMillis()-start_time)/1000.0 > timeout*(99.0/100.0);
   }
 
+  // finds the cells needed to copmlete a K-1 streak in any possible direction
+  // (vertical, horizontal, diagonal, counterdiagonal) for the ai
+  private List<MNKCell> find_one_move_win_cells(MinimaxBoard board) {
+    List<MNKCell> cells = new ArrayList<>();
+    for(MNKCell c : board.getFreeCells()) {
+      if(should_halt())
+        return cells;
+      else if(board.markCell(c) == MY_WIN)
+        cells.add(c);
+      board.unmarkCell();
+    }
+    return cells;
+  }
+
   private Pair<Double, MNKCell> minimax(MinimaxBoard board, Action action, int depth, double a, double b) {
     // handle the first move by placin ourselves at the center, which is the best postition for any mnk
     if(board.getMarkedCells().length == 0)
@@ -60,8 +74,19 @@ public class CharlesDarwin implements MNKPlayer {
     double best = action == Action.MAXIMIZE ? Double.MIN_VALUE : Double.MAX_VALUE;
     MNKCell best_cell = null;
     List<MNKCell> free_cells = new ArrayList<>(Arrays.asList(board.getFreeCells()));
+    List<MNKCell> one_move_win_cells = find_one_move_win_cells(board);
     Collections.shuffle(free_cells); // \Theta(n) i guess, both ignorable still
-    for(MNKCell c : free_cells) {
+    free_cells.removeAll(one_move_win_cells); // remove any overlapping cells
+    while(true) {
+      // select a cell, first from the one_move_win_cells collection,
+      // later from the free_cells collection
+      MNKCell c;
+      if(one_move_win_cells.size() > 0)
+        c = one_move_win_cells.remove(0);
+      else if(free_cells.size() > 0)
+        c = free_cells.remove(0);
+      else break;
+
       board.markCell(c);
       Pair<Double, MNKCell> rank = minimax(board, opposite(action), depth+1, a, b);
       board.unmarkCell();
@@ -76,8 +101,10 @@ public class CharlesDarwin implements MNKPlayer {
         best_cell = c;
       }
 
-      if(b < a)
+      if(b < a) {
+        System.out.println("cutoff, " + best_cell);
         break;
+      }
     }
     return new Pair<>(best, best_cell);
   }
@@ -91,6 +118,7 @@ public class CharlesDarwin implements MNKPlayer {
     MY_WIN   = first ? MNKGameState.WINP1 : MNKGameState.WINP2; 
     OTHER_WIN = first ? MNKGameState.WINP2 : MNKGameState.WINP1;
     ME = first ? MNKCellState.P1 : MNKCellState.P2;
+    ME = first ? MNKCellState.P2 : MNKCellState.P1;
     b = new MinimaxBoard(M, N, K);
   }
 
