@@ -8,10 +8,10 @@ CLASSES=$(wildcard *.java)
 PKG=mnkgame
 MAIN=$(PKG).MNKGame 
 PLAYERS=$(PKG).players
-SIZE:=3
-K:=3
+SIZE:=4
+K:=4
 REPS:=5
-BEST:=CharlesDarwin
+BEST:=BertrandRussell
 OLD:=BertrandRussell
 
 .SUFFIXES: .java .class

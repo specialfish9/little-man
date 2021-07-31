@@ -12,7 +12,7 @@ import mnkgame.*;
  */
 public class BertrandRussell implements MNKPlayer {
   private final double RANK_CONSTANT = 10;
-  private final double HALT = 1-Double.MAX_VALUE;
+  private final double HALT = Double.MIN_VALUE;
   private MNKCellState ME;
   private MNKGameState MY_WIN, OTHER_WIN;
 
@@ -30,6 +30,10 @@ public class BertrandRussell implements MNKPlayer {
     Pair(A first, B second) {
       this.first = first;
       this.second = second;
+    }
+
+    public String toString() {
+      return "(" + first + "," + second + ")";
     }
   }
 
@@ -69,6 +73,8 @@ public class BertrandRussell implements MNKPlayer {
       board.markCell(c);
       Pair<Double, MNKCell> rank = minimax(board, opposite(action), depth+1, a, b);
       board.unmarkCell();
+      if(rank.first == HALT)
+        return rank;
 
       if(action == Action.MAXIMIZE && rank.first > best) {
         // during our turn take the best viable move
