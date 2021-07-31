@@ -12,13 +12,16 @@ import mnkgame.*;
  */
 public class BertrandRussell implements MNKPlayer {
   private final double RANK_CONSTANT = 10;
-  private final double HALT = Double.MIN_VALUE+1;
+  private final double HALT = 1-Double.MAX_VALUE;
   private MNKCellState ME;
   private MNKGameState MY_WIN, OTHER_WIN;
 
   private int M, N, K;
   private long start_time, timeout;
   private MinimaxBoard b;
+
+  // NOTE: profiling
+  private int visited;
 
   private class Pair<A, B> {
     public A first;
@@ -44,9 +47,11 @@ public class BertrandRussell implements MNKPlayer {
   }
 
   private Pair<Double, MNKCell> minimax(MinimaxBoard board, Action action, int depth, double a, double b) {
+    visited++;
+    // MAYBE
     // handle the first move by placin ourselves at the center, which is the best postition for any mnk
-    if(board.getMarkedCells().length == 0)
-      return new Pair<>(Double.MAX_VALUE, new MNKCell(N/2, M/2, ME));
+    // if(board.getMarkedCells().length == 0)
+    //  return new Pair<>(Double.MAX_VALUE, new MNKCell(N/2, M/2, ME));
 
     if(board.gameState() == MY_WIN)
       return new Pair<>(RANK_CONSTANT / depth, null);
@@ -58,7 +63,7 @@ public class BertrandRussell implements MNKPlayer {
     if(should_halt())
       return new Pair<>(HALT, board.getFreeCells()[0]);
 
-    double best = action == Action.MAXIMIZE ? Double.MIN_VALUE : Double.MAX_VALUE;
+    double best = action == Action.MAXIMIZE ? -Double.MAX_VALUE : Double.MAX_VALUE;
     MNKCell best_cell = null;
     for(MNKCell c : board.getFreeCells()) {
       board.markCell(c);
@@ -98,7 +103,9 @@ public class BertrandRussell implements MNKPlayer {
     if(MC.length > 0)
       b.markCell(MC[MC.length-1]); // keep track of the opponent's marks
 
-    Pair<Double, MNKCell> result = minimax(b, Action.MAXIMIZE, 0, Double.MIN_VALUE, Double.MAX_VALUE);
+    visited = 0;
+    Pair<Double, MNKCell> result = minimax(b, Action.MAXIMIZE, 0, -Double.MAX_VALUE, Double.MAX_VALUE);
+    System.out.println(playerName() + "\t: visited " + visited + " nodes, ended with result: " + result);
     b.markCell(result.second);
     return result.second;
   }
