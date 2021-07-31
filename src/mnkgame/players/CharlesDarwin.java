@@ -48,7 +48,7 @@ public class CharlesDarwin implements MNKPlayer {
 
   private boolean should_halt() {
     // TODO: tweak values
-    return (System.currentTimeMillis()-start_time)/1000.0 > timeout*(99.0/100.0);
+    return (System.currentTimeMillis()-start_time)/1000.0 > timeout*(95.0/100.0);
   }
 
   private double evaluate(MNKBoard board, int depth) {

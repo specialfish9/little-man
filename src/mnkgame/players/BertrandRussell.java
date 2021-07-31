@@ -47,7 +47,7 @@ public class BertrandRussell implements MNKPlayer {
 
   private boolean should_halt() {
     // TODO: tweak values
-    return (System.currentTimeMillis()-start_time)/1000.0 > timeout*(99.0/100.0);
+    return (System.currentTimeMillis()-start_time)/1000.0 > timeout*(95.0/100.0);
   }
 
   private Pair<Double, MNKCell> minimax(MinimaxBoard board, Action action, int depth, double a, double b) {
