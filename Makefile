@@ -12,7 +12,7 @@ SIZE:=4
 K:=3
 REPS:=5
 BEST:=AlbertEinstein
-OLD:=Zarathustra
+OLD:=VinDiesel
 
 .SUFFIXES: .java .class
 .PHONY: build
@@ -37,6 +37,9 @@ albert: build
 
 zara: build
 	$(JVM) $(JVMFLAGS) $(MAIN) $(SIZE) $(SIZE) $(SIZE) $(PLAYERS).Zarathustra
+
+vin: build
+	$(JVM) $(JVMFLAGS) $(MAIN) $(SIZE) $(SIZE) $(SIZE) $(PLAYERS).VinDiesel
 
 random: build
 	$(JVM) $(JVMFLAGS) $(MAIN) $(SIZE) $(SIZE) $(K) $(PLAYERS).QuasiRandomPlayer

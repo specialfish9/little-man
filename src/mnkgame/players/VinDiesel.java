@@ -1,5 +1,8 @@
 package mnkgame.players;
 
+import java.util.Arrays;
+import java.util.Optional;
+
 import mnkgame.*;
 
 /*
@@ -11,14 +14,16 @@ import mnkgame.*;
   5. Test And Clear
 */
 
-
-
 //https://core.ac.uk/download/pdf/225892254.pdf
-public class VinDiesel {
+public class VinDiesel implements MNKPlayer{
   private final double RANK_CONSTANT = 10;
   private final double HALT = Double.MIN_VALUE+1;
   private MNKCellState ME;
   private MNKGameState MY_WIN, OTHER_WIN;
+
+  private final AdaptiveList maxADS = new AdaptiveList();
+  private final AdaptiveList minADS = new AdaptiveList();
+
 
   private int M, N, K;
   private long start_time, timeout;
@@ -64,6 +69,47 @@ public class VinDiesel {
 
     double best = action == Action.MAXIMIZE ? Double.MIN_VALUE : Double.MAX_VALUE;
     MNKCell best_cell = null;
+
+    if(action == Action.MAXIMIZE){
+      for(int i = 0; i < maxADS.size; i ++){
+        int code = maxADS.get(i);
+        Optional<MNKCell> cell = getCellFromCode(code, board.getFreeCells());
+        if(!cell.isPresent()) continue;
+        // if is a valid move then do it
+        board.markCell(cell.get());
+        Pair<Double, MNKCell> rank = minimax(board, opposite(action), depth+1, a, b);
+        board.unmarkCell();
+        if (rank.first > best){
+          best = a = rank.first;
+          best_cell = cell.get();
+        }
+        if(b < a){
+          maxADS.add(code);
+          return new Pair<>(best, best_cell);
+        }
+      }
+    } else {
+      for(int i = 0; i < minADS.size; i ++){
+        int code = minADS.get(i);
+        Optional<MNKCell> cell = getCellFromCode(code, board.getFreeCells());
+        if(!cell.isPresent()) continue;
+        // if is a valid move then do it
+        board.markCell(cell.get());
+        Pair<Double, MNKCell> rank = minimax(board, opposite(action), depth+1, a, b);
+        board.unmarkCell();
+        if (rank.first > best){
+          best = b = rank.first;
+          best_cell = cell.get();
+        }
+        if(b < a){
+          maxADS.add(code);
+          return new Pair<>(best, best_cell);
+        }
+      }
+    }
+    
+    // In case we didn't have any move in ads proceed with normal alpha beta
+
     for(MNKCell c : board.getFreeCells()) {
       board.markCell(c);
       Pair<Double, MNKCell> rank = minimax(board, opposite(action), depth+1, a, b);
@@ -79,8 +125,13 @@ public class VinDiesel {
         best_cell = c;
       }
 
-      if(b < a)
+      if(b < a){
+        if(action == Action.MAXIMIZE)
+          maxADS.add(getMoveCode(c));
+        else
+          minADS.add(getMoveCode(c));
         break;
+      }
     }
     return new Pair<>(best, best_cell);
   }
@@ -111,13 +162,24 @@ public class VinDiesel {
     return "Vin Diesel";
   }
 
+  private int getMoveCode(final MNKCell cell){
+    return cell.i * 3 + cell.j;
+  }
+
+  private Optional<MNKCell> getCellFromCode(final int code, final MNKCell[] cells){
+    return Arrays.stream(cells).takeWhile(cell -> getMoveCode(cell) == code).findFirst();
+  }
+
   public class AdaptiveList{
     
     private Node head;
 
+    public int size = 0;
+
     public void add(int move){
         if(head == null){
           head = new Node(move);
+          size++;
           return;
         }
         Node ptr = head;
@@ -135,6 +197,7 @@ public class VinDiesel {
         }
         // else append it at the end
         ptr.next = new Node(move);
+        size ++;
     }
 
     @Override
@@ -149,6 +212,15 @@ public class VinDiesel {
       return s;
     }
 
+    public int get(int index){
+      int i = 0;
+      Node ptr = head;
+      while(i++ < index && ptr != null)
+        ptr = ptr.next;
+      if (ptr == null)
+        throw new IndexOutOfBoundsException("Size is " + size + " and you tried to get " + index);
+      return ptr.value;
+    }
 
     private class Node {
       public int value;
@@ -158,5 +230,5 @@ public class VinDiesel {
         this.value = value;
       }
     }
-
+  }
 }
