@@ -4,20 +4,25 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
 import java.util.Collections;
+import java.util.LinkedHashSet;
+
 import mnkgame.*;
 
 /*
- * Minimax + Alpha Beta + random selection of next move
+ * Minimax + Alpha Beta + one-win-euristics (next-move wind/loss interception)
  */
 public class CharlesDarwin implements MNKPlayer {
   private final double RANK_CONSTANT = 10;
-  private final double HALT = Double.MIN_VALUE+1;
-  private MNKCellState ME;
-  private MNKGameState MY_WIN, OTHER_WIN;
+  private final double HALT = Double.MIN_VALUE;
+  private MNKCellState ME, ENEMY;
+  private MNKGameState MY_WIN, ENEMY_WIN;
 
   private int M, N, K;
   private long start_time, timeout;
   private MinimaxBoard b;
+
+  // NOTE: profiling
+  private int visited;
 
   private class Pair<A, B> {
     public A first;
@@ -27,56 +32,105 @@ public class CharlesDarwin implements MNKPlayer {
       this.first = first;
       this.second = second;
     }
+
+    @Override
+    public String toString() {
+      return "(" + first + "," + second + ")";
+    }
   }
 
   enum Action {
     MINIMIZE, MAXIMIZE
   }
 
-  private static Action opposite(Action a) {
+  private static Action opposite(final Action a) {
     return a == Action.MAXIMIZE ? Action.MINIMIZE : Action.MAXIMIZE;
   }
 
   private boolean should_halt() {
     // TODO: tweak values
-    return (System.currentTimeMillis()-start_time)/1000.0 > timeout*(99.0/100.0);
+    return (System.currentTimeMillis()-start_time)/1000.0 > timeout*(95.0/100.0);
+  }
+
+  private double evaluate(final MNKBoard board, final int depth) {
+    if(board.gameState() == MY_WIN)
+      return RANK_CONSTANT / depth;
+    else if(board.gameState() == ENEMY_WIN)
+      return -(depth * RANK_CONSTANT);
+    else if(board.gameState() == MNKGameState.DRAW)
+      return 0;
+    else throw new Error("invalid board state: game not ended");
+  }
+
+  // finds the first cell needed to copmlete a K-1 streak in any possible direction
+  private MNKCell find_one_move_win(MinimaxBoard board, final MNKGameState win_state) {
+    for(MNKCell c : board.getFreeCells()) {
+      if(should_halt())
+        return null;
+      else if(board.markCell(c) == win_state) {
+        board.unmarkCell();
+        return c;
+      } else
+        board.unmarkCell();
+    }
+    return null;
+  }
+
+  // Fisher–Yates shuffle
+  private static void shuffleArray(MNKCell[] ar)
+  {
+    Random rnd = ThreadLocalRandom.current();
+    for (int i = ar.length - 1; i > 0; i--)
+    {
+      int index = rnd.nextInt(i + 1);
+      // Simple swap
+      MNKCell a = ar[index];
+      ar[index] = ar[i];
+      ar[i] = a;
+    }
   }
 
   private Pair<Double, MNKCell> minimax(MinimaxBoard board, Action action, int depth, double a, double b) {
-    // handle the first move by placin ourselves at the center, which is the best postition for any mnk
-    if(board.getMarkedCells().length == 0)
-      return new Pair<>(Double.MAX_VALUE, new MNKCell(N/2, M/2, ME));
+    visited++;
+    // handle the first move by placing ourselves at the center, which is the best postition for any mnk
+    // if(board.getMarkedCells().length == 0)
+    //   return new Pair<>(Double.MAX_VALUE, new MNKCell(N/2, M/2, ME));
 
-    if(board.gameState() == MY_WIN)
-      return new Pair<>(RANK_CONSTANT / depth, null);
-    else if(board.gameState() == OTHER_WIN)
-      return new Pair<>(-(depth * RANK_CONSTANT), null);
-    else if(board.gameState() == MNKGameState.DRAW)
-      return new Pair<>(0d, null);
+    if(board.gameState() != MNKGameState.OPEN)
+      // return the evaluation of the current board with the last marked cell
+      // as the decision which has brough up to this game state
+      return new Pair<>(evaluate(board, depth), board.getMarkedCells()[board.getMarkedCells().length-1]);
 
     if(should_halt())
       return new Pair<>(HALT, board.getFreeCells()[0]);
 
-    double best = action == Action.MAXIMIZE ? Double.MIN_VALUE : Double.MAX_VALUE;
+    MNKCell omwc = null; // one move win cell
+    if((omwc = find_one_move_win(board, action == Action.MAXIMIZE ? MY_WIN : ENEMY_WIN)) != null) {
+      board.markCell(omwc);
+      double value = evaluate(board, depth+1);
+      board.unmarkCell();
+      return new Pair<>(value, omwc);
+    }
+
+    double best = action == Action.MAXIMIZE ? -Double.MAX_VALUE : Double.MAX_VALUE;
     MNKCell best_cell = null;
-    List<MNKCell> free_cells = new ArrayList<>(Arrays.asList(board.getFreeCells()));
-    Collections.shuffle(free_cells); // \Theta(n) i guess, both ignorable still
-    for(MNKCell c : free_cells) {
+    for(MNKCell c : board.getFreeCells()) {
       board.markCell(c);
       Pair<Double, MNKCell> rank = minimax(board, opposite(action), depth+1, a, b);
       board.unmarkCell();
+      if(rank.first == HALT)
+        return rank;
 
-      if(action == Action.MAXIMIZE && rank.first > best) {
-        // during our turn take the best viable move
-        best = a = rank.first;
-        best_cell = c;
-      } else if(action == Action.MINIMIZE && rank.first < best) {
-        // during the opponent's turn we assume he takes the smartest move
-        best = b = rank.first;
+      if((action == Action.MAXIMIZE && (double)rank.first > best) || (action == Action.MINIMIZE && rank.first < best)) {
+        best = rank.first;
         best_cell = c;
       }
+      if(action == Action.MAXIMIZE && best > a)
+        a = best;
+      else if(action == Action.MINIMIZE && best < b)
+        b = best;
 
-      if(b < a)
+      if(b <= a)
         break;
     }
     return new Pair<>(best, best_cell);
@@ -89,8 +143,9 @@ public class CharlesDarwin implements MNKPlayer {
     this.timeout = timeout_in_secs;
 
     MY_WIN   = first ? MNKGameState.WINP1 : MNKGameState.WINP2; 
-    OTHER_WIN = first ? MNKGameState.WINP2 : MNKGameState.WINP1;
+    ENEMY_WIN = first ? MNKGameState.WINP2 : MNKGameState.WINP1;
     ME = first ? MNKCellState.P1 : MNKCellState.P2;
+    ENEMY = first ? MNKCellState.P2 : MNKCellState.P1;
     b = new MinimaxBoard(M, N, K);
   }
 
@@ -99,7 +154,9 @@ public class CharlesDarwin implements MNKPlayer {
     if(MC.length > 0)
       b.markCell(MC[MC.length-1]); // keep track of the opponent's marks
 
-    Pair<Double, MNKCell> result = minimax(b, Action.MAXIMIZE, 0, Double.MIN_VALUE, Double.MAX_VALUE);
+    visited = 0;
+    Pair<Double, MNKCell> result = minimax(b, Action.MAXIMIZE, 0, -Double.MAX_VALUE, Double.MAX_VALUE);
+    System.out.println(playerName() + "\t: visited " + visited + " nodes, ended with result: " + result);
     b.markCell(result.second);
     return result.second;
   }
