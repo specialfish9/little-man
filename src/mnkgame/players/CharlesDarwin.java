@@ -36,6 +36,19 @@ public class CharlesDarwin implements MNKPlayer {
     }
   }
 
+  // Fisher–Yates shuffle
+  private void shuffleArray(MNKCell[] vec)
+  {
+    for (int i = vec.length - 1; i > 0; i--)
+    {
+      int index = r.nextInt(i + 1);
+      // Simple swap
+      MNKCell a = vec[index];
+      vec[index] = vec[i];
+      vec[i] = a;
+    }
+  }
+
   enum Action {
     MINIMIZE, MAXIMIZE
   }
@@ -64,26 +77,60 @@ public class CharlesDarwin implements MNKPlayer {
     for(MNKCell c : board.getFreeCells()) {
       if(should_halt())
         return null;
-      else if(board.markCell(c) == win_state) {
-        board.unmarkCell();
+
+      MNKGameState result = board.markCell(c);
+      board.unmarkCell();
+      if(result == win_state)
         return c;
-      } else
-        board.unmarkCell();
     }
     return null;
   }
 
-  // Fisher–Yates shuffle
-  private void shuffleArray(MNKCell[] vec)
-  {
-    for (int i = vec.length - 1; i > 0; i--)
-    {
-      int index = r.nextInt(i + 1);
-      // Simple swap
-      MNKCell a = vec[index];
-      vec[index] = vec[i];
-      vec[i] = a;
+  private MNKCell pick_random_non_closing_cell(MinimaxBoard board, MNKCell previous) {
+    for(MNKCell c : board.getFreeCells()) {
+      // avoiding the should_halt check here, kinda superflous
+      MNKGameState result = board.markCell(c);
+      board.unmarkCell();
+      if(result == MNKGameState.OPEN && (previous == null || previous.i != c.i || previous.j != c.j))
+        return c;
     }
+    return null;
+  }
+
+  // finds the first cell the enemy needs to copmlete a K-1 streak in any possible direction
+  private MNKCell find_one_move_loss(MinimaxBoard board, final MNKGameState loss_state) {
+    MNKCell random_cell = null;
+    if(board.getFreeCells().length == 1 || (random_cell = pick_random_non_closing_cell(board, null)) == null)
+      return null; // cannot check for enemy's next move when it doesn't exist
+
+    board.markCell(random_cell);
+    // identical to find_one_move_win but we keep track of non winning cells for
+    // the enemy so we can take one later. We know that there is no one-win-move
+    // when this method gets called so we can be sure that safe_cell won't make us win
+    for(MNKCell c : board.getFreeCells()) {
+      if(should_halt())
+        return null;
+
+      MNKGameState result = board.markCell(c);
+      board.unmarkCell();
+      if(result == loss_state) {
+        board.unmarkCell();
+        return c;
+      }
+    }
+    board.unmarkCell(); // remove the marked random_cell
+
+    // test the random_cell we selected at first. It may be a one-move loss cell
+    // get a new random cell different from the previous and call it safe_cell
+    if(board.markCell(pick_random_non_closing_cell(board, random_cell)) != MNKGameState.OPEN) {
+      // random_cell puts us in a draw, ignore that
+      board.unmarkCell();
+      return null;
+    }
+    MNKGameState result = board.markCell(random_cell); // let the enemy take the random ane
+    board.unmarkCell();
+    board.unmarkCell();
+    return result == loss_state ? random_cell : null;
   }
 
   private Pair<Double, MNKCell> minimax(MinimaxBoard board, Action action, int depth, double a, double b) {
@@ -100,15 +147,16 @@ public class CharlesDarwin implements MNKPlayer {
     if(should_halt())
       return new Pair<>(HALT, board.getFreeCells()[0]);
 
-    MNKCell omwc = null; // one move win cell
+    MNKCell omc = null; // one move win/loss cell
     if(board.getMarkedCells().length >= (K-1)*2 && // only check for one-win-moves
                                                    // if there have been placed
                                                    // enough cells to make one happen
-      (omwc = find_one_move_win(board, action == Action.MAXIMIZE ? MY_WIN : ENEMY_WIN)) != null) {
-      board.markCell(omwc);
-      double value = evaluate(board, depth+1);
+      ((omc = find_one_move_win(board, action == Action.MAXIMIZE ? MY_WIN : ENEMY_WIN)) != null ||
+      (omc = find_one_move_loss(board, action == Action.MAXIMIZE ? ENEMY_WIN : MY_WIN)) != null)) {
+      board.markCell(omc);
+      Pair<Double, MNKCell> result = minimax(board, opposite(action), depth+1, a, b);
       board.unmarkCell();
-      return new Pair<>(value, omwc);
+      return new Pair<>(result.first, omc);
     }
 
     double best = action == Action.MAXIMIZE ? -Double.MAX_VALUE : Double.MAX_VALUE;
@@ -157,10 +205,21 @@ public class CharlesDarwin implements MNKPlayer {
     if(MC.length > 0)
       b.markCell(MC[MC.length-1]); // keep track of the opponent's marks
 
-    Pair<Double, MNKCell> result = minimax(b, Action.MAXIMIZE, 0, -Double.MAX_VALUE, Double.MAX_VALUE);
-    System.out.println(playerName() + "\t: visited " + visited + " nodes, ended with result: " + result);
-    b.markCell(result.second);
-    return result.second;
+    try {
+      Pair<Double, MNKCell> result = minimax(b, Action.MAXIMIZE, 0, -Double.MAX_VALUE, Double.MAX_VALUE);
+      System.out.println(playerName() + "\t: visited " + visited + " nodes, ended with result: " + result);
+
+      if(FC.length != b.getFreeCells().length) {
+        System.out.println("FATAL: minimax didn't clean the board");
+        return FC[0];
+      }
+
+      b.markCell(result.second);
+      return result.second;
+    } catch(Exception e) {
+      e.printStackTrace();
+      return FC[0];
+    }
   }
 
   public String playerName() {
