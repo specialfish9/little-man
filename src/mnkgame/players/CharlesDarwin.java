@@ -104,21 +104,10 @@ public class CharlesDarwin implements MNKPlayer {
       return null; // cannot check for enemy's next move when it doesn't exist
 
     board.markCell(random_cell);
-    // identical to find_one_move_win but we keep track of non winning cells for
-    // the enemy so we can take one later. We know that there is no one-win-move
-    // when this method gets called so we can be sure that safe_cell won't make us win
-    for(MNKCell c : board.getFreeCells()) {
-      if(should_halt())
-        return null;
-
-      MNKGameState result = board.markCell(c);
-      board.unmarkCell();
-      if(result == loss_state) {
-        board.unmarkCell();
-        return c;
-      }
-    }
+    MNKCell c = find_one_move_win(board, loss_state);
     board.unmarkCell(); // remove the marked random_cell
+    if(c != null)
+      return c;
 
     // test the random_cell we selected at first. It may be a one-move loss cell
     // get a new random cell different from the previous and call it safe_cell
@@ -153,6 +142,11 @@ public class CharlesDarwin implements MNKPlayer {
                                                    // enough cells to make one happen
       ((omc = find_one_move_win(board, action == Action.MAXIMIZE ? MY_WIN : ENEMY_WIN)) != null ||
       (omc = find_one_move_loss(board, action == Action.MAXIMIZE ? ENEMY_WIN : MY_WIN)) != null)) {
+      // if we know we are acting on the root we can just return without
+      // evaluating the value of the move, as this won't be used anywhere
+      if(depth == 0)
+        return new Pair<>(0d, omc);
+
       board.markCell(omc);
       Pair<Double, MNKCell> result = minimax(board, opposite(action), depth+1, a, b);
       board.unmarkCell();
