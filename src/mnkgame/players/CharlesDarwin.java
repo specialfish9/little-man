@@ -76,6 +76,20 @@ public class CharlesDarwin implements MNKPlayer {
     return null;
   }
 
+  // Fisher–Yates shuffle
+  private static void shuffleArray(MNKCell[] ar)
+  {
+    Random rnd = ThreadLocalRandom.current();
+    for (int i = ar.length - 1; i > 0; i--)
+    {
+      int index = rnd.nextInt(i + 1);
+      // Simple swap
+      MNKCell a = ar[index];
+      ar[index] = ar[i];
+      ar[i] = a;
+    }
+  }
+
   private Pair<Double, MNKCell> minimax(MinimaxBoard board, Action action, int depth, double a, double b) {
     visited++;
     // handle the first move by placing ourselves at the center, which is the best postition for any mnk
