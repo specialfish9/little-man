@@ -143,11 +143,12 @@ public class CharlesDarwin implements MNKPlayer {
     ME = first ? MNKCellState.P1 : MNKCellState.P2;
     ENEMY = first ? MNKCellState.P2 : MNKCellState.P1;
     b = new MinimaxBoard(M, N, K);
+    r = new Random(0);
   }
 
   public MNKCell selectCell(MNKCell[] FC, MNKCell[] MC) {
     start_time = System.currentTimeMillis();
-    r = new Random(start_time); // get a new random for each turn
+    r.setSeed(start_time); // have a new pseudo-random generator each turn to improve randomness
     visited = 0;
 
     if(MC.length > 0)
