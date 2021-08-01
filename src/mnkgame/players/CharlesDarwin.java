@@ -43,7 +43,7 @@ public class CharlesDarwin implements MNKPlayer {
     MINIMIZE, MAXIMIZE
   }
 
-  private static Action opposite(Action a) {
+  private static Action opposite(final Action a) {
     return a == Action.MAXIMIZE ? Action.MINIMIZE : Action.MAXIMIZE;
   }
 
@@ -52,7 +52,7 @@ public class CharlesDarwin implements MNKPlayer {
     return (System.currentTimeMillis()-start_time)/1000.0 > timeout*(95.0/100.0);
   }
 
-  private double evaluate(MNKBoard board, int depth) {
+  private double evaluate(final MNKBoard board, final int depth) {
     if(board.gameState() == MY_WIN)
       return RANK_CONSTANT / depth;
     else if(board.gameState() == ENEMY_WIN)
@@ -63,7 +63,7 @@ public class CharlesDarwin implements MNKPlayer {
   }
 
   // finds the first cell needed to copmlete a K-1 streak in any possible direction
-  private MNKCell find_one_move_win(MinimaxBoard board, MNKGameState win_state) {
+  private MNKCell find_one_move_win(MinimaxBoard board, final MNKGameState win_state) {
     for(MNKCell c : board.getFreeCells()) {
       if(should_halt())
         return null;
