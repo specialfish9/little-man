@@ -101,7 +101,10 @@ public class CharlesDarwin implements MNKPlayer {
       return new Pair<>(HALT, board.getFreeCells()[0]);
 
     MNKCell omwc = null; // one move win cell
-    if((omwc = find_one_move_win(board, action == Action.MAXIMIZE ? MY_WIN : ENEMY_WIN)) != null) {
+    if(board.getMarkedCells().length >= (K-1)*2 && // only check for one-win-moves
+                                                   // if there have been placed
+                                                   // enough cells to make one happen
+      (omwc = find_one_move_win(board, action == Action.MAXIMIZE ? MY_WIN : ENEMY_WIN)) != null) {
       board.markCell(omwc);
       double value = evaluate(board, depth+1);
       board.unmarkCell();
