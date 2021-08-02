@@ -1,0 +1,149 @@
+mkdir -p build
+javac -cp src -d build src/mnkgame/*.java src/mnkgame/players/*.java
+java  -cp build mnkgame.MNKPlayerTester 3 3 3 mnkgame.players.CharlesDarwin mnkgame.players.BertrandRussell -v -t 1 -r 5
+Game type : 3,3,3
+Player1   : Charles Darwin
+Player2   : Bertrand Russell
+Rounds    : 5
+Timeout   : 1 secs
+
+
+
+**** ROUND 1 ****
+Initializing 3,3,3 board
+Initializing Charles Darwin as Player 1
+Initializing Bertrand Russell as Player 2
+
+Charles Darwin	: visited 3414 nodes, ended with result: (0.0,[1,1] -> FREE)
+Player 1 (Charles Darwin) -> [1,1]
+Bertrand Russell	: visited 25183 nodes, ended with result: (0.0,[2,0] -> FREE)
+Player 2 (Bertrand Russell) -> [2,0]
+Charles Darwin	: visited 263 nodes, ended with result: (0.0,[2,1] -> FREE)
+Player 1 (Charles Darwin) -> [2,1]
+Bertrand Russell	: visited 198 nodes, ended with result: (0.0,[0,1] -> FREE)
+Player 2 (Bertrand Russell) -> [0,1]
+Charles Darwin	: visited 56 nodes, ended with result: (0.0,[1,2] -> FREE)
+Player 1 (Charles Darwin) -> [1,2]
+Bertrand Russell	: visited 25 nodes, ended with result: (0.0,[1,0] -> FREE)
+Player 2 (Bertrand Russell) -> [1,0]
+Charles Darwin	: visited 7 nodes, ended with result: (0.0,[0,0] -> FREE)
+Player 1 (Charles Darwin) -> [0,0]
+Bertrand Russell	: visited 5 nodes, ended with result: (0.0,[2,2] -> FREE)
+Player 2 (Bertrand Russell) -> [2,2]
+Charles Darwin	: visited 2 nodes, ended with result: (0.0,[0,2] -> FREE)
+Player 1 (Charles Darwin) -> [0,2]
+
+Game state    : DRAW
+Current score : Charles Darwin (1) - Bertrand Russell (1)
+
+**** ROUND 2 ****
+Initializing 3,3,3 board
+Initializing Charles Darwin as Player 1
+Initializing Bertrand Russell as Player 2
+
+Charles Darwin	: visited 3414 nodes, ended with result: (0.0,[1,1] -> FREE)
+Player 1 (Charles Darwin) -> [1,1]
+Bertrand Russell	: visited 25183 nodes, ended with result: (0.0,[2,0] -> FREE)
+Player 2 (Bertrand Russell) -> [2,0]
+Charles Darwin	: visited 263 nodes, ended with result: (0.0,[2,1] -> FREE)
+Player 1 (Charles Darwin) -> [2,1]
+Bertrand Russell	: visited 198 nodes, ended with result: (0.0,[0,1] -> FREE)
+Player 2 (Bertrand Russell) -> [0,1]
+Charles Darwin	: visited 56 nodes, ended with result: (0.0,[1,2] -> FREE)
+Player 1 (Charles Darwin) -> [1,2]
+Bertrand Russell	: visited 25 nodes, ended with result: (0.0,[1,0] -> FREE)
+Player 2 (Bertrand Russell) -> [1,0]
+Charles Darwin	: visited 7 nodes, ended with result: (0.0,[0,0] -> FREE)
+Player 1 (Charles Darwin) -> [0,0]
+Bertrand Russell	: visited 5 nodes, ended with result: (0.0,[2,2] -> FREE)
+Player 2 (Bertrand Russell) -> [2,2]
+Charles Darwin	: visited 2 nodes, ended with result: (0.0,[0,2] -> FREE)
+Player 1 (Charles Darwin) -> [0,2]
+
+Game state    : DRAW
+Current score : Charles Darwin (2) - Bertrand Russell (2)
+
+**** ROUND 3 ****
+Initializing 3,3,3 board
+Initializing Charles Darwin as Player 1
+Initializing Bertrand Russell as Player 2
+
+Charles Darwin	: visited 3414 nodes, ended with result: (0.0,[1,1] -> FREE)
+Player 1 (Charles Darwin) -> [1,1]
+Bertrand Russell	: visited 25183 nodes, ended with result: (0.0,[2,0] -> FREE)
+Player 2 (Bertrand Russell) -> [2,0]
+Charles Darwin	: visited 263 nodes, ended with result: (0.0,[2,1] -> FREE)
+Player 1 (Charles Darwin) -> [2,1]
+Bertrand Russell	: visited 198 nodes, ended with result: (0.0,[0,1] -> FREE)
+Player 2 (Bertrand Russell) -> [0,1]
+Charles Darwin	: visited 56 nodes, ended with result: (0.0,[1,2] -> FREE)
+Player 1 (Charles Darwin) -> [1,2]
+Bertrand Russell	: visited 25 nodes, ended with result: (0.0,[1,0] -> FREE)
+Player 2 (Bertrand Russell) -> [1,0]
+Charles Darwin	: visited 7 nodes, ended with result: (0.0,[0,0] -> FREE)
+Player 1 (Charles Darwin) -> [0,0]
+Bertrand Russell	: visited 5 nodes, ended with result: (0.0,[2,2] -> FREE)
+Player 2 (Bertrand Russell) -> [2,2]
+Charles Darwin	: visited 2 nodes, ended with result: (0.0,[0,2] -> FREE)
+Player 1 (Charles Darwin) -> [0,2]
+
+Game state    : DRAW
+Current score : Charles Darwin (3) - Bertrand Russell (3)
+
+**** ROUND 4 ****
+Initializing 3,3,3 board
+Initializing Charles Darwin as Player 1
+Initializing Bertrand Russell as Player 2
+
+Charles Darwin	: visited 3414 nodes, ended with result: (0.0,[1,1] -> FREE)
+Player 1 (Charles Darwin) -> [1,1]
+Bertrand Russell	: visited 25183 nodes, ended with result: (0.0,[2,0] -> FREE)
+Player 2 (Bertrand Russell) -> [2,0]
+Charles Darwin	: visited 263 nodes, ended with result: (0.0,[2,1] -> FREE)
+Player 1 (Charles Darwin) -> [2,1]
+Bertrand Russell	: visited 198 nodes, ended with result: (0.0,[0,1] -> FREE)
+Player 2 (Bertrand Russell) -> [0,1]
+Charles Darwin	: visited 56 nodes, ended with result: (0.0,[1,2] -> FREE)
+Player 1 (Charles Darwin) -> [1,2]
+Bertrand Russell	: visited 25 nodes, ended with result: (0.0,[1,0] -> FREE)
+Player 2 (Bertrand Russell) -> [1,0]
+Charles Darwin	: visited 7 nodes, ended with result: (0.0,[0,0] -> FREE)
+Player 1 (Charles Darwin) -> [0,0]
+Bertrand Russell	: visited 5 nodes, ended with result: (0.0,[2,2] -> FREE)
+Player 2 (Bertrand Russell) -> [2,2]
+Charles Darwin	: visited 2 nodes, ended with result: (0.0,[0,2] -> FREE)
+Player 1 (Charles Darwin) -> [0,2]
+
+Game state    : DRAW
+Current score : Charles Darwin (4) - Bertrand Russell (4)
+
+**** ROUND 5 ****
+Initializing 3,3,3 board
+Initializing Charles Darwin as Player 1
+Initializing Bertrand Russell as Player 2
+
+Charles Darwin	: visited 3414 nodes, ended with result: (0.0,[1,1] -> FREE)
+Player 1 (Charles Darwin) -> [1,1]
+Bertrand Russell	: visited 25183 nodes, ended with result: (0.0,[2,0] -> FREE)
+Player 2 (Bertrand Russell) -> [2,0]
+Charles Darwin	: visited 263 nodes, ended with result: (0.0,[2,1] -> FREE)
+Player 1 (Charles Darwin) -> [2,1]
+Bertrand Russell	: visited 198 nodes, ended with result: (0.0,[0,1] -> FREE)
+Player 2 (Bertrand Russell) -> [0,1]
+Charles Darwin	: visited 56 nodes, ended with result: (0.0,[1,2] -> FREE)
+Player 1 (Charles Darwin) -> [1,2]
+Bertrand Russell	: visited 25 nodes, ended with result: (0.0,[1,0] -> FREE)
+Player 2 (Bertrand Russell) -> [1,0]
+Charles Darwin	: visited 7 nodes, ended with result: (0.0,[0,0] -> FREE)
+Player 1 (Charles Darwin) -> [0,0]
+Bertrand Russell	: visited 5 nodes, ended with result: (0.0,[2,2] -> FREE)
+Player 2 (Bertrand Russell) -> [2,2]
+Charles Darwin	: visited 2 nodes, ended with result: (0.0,[0,2] -> FREE)
+Player 1 (Charles Darwin) -> [0,2]
+
+Game state    : DRAW
+Current score : Charles Darwin (5) - Bertrand Russell (5)
+
+**** FINAL SCORE ****
+Charles Darwin 5
+Bertrand Russell 5
