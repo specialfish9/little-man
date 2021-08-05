@@ -21,7 +21,7 @@ public class DavidHilbert implements MNKPlayer {
   private Random r;
 
   // NOTE: profiling
-  private int visited;
+  private int visited, cells_ignored;
 
   private class Pair<A, B> {
     public A first;
@@ -76,7 +76,7 @@ public class DavidHilbert implements MNKPlayer {
 
 
   private static int distance(final MNKCell a, final MNKCell b){
-    return Math.min(Math.abs(a.i - b.i), Math.abs(a.j - b.j));
+    return Math.max(Math.abs(a.i - b.i), Math.abs(a.j - b.j));
   }
 
   private MNKCell[] getNearbyCells(final MNKBoard board){
@@ -176,6 +176,7 @@ public class DavidHilbert implements MNKPlayer {
     double best = action == Action.MAXIMIZE ? -Double.MAX_VALUE : Double.MAX_VALUE;
     MNKCell best_cell = null;
     MNKCell[] cells = board.getMarkedCells().length > 0 ? getNearbyCells(board) : board.getFreeCells();
+    cells_ignored += board.getFreeCells().length - cells.length;
     shuffle(cells);
     for(MNKCell c : cells) {
       board.markCell(c);
@@ -224,6 +225,7 @@ public class DavidHilbert implements MNKPlayer {
     try {
       Pair<Double, MNKCell> result = minimax(b, Action.MAXIMIZE, 0, -Double.MAX_VALUE, Double.MAX_VALUE);
       System.out.println(playerName() + "\t: visited " + visited + " nodes, ended with result: " + result);
+      System.out.println(playerName() + "\t: saved " + cells_ignored + " cells");
 
       if(FC.length != b.getFreeCells().length) {
         System.out.println("FATAL: minimax didn't clean the board");
