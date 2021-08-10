@@ -86,6 +86,6 @@ public class MNKCell {
 
 	@Override
 	public String toString() {
-		return "[" + this.i + "," + this.j + "] -> " + this.state;
+		return "(" + this.i + ", " + this.j + ", " + this.state + ")";
 	}
 }

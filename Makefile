@@ -8,8 +8,8 @@ CLASSES=$(wildcard *.java)
 PKG=mnkgame
 MAIN=$(PKG).MNKGame 
 PLAYERS=$(PKG).players
-SIZE:=3
-K:=3
+SIZE:=5
+K:=5
 REPS:=5
 BEST:=DavidHilbert
 OLD:=CharlesDarwin
@@ -31,6 +31,9 @@ constrained: build
 
 constrained1: build
 	$(JVM) $(JVMFLAGS) mnkgame.MNKPlayerTester $(SIZE) $(SIZE) $(K) $(PLAYERS).$(BEST) $(PLAYERS).$(OLD) -v -t 1 -r $(REPS)
+
+david: build
+	$(JVM) $(JVMFLAGS) $(MAIN) $(SIZE) $(SIZE) $(K) $(PLAYERS).DavidHilbert
 
 charles: build
 	$(JVM) $(JVMFLAGS) $(MAIN) $(SIZE) $(SIZE) $(K) $(PLAYERS).CharlesDarwin

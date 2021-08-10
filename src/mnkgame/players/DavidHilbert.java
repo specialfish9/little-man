@@ -113,6 +113,7 @@ public class DavidHilbert implements MNKPlayer {
       } else {
         // opponent marked cell swap streak data
         curr_streak.clear();
+        curr_streak_free.clear();
         curr_streak.add(c);
         curr_player = s;
       }
@@ -221,6 +222,11 @@ public class DavidHilbert implements MNKPlayer {
       for(int i = 2; i < 6; i++)
         kn.addAll(series.get(i));
 
+      // increase the amount of series found here as later we'll also add 
+      // non-series cells to kn
+      series_found += k1.size() + kn.size();
+    
+
       for(int i = 0; i < M; i++)
         for(int j = 0; j < N; j++)
           if(cells[i][j] == null && b.cellState(i, j) == MNKCellState.FREE)
@@ -241,7 +247,7 @@ public class DavidHilbert implements MNKPlayer {
   private Random r;
 
   // NOTE: profiling
-  private int visited, cells_ignored;
+  private static int visited, series_found;
 
   // Fisher–Yates shuffle
   private void shuffle(MNKCell[] vec) {
@@ -296,10 +302,7 @@ public class DavidHilbert implements MNKPlayer {
       return new Pair<>(HALT, board.getFreeCells()[0]);
 
     Series.Result series = Series.findSeries(board, action == Action.MAXIMIZE ? ME : ENEMY);
-    if(depth == 0) {
-        System.out.println("found " + series.k1.size() + " k-1 streak");
-        System.out.println(series.k1);
-    }
+
     // instantly pick one-move win/loss prevention moves (k-1 seires, for both players)
     // as they are certainly the best for the game outcome
     if(series.k1.size() > 0) {
@@ -356,7 +359,7 @@ public class DavidHilbert implements MNKPlayer {
   public MNKCell selectCell(MNKCell[] FC, MNKCell[] MC) {
     start_time = System.currentTimeMillis();
     r.setSeed(start_time); // have a new pseudo-random generator each turn to improve randomness
-    visited = 0;
+    visited = series_found = 0;
 
     if(MC.length > 0)
       b.markCell(MC[MC.length-1]); // keep track of the opponent's marks
@@ -364,7 +367,7 @@ public class DavidHilbert implements MNKPlayer {
     try {
       Pair<Double, MNKCell> result = minimax(b, Action.MAXIMIZE, 0, -Double.MAX_VALUE, Double.MAX_VALUE);
       System.out.println(playerName() + "\t: visited " + visited + " nodes, ended with result: " + result);
-      System.out.println(playerName() + "\t: saved " + cells_ignored + " cells");
+      System.out.println(playerName() + "\t: found a total of " + series_found + " free cells in series (up to k-3)");
 
       if(FC.length != b.getFreeCells().length) {
         System.out.println("FATAL: minimax didn't clean the board");

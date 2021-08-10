@@ -19,7 +19,7 @@ public class CharlesDarwin implements MNKPlayer {
   private Random r;
 
   // NOTE: profiling
-  private int visited;
+  private static int visited, series_found;
 
   private class Pair<A, B> {
     public A first;
@@ -144,6 +144,7 @@ public class CharlesDarwin implements MNKPlayer {
       (omc = find_one_move_loss(board, action == Action.MAXIMIZE ? ENEMY_WIN : MY_WIN)) != null)) {
       // if we know we are acting on the root we can just return without
       // evaluating the value of the move, as this won't be used anywhere
+      series_found++; // found once cell in a k-1 series
       if(depth == 0)
         return new Pair<>(0d, omc);
 
@@ -194,7 +195,7 @@ public class CharlesDarwin implements MNKPlayer {
   public MNKCell selectCell(MNKCell[] FC, MNKCell[] MC) {
     start_time = System.currentTimeMillis();
     r.setSeed(start_time); // have a new pseudo-random generator each turn to improve randomness
-    visited = 0;
+    visited = series_found = 0;
 
     if(MC.length > 0)
       b.markCell(MC[MC.length-1]); // keep track of the opponent's marks
@@ -202,6 +203,7 @@ public class CharlesDarwin implements MNKPlayer {
     try {
       Pair<Double, MNKCell> result = minimax(b, Action.MAXIMIZE, 0, -Double.MAX_VALUE, Double.MAX_VALUE);
       System.out.println(playerName() + "\t: visited " + visited + " nodes, ended with result: " + result);
+      System.out.println(playerName() + "\t: found a total of " + series_found + " free cells in series (up to k-1)");
 
       if(FC.length != b.getFreeCells().length) {
         System.out.println("FATAL: minimax didn't clean the board");
