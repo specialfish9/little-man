@@ -20,6 +20,9 @@ OLD:=CharlesDarwin
 best: build
 	$(JVM) $(JVMFLAGS) $(MAIN) $(SIZE) $(SIZE) $(K) $(PLAYERS).$(BEST)
 
+vs: build
+	$(JVM) $(JVMFLAGS) $(MAIN) $(SIZE) $(SIZE) $(K) $(PLAYERS).$(BEST) $(PLAYERS).$(OLD)
+
 test: build
 	$(JVM) $(JVMFLAGS) mnkgame.MNKPlayerTester $(SIZE) $(SIZE) $(K) $(PLAYERS).$(BEST) $(PLAYERS).$(OLD) -v -r $(REPS)
 
