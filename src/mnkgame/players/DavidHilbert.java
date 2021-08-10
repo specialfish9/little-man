@@ -1,6 +1,7 @@
 package mnkgame.players;
 
 import java.util.ArrayList;
+import java.util.LinkedList;
 import java.util.List;
 import java.util.Random;
 
@@ -8,22 +9,10 @@ import mnkgame.*;
 
 /*
  * Minimax + Alpha Beta + one-win-euristics (next-move wind/loss interception)
+ * + radious-checking cells + 
  */
 public class DavidHilbert implements MNKPlayer {
-  private final double RANK_CONSTANT = 10;
-  private final double HALT = Double.MIN_VALUE;
-  private MNKCellState ME, ENEMY;
-  private MNKGameState MY_WIN, ENEMY_WIN;
-
-  private int M, N, K;
-  private long start_time, timeout;
-  private MinimaxBoard b;
-  private Random r;
-
-  // NOTE: profiling
-  private int visited, cells_ignored;
-
-  private class Pair<A, B> {
+  private static class Pair<A, B> {
     public A first;
     public B second;
 
@@ -38,11 +27,225 @@ public class DavidHilbert implements MNKPlayer {
     }
   }
 
+  private class Series {
+    private static class CellState {
+      public int series; // 1-6 int to mark the current best series for the given cell
+      public MNKCell cell;
+
+      public CellState(int series, MNKCell cell) {
+        this.series = series;
+        this.cell = cell;
+      }
+
+      @Override
+      public String toString() {
+        return "CellState[series=" + series + ",cell=" + cell + "]";
+      }
+    }
+
+    public static class Result {
+      public List<MNKCell> k1;
+      public List<MNKCell> kn;
+
+      public Result(List<MNKCell> k1, List<MNKCell> kn) {
+        this.k1 = k1;
+        this.kn = kn;
+      }
+    }
+
+    private static MNKBoard board = null;
+    private static int M, N, K;
+    private static MNKCellState player = null, opponent = null;
+    private static CellState[][] cells;
+
+    private static List<List<MNKCell>> series = new ArrayList<List<MNKCell>>(); // k-(1..3) streak cells for the current player/opponent 
+                                               // k-n where n is odd means k-n streak for the current player
+                                               // k-n where n is even means k-(n/2) streak for the opponent
+
+    private static MNKCellState curr_player = MNKCellState.FREE;
+    private static List<MNKCell> curr_streak = new ArrayList<>();
+    private static List<MNKCell> curr_streak_free = new ArrayList<>();
+
+    private static void reset() {
+      curr_player = MNKCellState.FREE;
+      curr_streak.clear();
+      curr_streak_free.clear();
+    }
+
+    private static void addCell(int i, int j, int s) {
+      // first check if we have to remove the cell
+      CellState prev;
+      if((prev = cells[i][j]) != null && prev.series > s)
+        // TODO: improve cost: MxN matrix with double-linked-list structure
+        series.get(prev.series).remove(prev.cell);
+
+      MNKCell c = new MNKCell(i, j, MNKCellState.FREE);
+      cells[i][j] = new CellState(s, c);
+      series.get(s).add(c);
+    }
+
+    private static int index(int streak, MNKCellState player) {
+      if(streak == 1)
+        return player == opponent ? 1 : 0;
+      else if(streak == 2)
+        return 2 + (player == opponent ? 1 : 0);
+      else
+        return 4 + (player == opponent ? 1 : 0); 
+    }
+
+    private static void checkCell(int i, int j) {
+      MNKCellState s = board.cellState(i, j);
+      MNKCell c = new MNKCell(i, j, s);
+      // when we have no current player we wanna fill that asap
+      // take this board as an example(k=3):
+      // - - - -  | the first two cells in the first row will be checked and
+      // - - - -  | added, later we find the x and want to make sure the previously
+      // x - - -  | discorvered cells are used in the x player streak.
+      // o - - -  |
+      if(curr_player == MNKCellState.FREE && s != MNKCellState.FREE)
+        curr_player = s;
+
+      if(s == curr_player || s == MNKCellState.FREE) {
+        // possible streak cell
+        curr_streak.add(c);
+        if(s == MNKCellState.FREE)
+          curr_streak_free.add(c);
+      } else {
+        // opponent marked cell swap streak data
+        curr_streak.clear();
+        curr_streak.add(c);
+        curr_player = s;
+      }
+
+      // we have a k-(n<=3) streak assigned to a player
+      if(curr_streak.size() >= K && curr_streak_free.size() <= 3 &&
+          curr_player != MNKCellState.FREE) {
+        for(MNKCell cc : curr_streak_free)
+          addCell(cc.i, cc.j, index(curr_streak_free.size(), curr_player));
+      }
+      // remove the last free cell as it'll be useless in the next iteration, 
+      // as we want a k-3 streak at min
+      if(curr_streak_free.size() >= 3) {
+        // ignore the first free cell in the streak to allow the lookup of other
+        // possible streaks. Take this board as an example(k=4):
+        // - - - - o - | in the first 4 iterations we find 4 free cells but the 
+        // - - - - o - | curr_player is not clear so we remove the (1,1) cell and
+        // - - - - - - | move onto the 5th iteration, where we find a marked cell 
+        // - - - - - - | and have a streak match.
+        // x - - - - - |
+        // x - - - - - |
+        // Another example: (which shows why we need that loop)
+        // TODO: cleanup comments
+        // x           (k=5)
+        // -
+        // -
+        // -
+        // -
+        // x
+        // x
+        MNKCell r = curr_streak_free.remove(0);
+        while(curr_streak.get(0) != r)
+          curr_streak.remove(0);
+        curr_streak.remove(0);
+      }
+    }
+
+    // returns a pair of (k-1, k-n) cells. We separate the k-1 cells (for both players)
+    // as these are the ones we can mark instantly without developing the whole
+    // minimax tree as we know they are the possible available moves (either give
+    // a win or prevent a loss)
+    public static Result findSeries(MNKBoard b, MNKCellState p) {
+      board = b; 
+      M = board.M; N = board.N; K = board.K;
+      cells = new CellState[M][N];
+      series.clear();
+      for(int i = 0; i < 6; i++)
+        series.add(new ArrayList<MNKCell>());
+
+      player = p;
+      opponent = opponent(p);
+
+      // iterate over all rows
+      for(int i = 0; i < M; i++) {
+        reset();
+        for(int j = 0; j < N; j++)
+          checkCell(i, j);
+      }
+ 
+      // iterate over all columns
+      for(int j = 0; j < N; j++) {
+        reset();
+        for(int i = 0; i < M; i++)
+          checkCell(i, j);
+      }
+
+      // iterate over all diagonals
+      int nDiagonals = (Math.min(N, M) - K)*2 + 1;
+      for(int x = 0; x < nDiagonals; x++) {
+        reset();
+        int i = 0, j = 0;
+        if(x != 0 && x % 2 == 0)
+          i = x/2;
+        else if (x != 0)
+          j = x;
+
+        while(i < M && j < N) {
+          checkCell(i, j);
+          j++; i++;
+        }
+      }
+
+      // iterate over all counter diagonals
+      for(int x = 0; x < nDiagonals; x++) {
+        reset();
+        int i = 0, j = N-1;
+        if(x != 0 && x % 2 == 0)
+          i = x/2;
+        else if (x != 0)
+          j = N-1-x;
+
+        while(i < M && j >= 0) {
+          checkCell(i, j);
+          j--; i++;
+        }
+      }
+
+      // k[0] and k[1] are k-1 series for both player, same relevance but
+      // we wanna keep the k-1 for urselves first as they lead to win and
+      // not loss defense
+      List<MNKCell> k1 = new ArrayList<>(series.get(0));
+      k1.addAll(series.get(1));
+
+      // parepare the results
+      List<MNKCell> kn = new LinkedList<>();
+      for(int i = 2; i < 6; i++)
+        kn.addAll(series.get(i));
+
+      for(int i = 0; i < M; i++)
+        for(int j = 0; j < N; j++)
+          if(cells[i][j] == null && b.cellState(i, j) == MNKCellState.FREE)
+            kn.add(new MNKCell(i, j, MNKCellState.FREE));
+
+      return new Result(k1, kn);
+    }
+  }
+
+  private final double RANK_CONSTANT = 10;
+  private final double HALT = Double.MIN_VALUE;
+  private MNKCellState ME, ENEMY;
+  private MNKGameState MY_WIN, ENEMY_WIN;
+
+  private int M, N, K;
+  private long start_time, timeout;
+  private MinimaxBoard b;
+  private Random r;
+
+  // NOTE: profiling
+  private int visited, cells_ignored;
+
   // Fisher–Yates shuffle
-  private void shuffle(MNKCell[] vec)
-  {
-    for (int i = vec.length - 1; i > 0; i--)
-    {
+  private void shuffle(MNKCell[] vec) {
+    for (int i = vec.length - 1; i > 0; i--) {
       int index = r.nextInt(i + 1);
       // Simple swap
       MNKCell a = vec[index];
@@ -57,6 +260,10 @@ public class DavidHilbert implements MNKPlayer {
 
   private static Action opposite(final Action a) {
     return a == Action.MAXIMIZE ? Action.MINIMIZE : Action.MAXIMIZE;
+  }
+
+  private static MNKCellState opponent(final MNKCellState p) {
+    return p == MNKCellState.P1 ? MNKCellState.P2 : MNKCellState.P1;
   }
 
   private boolean should_halt() {
@@ -74,74 +281,6 @@ public class DavidHilbert implements MNKPlayer {
     else throw new Error("invalid board state: game not ended");
   }
 
-
-  private static int distance(final MNKCell a, final MNKCell b){
-    return Math.max(Math.abs(a.i - b.i), Math.abs(a.j - b.j));
-  }
-
-  private MNKCell[] getNearbyCells(final MNKBoard board){
-    List<MNKCell> res = new ArrayList<>();
-    for(MNKCell c : board.getFreeCells()){
-      for(MNKCell m : board.getMarkedCells()){
-        if(distance(c,m) < K){
-          res.add(c);
-          break;
-        }
-      }
-    }
-    return res.toArray(new MNKCell[res.size()]);
-  }
-
-  // finds the first cell needed to copmlete a K-1 streak in any possible direction
-  private MNKCell find_one_move_win(MinimaxBoard board, final MNKGameState win_state) {
-    for(MNKCell c : board.getFreeCells()) {
-      if(should_halt())
-        return null;
-
-      MNKGameState result = board.markCell(c);
-      board.unmarkCell();
-      if(result == win_state)
-        return c;
-    }
-    return null;
-  }
-
-  private MNKCell pick_random_non_closing_cell(MinimaxBoard board, MNKCell previous) {
-    for(MNKCell c : board.getFreeCells()) {
-      // avoiding the should_halt check here, kinda superflous
-      MNKGameState result = board.markCell(c);
-      board.unmarkCell();
-      if(result == MNKGameState.OPEN && (previous == null || previous.i != c.i || previous.j != c.j))
-        return c;
-    }
-    return null;
-  }
-
-  // finds the first cell the enemy needs to copmlete a K-1 streak in any possible direction
-  private MNKCell find_one_move_loss(MinimaxBoard board, final MNKGameState loss_state) {
-    MNKCell random_cell = null;
-    if(board.getFreeCells().length == 1 || (random_cell = pick_random_non_closing_cell(board, null)) == null)
-      return null; // cannot check for enemy's next move when it doesn't exist
-
-    board.markCell(random_cell);
-    MNKCell c = find_one_move_win(board, loss_state);
-    board.unmarkCell(); // remove the marked random_cell
-    if(c != null)
-      return c;
-
-    // test the random_cell we selected at first. It may be a one-move loss cell
-    // get a new random cell different from the previous and call it safe_cell
-    if(board.markCell(pick_random_non_closing_cell(board, random_cell)) != MNKGameState.OPEN) {
-      // random_cell puts us in a draw, ignore that
-      board.unmarkCell();
-      return null;
-    }
-    MNKGameState result = board.markCell(random_cell); // let the enemy take the random ane
-    board.unmarkCell();
-    board.unmarkCell();
-    return result == loss_state ? random_cell : null;
-  }
-
   private Pair<Double, MNKCell> minimax(MinimaxBoard board, Action action, int depth, double a, double b) {
     visited++;
     // handle the first move by placing ourselves at the center, which is the best postition for any mnk
@@ -156,29 +295,29 @@ public class DavidHilbert implements MNKPlayer {
     if(should_halt())
       return new Pair<>(HALT, board.getFreeCells()[0]);
 
-    MNKCell omc = null; // one move win/loss cell
-    if(board.getMarkedCells().length >= (K-1)*2 && // only check for one-win-moves
-                                                   // if there have been placed
-                                                   // enough cells to make one happen
-      ((omc = find_one_move_win(board, action == Action.MAXIMIZE ? MY_WIN : ENEMY_WIN)) != null ||
-      (omc = find_one_move_loss(board, action == Action.MAXIMIZE ? ENEMY_WIN : MY_WIN)) != null)) {
+    Series.Result series = Series.findSeries(board, action == Action.MAXIMIZE ? ME : ENEMY);
+    if(depth == 0) {
+        System.out.println("found " + series.k1.size() + " k-1 streak");
+        System.out.println(series.k1);
+    }
+    // instantly pick one-move win/loss prevention moves (k-1 seires, for both players)
+    // as they are certainly the best for the game outcome
+    if(series.k1.size() > 0) {
       // if we know we are acting on the root we can just return without
       // evaluating the value of the move, as this won't be used anywhere
       if(depth == 0)
-        return new Pair<>(0d, omc);
+        return new Pair<>(0d, series.k1.get(0));
 
-      board.markCell(omc);
+      board.markCell(series.k1.get(0));
       Pair<Double, MNKCell> result = minimax(board, opposite(action), depth+1, a, b);
       board.unmarkCell();
-      return new Pair<>(result.first, omc);
+      return new Pair<>(result.first, series.k1.get(0));
     }
-
+    
     double best = action == Action.MAXIMIZE ? -Double.MAX_VALUE : Double.MAX_VALUE;
     MNKCell best_cell = null;
-    MNKCell[] cells = board.getMarkedCells().length > 0 ? getNearbyCells(board) : board.getFreeCells();
-    cells_ignored += board.getFreeCells().length - cells.length;
-    shuffle(cells);
-    for(MNKCell c : cells) {
+    // TODO: (?) shuffle(series.noseries);
+    for(MNKCell c : series.kn) {
       board.markCell(c);
       Pair<Double, MNKCell> rank = minimax(board, opposite(action), depth+1, a, b);
       board.unmarkCell();
