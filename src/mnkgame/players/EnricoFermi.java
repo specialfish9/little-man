@@ -8,9 +8,9 @@ import java.util.Random;
 import mnkgame.*;
 
 /*
- * Minimax + Alpha Beta + k-1,k-2,k-3 heuristics
+ * Minimax + Alpha Beta + k-1,k-2,k-3 heuristics + euristic evaluation at fixed-depth
  */
-public class DavidHilbert implements MNKPlayer {
+public class EnricoFermi implements MNKPlayer {
   private static class Pair<A, B> {
     public A first;
     public B second;
@@ -26,6 +26,7 @@ public class DavidHilbert implements MNKPlayer {
     }
   }
 
+  // {{{ series
   private class Series {
     private static class CellState {
       public int series; // 1-6 int to mark the current best series for the given cell
@@ -234,6 +235,7 @@ public class DavidHilbert implements MNKPlayer {
       return new Result(k1, kn);
     }
   }
+  // }}}
 
   private final double RANK_CONSTANT = 10;
   private final double HALT = Double.MIN_VALUE;
@@ -242,11 +244,12 @@ public class DavidHilbert implements MNKPlayer {
 
   private int M, N, K;
   private long start_time, timeout;
+  private int maxDepth;
   private MinimaxBoard b;
   private Random r;
 
   // NOTE: profiling
-  private static int visited, series_found;
+  private static int visited, series_found, evaluated;
 
   enum Action {
     MINIMIZE, MAXIMIZE
@@ -265,6 +268,102 @@ public class DavidHilbert implements MNKPlayer {
     return (System.currentTimeMillis()-start_time)/1000.0 > timeout*(95.0/100.0);
   }
 
+  // {{{ chances
+  // TODO: check per entrambi i giocatori uno come per Series (?)
+  private static class Chances {
+    private static MNKBoard board;
+    private static int M, N, K;
+    private static double klog;
+    private static MNKCellState player;
+
+    private static int curr_streak, curr_streak_free;
+    private static double checkCell(int i, int j) {
+      MNKCellState c = board.cellState(i, j);
+      if(c == player || c == MNKCellState.FREE) {
+        curr_streak++;
+        curr_streak_free++;
+      } else
+        curr_streak = curr_streak_free = 0;
+
+      double value = 0;
+      if(curr_streak >= K) {
+        // we know for a fact that curr_stack_free > 0, oterwhise this method
+        // won't be called as the evaluation can be done in a deterministic way
+        value = Math.log(curr_streak/curr_streak_free)/klog;
+        // should be 1 when curr_streak_free == 1 which is the best value and
+        // the greatest chance to win (only need to mark 1 cell) whereas
+        // should get closer to 0 as curr_streak_free increases. It's effectively
+        // log_k(curr_streak/curr_streak_free)
+        curr_streak--;
+        curr_streak_free--;
+      }
+      return value;
+    }
+
+    private static void reset() {
+      curr_streak = curr_streak_free = 0;
+    }
+    
+    // Returns the number of possible series the player could streak to win the game
+    public static double winningChances(final MNKBoard b, final MNKCellState p) {
+      board = b;
+      player = p;
+      M = board.M; N = board.N; K = board.K;
+      klog = Math.log(K);
+
+      double chance = 0;
+
+      // check all columns
+      for(int i = 0; i < M && M-i+curr_streak >= K; i++) {
+        reset();
+        for(int j = 0; j < N && N-j+curr_streak >= K; j++)
+          chance += checkCell(i, j);
+      }
+
+      // check all rows
+      for(int j = 0; j < N && N-j+curr_streak >= K; j++) {
+        reset();
+        for(int i = 0; i < M && M-i+curr_streak >= K; i++)
+          chance += checkCell(i, j);
+      }
+
+      // iterate over all diagonals
+      int nDiagonals = (Math.min(N, M) - K)*2 + 1;
+      for(int x = 0; x < nDiagonals; x++) {
+        reset();
+        int i = 0, j = 0;
+        if(x != 0 && x % 2 == 0)
+          i = x/2;
+        else if (x != 0)
+          j = x;
+
+        // TODO: don't check useless cells like in prev loops
+        while(i < M && j < N) {
+          checkCell(i, j);
+          j++; i++;
+        }
+      }
+
+      // iterate over all counter diagonals
+      for(int x = 0; x < nDiagonals; x++) {
+        reset();
+        int i = 0, j = N-1;
+        if(x != 0 && x % 2 == 0)
+          i = x/2;
+        else if (x != 0)
+          j = N-1-x;
+
+        while(i < M && j >= 0) {
+          checkCell(i, j);
+          j--; i++;
+        }
+      }
+
+      return chance;
+    }
+  }
+  // }}}
+
   private double evaluate(final MNKBoard board, final int depth) {
     if(board.gameState() == MY_WIN)
       return RANK_CONSTANT / depth;
@@ -272,16 +371,20 @@ public class DavidHilbert implements MNKPlayer {
       return -(depth * RANK_CONSTANT);
     else if(board.gameState() == MNKGameState.DRAW)
       return 0;
-    else throw new Error("invalid board state: game not ended");
+    else {
+      evaluated++;
+      return Chances.winningChances(board, ME) - Chances.winningChances(board, ENEMY);
+    }
   }
 
   private Pair<Double, MNKCell> minimax(MinimaxBoard board, Action action, int depth, double a, double b) {
     visited++;
     // handle the first move by placing ourselves at the center, which is the best postition for any mnk
+    // TODO: readd as it's correct, just not using it to measure performance
     // if(board.getMarkedCells().length == 0)
     //   return new Pair<>(Double.MAX_VALUE, new MNKCell(N/2, M/2, ME));
 
-    if(board.gameState() != MNKGameState.OPEN)
+    if(board.gameState() != MNKGameState.OPEN || depth == maxDepth)
       // return the evaluation of the current board with the last marked cell
       // as the decision which has brough up to this game state
       return new Pair<>(evaluate(board, depth), board.getMarkedCells()[board.getMarkedCells().length-1]);
@@ -294,15 +397,16 @@ public class DavidHilbert implements MNKPlayer {
     // instantly pick one-move win/loss prevention moves (k-1 seires, for both players)
     // as they are certainly the best for the game outcome
     if(series.k1.size() > 0) {
+      MNKCell c = series.k1.get(0);
       // if we know we are acting on the root we can just return without
       // evaluating the value of the move, as this won't be used anywhere
       if(depth == 0)
-        return new Pair<>(0d, series.k1.get(0));
+        return new Pair<>(0d, c);
 
-      board.markCell(series.k1.get(0));
+      board.markCell(c);
       Pair<Double, MNKCell> result = minimax(board, opposite(action), depth+1, a, b);
       board.unmarkCell();
-      return new Pair<>(result.first, series.k1.get(0));
+      return new Pair<>(result.first, c);
     }
     
     double best = action == Action.MAXIMIZE ? -Double.MAX_VALUE : Double.MAX_VALUE;
@@ -347,7 +451,8 @@ public class DavidHilbert implements MNKPlayer {
   public MNKCell selectCell(MNKCell[] FC, MNKCell[] MC) {
     start_time = System.currentTimeMillis();
     r.setSeed(start_time); // have a new pseudo-random generator each turn to improve randomness
-    visited = series_found = 0;
+    visited = series_found = evaluated = 0;
+    maxDepth = 4;
 
     if(MC.length > 0)
       b.markCell(MC[MC.length-1]); // keep track of the opponent's marks
@@ -356,6 +461,7 @@ public class DavidHilbert implements MNKPlayer {
       Pair<Double, MNKCell> result = minimax(b, Action.MAXIMIZE, 0, -Double.MAX_VALUE, Double.MAX_VALUE);
       System.out.println(playerName() + "\t: visited " + visited + " nodes, ended with result: " + result);
       System.out.println(playerName() + "\t: found a total of " + series_found + " free cells in series (up to k-3)");
+      System.out.println(playerName() + "\t: heuristically evaluated " + evaluated + " boards");
 
       if(FC.length != b.getFreeCells().length) {
         System.out.println("FATAL: minimax didn't clean the board");
@@ -371,6 +477,6 @@ public class DavidHilbert implements MNKPlayer {
   }
 
   public String playerName() {
-    return "David Hilbert";
+    return "Enrico Fermi";
   }
 }
