@@ -3,7 +3,7 @@ package mnkgame.players;
 import java.util.ArrayList;
 import java.util.LinkedList;
 import java.util.List;
-import java.util.Random;
+import java.util.HashMap;
 
 import mnkgame.*;
 
@@ -11,6 +11,7 @@ import mnkgame.*;
  * Minimax + Alpha Beta + k-1,k-2,k-3 heuristics + euristic evaluation at fixed-depth
  */
 public class EnricoFermi implements MNKPlayer {
+  // {{{ pair
   private static class Pair<A, B> {
     public A first;
     public B second;
@@ -25,6 +26,24 @@ public class EnricoFermi implements MNKPlayer {
       return "(" + first + "," + second + ")";
     }
   }
+  // }}}
+
+  // {{{ board
+  private static class Board extends MNKBoard {
+    public Board(int M, int N, int K) {
+      super(M, N, K);
+    }
+
+    public MNKGameState markCell(MNKCell c) throws IndexOutOfBoundsException, IllegalStateException {
+      return markCell(c.i, c.j);
+    }
+
+    @Override
+    public int hashCode() {
+      return this.B.hashCode();
+    }
+  }
+  // }}}
 
   // {{{ series
   private class Series {
@@ -53,7 +72,7 @@ public class EnricoFermi implements MNKPlayer {
       }
     }
 
-    private static MNKBoard board = null;
+    private static Board board = null;
     private static int M, N, K;
     private static MNKCellState player = null, opponent = null;
     private static CellState[][] cells;
@@ -155,7 +174,7 @@ public class EnricoFermi implements MNKPlayer {
     // as these are the ones we can mark instantly without developing the whole
     // minimax tree as we know they are the possible available moves (either give
     // a win or prevent a loss)
-    public static Result findSeries(MNKBoard b, MNKCellState p) {
+    public static Result findSeries(Board b, MNKCellState p) {
       board = b; 
       M = board.M; N = board.N; K = board.K;
       cells = new CellState[M][N];
@@ -237,41 +256,10 @@ public class EnricoFermi implements MNKPlayer {
   }
   // }}}
 
-  private final double RANK_CONSTANT = 10;
-  private final double HALT = Double.MIN_VALUE;
-  private MNKCellState ME, ENEMY;
-  private MNKGameState MY_WIN, ENEMY_WIN;
-
-  private int M, N, K;
-  private long start_time, timeout;
-  private int maxDepth;
-  private MinimaxBoard b;
-  private Random r;
-
-  // NOTE: profiling
-  private static int visited, series_found, evaluated;
-
-  enum Action {
-    MINIMIZE, MAXIMIZE
-  }
-
-  private static Action opposite(final Action a) {
-    return a == Action.MAXIMIZE ? Action.MINIMIZE : Action.MAXIMIZE;
-  }
-
-  private static MNKCellState opponent(final MNKCellState p) {
-    return p == MNKCellState.P1 ? MNKCellState.P2 : MNKCellState.P1;
-  }
-
-  private boolean should_halt() {
-    // TODO: tweak values
-    return (System.currentTimeMillis()-start_time)/1000.0 > timeout*(95.0/100.0);
-  }
-
   // {{{ chances
   // TODO: check per entrambi i giocatori uno come per Series (?)
   private static class Chances {
-    private static MNKBoard board;
+    private static Board board;
     private static int M, N, K;
     private static double klog;
     private static MNKCellState player;
@@ -305,7 +293,7 @@ public class EnricoFermi implements MNKPlayer {
     }
     
     // Returns the number of possible series the player could streak to win the game
-    public static double winningChances(final MNKBoard b, final MNKCellState p) {
+    public static double winningChances(final Board b, final MNKCellState p) {
       board = b;
       player = p;
       M = board.M; N = board.N; K = board.K;
@@ -364,7 +352,38 @@ public class EnricoFermi implements MNKPlayer {
   }
   // }}}
 
-  private double evaluate(final MNKBoard board, final int depth) {
+  private final double RANK_CONSTANT = 10;
+  private final double HALT = Double.MIN_VALUE;
+  private MNKCellState ME, ENEMY;
+  private MNKGameState MY_WIN, ENEMY_WIN;
+
+  private int M, N, K;
+  private long start_time, timeout;
+  private int maxDepth;
+  private Board b;
+  private HashMap<Board, Pair<MNKCell, Double>> cache;
+
+  // NOTE: profiling
+  private static int visited, series_found, evaluated;
+
+  enum Action {
+    MINIMIZE, MAXIMIZE
+  }
+
+  private static Action opposite(final Action a) {
+    return a == Action.MAXIMIZE ? Action.MINIMIZE : Action.MAXIMIZE;
+  }
+
+  private static MNKCellState opponent(final MNKCellState p) {
+    return p == MNKCellState.P1 ? MNKCellState.P2 : MNKCellState.P1;
+  }
+
+  private boolean should_halt() {
+    // TODO: tweak values
+    return (System.currentTimeMillis()-start_time)/1000.0 > timeout*(95.0/100.0);
+  }
+
+  private double evaluate(final Board board, final int depth) {
     if(board.gameState() == MY_WIN)
       return RANK_CONSTANT / depth;
     else if(board.gameState() == ENEMY_WIN)
@@ -377,7 +396,7 @@ public class EnricoFermi implements MNKPlayer {
     }
   }
 
-  private Pair<Double, MNKCell> minimax(MinimaxBoard board, Action action, int depth, double a, double b) {
+  private Pair<Double, MNKCell> minimax(Board board, Action action, int depth, double a, double b) {
     visited++;
     // handle the first move by placing ourselves at the center, which is the best postition for any mnk
     // TODO: readd as it's correct, just not using it to measure performance
@@ -444,15 +463,14 @@ public class EnricoFermi implements MNKPlayer {
     ENEMY_WIN = first ? MNKGameState.WINP2 : MNKGameState.WINP1;
     ME = first ? MNKCellState.P1 : MNKCellState.P2;
     ENEMY = first ? MNKCellState.P2 : MNKCellState.P1;
-    b = new MinimaxBoard(M, N, K);
-    r = new Random(0);
+    b = new Board(M, N, K);
+    cache = new HashMap<>();
   }
 
   public MNKCell selectCell(MNKCell[] FC, MNKCell[] MC) {
     start_time = System.currentTimeMillis();
-    r.setSeed(start_time); // have a new pseudo-random generator each turn to improve randomness
     visited = series_found = evaluated = 0;
-    maxDepth = 4;
+    maxDepth = 4; // TODO: dynamic
 
     if(MC.length > 0)
       b.markCell(MC[MC.length-1]); // keep track of the opponent's marks

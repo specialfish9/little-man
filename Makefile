@@ -8,8 +8,9 @@ CLASSES=$(wildcard *.java)
 PKG=mnkgame
 MAIN=$(PKG).MNKGame 
 PLAYERS=$(PKG).players
-SIZE:=10
-K:=7
+M:=6
+N:=5
+K:=4
 REPS:=5
 BEST:=EnricoFermi
 OLD:=DavidHilbert
@@ -18,40 +19,40 @@ OLD:=DavidHilbert
 .PHONY: build
 
 best: build
-	$(JVM) $(JVMFLAGS) $(MAIN) $(SIZE) $(SIZE) $(K) $(PLAYERS).$(BEST)
+	$(JVM) $(JVMFLAGS) $(MAIN) $(M) $(N) $(K) $(PLAYERS).$(BEST)
 
 vs: build
-	$(JVM) $(JVMFLAGS) $(MAIN) $(SIZE) $(SIZE) $(K) $(PLAYERS).$(BEST) $(PLAYERS).$(OLD)
+	$(JVM) $(JVMFLAGS) $(MAIN) $(M) $(N) $(K) $(PLAYERS).$(BEST) $(PLAYERS).$(OLD)
 
 test: build
-	$(JVM) $(JVMFLAGS) mnkgame.MNKPlayerTester $(SIZE) $(SIZE) $(K) $(PLAYERS).$(BEST) $(PLAYERS).$(OLD) -v -r $(REPS)
+	$(JVM) $(JVMFLAGS) mnkgame.MNKPlayerTester $(M) $(N) $(K) $(PLAYERS).$(BEST) $(PLAYERS).$(OLD) -v -r $(REPS)
 
 test1: build
-	$(JVM) $(JVMFLAGS) mnkgame.MNKPlayerTester $(SIZE) $(SIZE) $(K) $(PLAYERS).$(OLD) $(PLAYERS).$(BEST) -v -r $(REPS)
+	$(JVM) $(JVMFLAGS) mnkgame.MNKPlayerTester $(M) $(N) $(K) $(PLAYERS).$(OLD) $(PLAYERS).$(BEST) -v -r $(REPS)
 
 constrained: build
-	$(JVM) $(JVMFLAGS) mnkgame.MNKPlayerTester $(SIZE) $(SIZE) $(K) $(PLAYERS).$(OLD) $(PLAYERS).$(BEST) -v -t 1 -r $(REPS)
+	$(JVM) $(JVMFLAGS) mnkgame.MNKPlayerTester $(M) $(N) $(K) $(PLAYERS).$(OLD) $(PLAYERS).$(BEST) -v -t 1 -r $(REPS)
 
 constrained1: build
-	$(JVM) $(JVMFLAGS) mnkgame.MNKPlayerTester $(SIZE) $(SIZE) $(K) $(PLAYERS).$(BEST) $(PLAYERS).$(OLD) -v -t 1 -r $(REPS)
+	$(JVM) $(JVMFLAGS) mnkgame.MNKPlayerTester $(M) $(N) $(K) $(PLAYERS).$(BEST) $(PLAYERS).$(OLD) -v -t 1 -r $(REPS)
 
 enrico: build
-	$(JVM) $(JVMFLAGS) $(MAIN) $(SIZE) $(SIZE) $(K) $(PLAYERS).EnricoFermi
+	$(JVM) $(JVMFLAGS) $(MAIN) $(M) $(N) $(K) $(PLAYERS).EnricoFermi
 
 david: build
-	$(JVM) $(JVMFLAGS) $(MAIN) $(SIZE) $(SIZE) $(K) $(PLAYERS).DavidHilbert
+	$(JVM) $(JVMFLAGS) $(MAIN) $(M) $(N) $(K) $(PLAYERS).DavidHilbert
 
 charles: build
-	$(JVM) $(JVMFLAGS) $(MAIN) $(SIZE) $(SIZE) $(K) $(PLAYERS).CharlesDarwin
+	$(JVM) $(JVMFLAGS) $(MAIN) $(M) $(N) $(K) $(PLAYERS).CharlesDarwin
 
 bertrand: build
-	$(JVM) $(JVMFLAGS) $(MAIN) $(SIZE) $(SIZE) $(K) $(PLAYERS).BertrandRussell
+	$(JVM) $(JVMFLAGS) $(MAIN) $(M) $(N) $(K) $(PLAYERS).BertrandRussell
 
 albert: build
-	$(JVM) $(JVMFLAGS) $(MAIN) $(SIZE) $(SIZE) $(K) $(PLAYERS).AlbertEinstein
+	$(JVM) $(JVMFLAGS) $(MAIN) $(M) $(N) $(K) $(PLAYERS).AlbertEinstein
 
 random: build
-	$(JVM) $(JVMFLAGS) $(MAIN) $(SIZE) $(SIZE) $(K) $(PLAYERS).QuasiRandomPlayer
+	$(JVM) $(JVMFLAGS) $(MAIN) $(M) $(N) $(K) $(PLAYERS).QuasiRandomPlayer
 
 build: $(CLASSES)
 	mkdir -p build
