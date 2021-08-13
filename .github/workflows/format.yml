@@ -1,10 +1,9 @@
-# Example workflow
 name: Format
 
 on:
   push:
     branches:
-      - master
+      - main
 
 jobs:
   formatting:
