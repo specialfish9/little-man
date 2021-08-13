@@ -1,9 +1,7 @@
 package mnkgame.players;
-
-import java.util.ArrayList;
-import java.util.LinkedList;
-import java.util.List;
+import java.util.ArrayList; import java.util.LinkedList; import java.util.List;
 import java.util.HashMap;
+import java.util.Arrays;
 
 import mnkgame.*;
 
@@ -12,18 +10,20 @@ import mnkgame.*;
  */
 public class EnricoFermi implements MNKPlayer {
   // {{{ pair
-  private static class Pair<A, B> {
+  private static class Tuple<A, B, C> {
     public A first;
     public B second;
+    public C third;
 
-    Pair(A first, B second) {
+    public Tuple(A first, B second, C third) {
       this.first = first;
       this.second = second;
+      this.third = third;
     }
 
     @Override
     public String toString() {
-      return "(" + first + "," + second + ")";
+      return "(" + first + "," + second + "," + third + ")";
     }
   }
   // }}}
@@ -40,7 +40,9 @@ public class EnricoFermi implements MNKPlayer {
 
     @Override
     public int hashCode() {
-      return this.B.hashCode();
+      // deep hash code of the contents of the array as it's multi dimensional,
+      // otherwhise the hashes of the columns would not have been computed correctly
+      return Arrays.deepHashCode(this.B);
     }
   }
   // }}}
@@ -352,7 +354,6 @@ public class EnricoFermi implements MNKPlayer {
   }
   // }}}
 
-  private final double RANK_CONSTANT = 10;
   private final double HALT = Double.MIN_VALUE;
   private MNKCellState ME, ENEMY;
   private MNKGameState MY_WIN, ENEMY_WIN;
@@ -361,10 +362,10 @@ public class EnricoFermi implements MNKPlayer {
   private long start_time, timeout;
   private int maxDepth;
   private Board b;
-  private HashMap<Board, Pair<MNKCell, Double>> cache;
+  private HashMap<Board, Tuple<Double, Integer, MNKCell>> cache;
 
   // NOTE: profiling
-  private static int visited, series_found, evaluated;
+  private static int visited, series_found, evaluated, cache_hits;
 
   enum Action {
     MINIMIZE, MAXIMIZE
@@ -378,38 +379,51 @@ public class EnricoFermi implements MNKPlayer {
     return p == MNKCellState.P1 ? MNKCellState.P2 : MNKCellState.P1;
   }
 
-  private boolean should_halt() {
+  private boolean shouldHalt() {
     // TODO: tweak values
     return (System.currentTimeMillis()-start_time)/1000.0 > timeout*(95.0/100.0);
   }
 
-  private double evaluate(final Board board, final int depth) {
+  // evaluate a state (either heuristically or in a deterministic way) regardless
+  // of its depth. The depth will be taken into account later to allow for caching
+  private double evaluate(final Board board) {
     if(board.gameState() == MY_WIN)
-      return RANK_CONSTANT / depth;
+      return 1;
     else if(board.gameState() == ENEMY_WIN)
-      return -(depth * RANK_CONSTANT);
+      return -1;
     else if(board.gameState() == MNKGameState.DRAW)
       return 0;
     else {
       evaluated++;
-      return Chances.winningChances(board, ME) - Chances.winningChances(board, ENEMY);
+      // keep the heuristic evaluation between 1 and -1
+      return Math.min(Math.max(Chances.winningChances(board, ME) - Chances.winningChances(board, ENEMY), -1), 1);
     }
   }
 
-  private Pair<Double, MNKCell> minimax(Board board, Action action, int depth, double a, double b) {
+  private double factorDepth(double val, Action action, int depth) {
+    // TODO: maybe replace in all places where its used if this remains this simple
+    return action == Action.MAXIMIZE ? val / depth : val * depth; 
+  }
+
+  private Tuple<Double, Integer, MNKCell> minimax(Board board, Action action, int depth, double a, double b) {
     visited++;
     // handle the first move by placing ourselves at the center, which is the best postition for any mnk
     // TODO: readd as it's correct, just not using it to measure performance
     // if(board.getMarkedCells().length == 0)
     //   return new Pair<>(Double.MAX_VALUE, new MNKCell(N/2, M/2, ME));
+    if(cache.containsKey(board)) {
+      cache_hits++;
+      Tuple<Double, Integer, MNKCell> val = cache.get(board);
+      return new Tuple<>(val.first, depth, val.third);
+    }
 
     if(board.gameState() != MNKGameState.OPEN || depth == maxDepth)
       // return the evaluation of the current board with the last marked cell
       // as the decision which has brough up to this game state
-      return new Pair<>(evaluate(board, depth), board.getMarkedCells()[board.getMarkedCells().length-1]);
+      return new Tuple<>(evaluate(board), depth, board.getMarkedCells()[board.getMarkedCells().length-1]);
 
-    if(should_halt())
-      return new Pair<>(HALT, board.getFreeCells()[0]);
+    if(shouldHalt())
+      return new Tuple<>(HALT, depth, board.getFreeCells()[0]);
 
     Series.Result series = Series.findSeries(board, action == Action.MAXIMIZE ? ME : ENEMY);
 
@@ -419,27 +433,29 @@ public class EnricoFermi implements MNKPlayer {
       MNKCell c = series.k1.get(0);
       // if we know we are acting on the root we can just return without
       // evaluating the value of the move, as this won't be used anywhere
-      if(depth == 0)
-        return new Pair<>(0d, c);
+      // if(depth == 0)
+      //   return new Pair<>(0d, c);
 
       board.markCell(c);
-      Pair<Double, MNKCell> result = minimax(board, opposite(action), depth+1, a, b);
+      Tuple<Double, Integer, MNKCell> result = minimax(board, opposite(action), depth+1, a, b);
       board.unmarkCell();
-      return new Pair<>(result.first, c);
+      return new Tuple<>(result.first, depth, c);
     }
     
-    double best = action == Action.MAXIMIZE ? -Double.MAX_VALUE : Double.MAX_VALUE;
+    double best = action == Action.MAXIMIZE ? -Double.MAX_VALUE : Double.MAX_VALUE, best_value = best;
+    int best_depth = depth+1;
     MNKCell best_cell = null;
     // TODO: (?) shuffle(series.noseries);
     for(MNKCell c : series.kn) {
       board.markCell(c);
-      Pair<Double, MNKCell> rank = minimax(board, opposite(action), depth+1, a, b);
+      Tuple<Double, Integer, MNKCell> result = minimax(board, opposite(action), depth+1, a, b);
       board.unmarkCell();
-      if(rank.first == HALT)
-        return rank;
+      double value = factorDepth(result.first, opposite(action), result.second);
 
-      if((action == Action.MAXIMIZE && (double)rank.first > best) || (action == Action.MINIMIZE && rank.first < best)) {
-        best = rank.first;
+      if((action == Action.MAXIMIZE && value > best) || (action == Action.MINIMIZE && value < best)) {
+        best = value;
+        best_value = result.first;
+        best_depth = result.second;
         best_cell = c;
       }
       if(action == Action.MAXIMIZE && best > a)
@@ -447,10 +463,14 @@ public class EnricoFermi implements MNKPlayer {
       else if(action == Action.MINIMIZE && best < b)
         b = best;
 
-      if(b <= a)
+      if(b <= a || result.first == HALT)
         break;
     }
-    return new Pair<>(best, best_cell);
+
+    if(depth >= 2*K-1)
+      cache.put(board, new Tuple<>(best_value, best_depth, best_cell));
+
+    return new Tuple<>(best_value, best_depth, best_cell);
   }
 
   public void initPlayer(int M, int N, int K, boolean first, int timeout_in_secs) {
@@ -469,25 +489,27 @@ public class EnricoFermi implements MNKPlayer {
 
   public MNKCell selectCell(MNKCell[] FC, MNKCell[] MC) {
     start_time = System.currentTimeMillis();
-    visited = series_found = evaluated = 0;
-    maxDepth = 4; // TODO: dynamic
+    cache.clear(); // TODO: better clearing method
+    visited = series_found = evaluated = cache_hits = 0;
+    maxDepth = 10; // TODO: dynamic
 
     if(MC.length > 0)
       b.markCell(MC[MC.length-1]); // keep track of the opponent's marks
 
     try {
-      Pair<Double, MNKCell> result = minimax(b, Action.MAXIMIZE, 0, -Double.MAX_VALUE, Double.MAX_VALUE);
+      Tuple<Double, Integer, MNKCell> result = minimax(b, Action.MAXIMIZE, 0, -Double.MAX_VALUE, Double.MAX_VALUE);
       System.out.println(playerName() + "\t: visited " + visited + " nodes, ended with result: " + result);
       System.out.println(playerName() + "\t: found a total of " + series_found + " free cells in series (up to k-3)");
       System.out.println(playerName() + "\t: heuristically evaluated " + evaluated + " boards");
+      System.out.println(playerName() + "\t: cached " + cache.size() + " elements, hit " + cache_hits + " times");
 
       if(FC.length != b.getFreeCells().length) {
         System.out.println("FATAL: minimax didn't clean the board");
         return FC[0];
       }
 
-      b.markCell(result.second);
-      return result.second;
+      b.markCell(result.third);
+      return result.third;
     } catch(Exception e) {
       e.printStackTrace();
       return FC[0];
