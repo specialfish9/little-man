@@ -1,8 +1,8 @@
 /*
  *  Copyright (C) 2021 Pietro Di Lena
- *  
+ *
  *  This file is part of the MNKGame v2.0 software developed for the
- *  students of the course "Algoritmi e Strutture di Dati" first 
+ *  students of the course "Algoritmi e Strutture di Dati" first
  *  cycle degree/bachelor in Computer Science, University of Bologna
  *  A.Y. 2020-2021.
  *
@@ -22,24 +22,14 @@
 
 package mnkgame;
 
-/**
- * MNKGame states
- */
+/** MNKGame states */
 public enum MNKGameState {
-	/**
-   * Game still open
-   */
-	OPEN,
-	/**
-   * Game ended in a draw
-   */
-	DRAW, 
-	/**
-	 * Player1 won
-	 */
-	WINP1,
-	/**
-	 * Player2 won 
-	 */
-	WINP2
+  /** Game still open */
+  OPEN,
+  /** Game ended in a draw */
+  DRAW,
+  /** Player1 won */
+  WINP1,
+  /** Player2 won */
+  WINP2
 }
