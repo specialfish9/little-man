@@ -1,8 +1,8 @@
 /*
  *  Copyright (C) 2021 Pietro Di Lena
- *  
+ *
  *  This file is part of the MNKGame v2.0 software developed for the
- *  students of the course "Algoritmi e Strutture di Dati" first 
+ *  students of the course "Algoritmi e Strutture di Dati" first
  *  cycle degree/bachelor in Computer Science, University of Bologna
  *  A.Y. 2020-2021.
  *
@@ -25,51 +25,44 @@ package mnkgame.players;
 import java.util.Random;
 import mnkgame.*;
 
-/**
- * Totally random software player.
- */
-public class RandomPlayer  implements MNKPlayer {
-	private Random rand;
-	private int TIMEOUT;
+/** Totally random software player. */
+public class RandomPlayer implements MNKPlayer {
+  private Random rand;
+  private int TIMEOUT;
 
-	/**
-   * Default empty constructor
-   */
-	public RandomPlayer() {
-	}
+  /** Default empty constructor */
+  public RandomPlayer() {}
 
-	public void initPlayer(int M, int N, int K, boolean first, int timeout_in_secs) {
-		// New random seed for each game
-		rand    = new Random(System.currentTimeMillis()); 
-		// Save the timeout for testing purposes
-		TIMEOUT = timeout_in_secs;
-		
-		// Uncomment to chech the initialization timeout
-		/* 
-		try {
-			Thread.sleep(1000*2*TIMEOUT);
-		} 
-		catch(Exception e) {
-		}
-		*/
-	}
+  public void initPlayer(int M, int N, int K, boolean first, int timeout_in_secs) {
+    // New random seed for each game
+    rand = new Random(System.currentTimeMillis());
+    // Save the timeout for testing purposes
+    TIMEOUT = timeout_in_secs;
 
-	/**
-   * Selects a random cell in <code>FC</code>
-   */
-	public MNKCell selectCell(MNKCell[] FC, MNKCell[] MC) {
-		// Uncomment to chech the move timeout
-		/* 
-		try {
-			Thread.sleep(1000*2*TIMEOUT);
-		} 
-		catch(Exception e) {
-		}
-		*/
-		return FC[rand.nextInt(FC.length)];
-	}
+    // Uncomment to chech the initialization timeout
+    /*
+    try {
+    	Thread.sleep(1000*2*TIMEOUT);
+    }
+    catch(Exception e) {
+    }
+    */
+  }
 
-	public String playerName() {
-		return "R4nd0m";
-	}
+  /** Selects a random cell in <code>FC</code> */
+  public MNKCell selectCell(MNKCell[] FC, MNKCell[] MC) {
+    // Uncomment to chech the move timeout
+    /*
+    try {
+    	Thread.sleep(1000*2*TIMEOUT);
+    }
+    catch(Exception e) {
+    }
+    */
+    return FC[rand.nextInt(FC.length)];
+  }
+
+  public String playerName() {
+    return "R4nd0m";
+  }
 }
