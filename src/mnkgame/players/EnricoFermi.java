@@ -63,9 +63,10 @@ public class EnricoFermi implements MNKPlayer {
     @Override
     public String toString() {
       String str = "";
-      for(int i = 0; i < M; i++) {
-        for(int j = 0; j < N; j++)
-          str += " " + (B[i][j] == MNKCellState.P1 ? 'x' : (B[i][j] == MNKCellState.P2 ? 'o' : '-'));
+      for (int i = 0; i < M; i++) {
+        for (int j = 0; j < N; j++)
+          str +=
+              " " + (B[i][j] == MNKCellState.P1 ? 'x' : (B[i][j] == MNKCellState.P2 ? 'o' : '-'));
         str += '\n';
       }
       return str;
@@ -75,8 +76,12 @@ public class EnricoFermi implements MNKPlayer {
 
   // {{{ streak search
   private static enum StreakCellState {
-    NONE(0), K3(1), K2(2), K1(3);
+    NONE(0),
+    K3(1),
+    K2(2),
+    K1(3);
     private final int n;
+
     private StreakCellState(int n) {
       this.n = n;
     }
@@ -85,7 +90,13 @@ public class EnricoFermi implements MNKPlayer {
       return s.n > this.n;
     }
   }
-  private static enum StreakDirection { HORIZONTAL, VERTICAL, DIAGONAL, ANTIDIAGONAL; }
+
+  private static enum StreakDirection {
+    HORIZONTAL,
+    VERTICAL,
+    DIAGONAL,
+    ANTIDIAGONAL;
+  }
 
   private static int streak = 0, streak_free = 0;
   private static MNKCellState streak_enemy;
@@ -97,30 +108,25 @@ public class EnricoFermi implements MNKPlayer {
   // we should care about it. Returns true if the streak has been interrupted
   private boolean checkStreakCell(int i, int j) {
     MNKCellState c = board.cellState(i, j);
-    if(c == streak_enemy)
-      return true;
+    if (c == streak_enemy) return true;
     else {
       streak++;
-      if(c == MNKCellState.FREE)
-        streak_free++;
+      if (c == MNKCellState.FREE) streak_free++;
     }
 
-    if(streak == K && streak_free <= 3)
-      markStreakCell(i, j);
+    if (streak == K && streak_free <= 3) markStreakCell(i, j);
     return false;
   }
 
   private void markStreakCell(int i, int j) {
     StreakCellState s = streak_states[streak_free];
-    switch(streakDirection) {
+    switch (streakDirection) {
       case HORIZONTAL:
-        for(int x = i; x > i-K; x--)
-          if(SB[x][j].isBetter(s))
-            SB[x][j] = s;
-      break;
+        for (int x = i; x > i - K; x--) if (SB[x][j].isBetter(s)) SB[x][j] = s;
+        break;
 
       default:
-      break;
+        break;
     }
 
     // decrease the streak by 1 so we count further cells;
@@ -135,16 +141,12 @@ public class EnricoFermi implements MNKPlayer {
   private void findStreaks(MNKCellState player) {
     streak_enemy = opponent(player);
 
-    for (int i = 0; i < M; i++)
-      for (int j = 0; j < N; j++)
-        SB[i][j] = StreakCellState.NONE;
+    for (int i = 0; i < M; i++) for (int j = 0; j < N; j++) SB[i][j] = StreakCellState.NONE;
 
     // iterate over all rows
-    for(int i = 0; i < M; i++) {
+    for (int i = 0; i < M; i++) {
       resetStreak();
-      for(int j = 0; j < N; j++)
-        if(checkStreakCell(i, j))
-          resetStreak();
+      for (int j = 0; j < N; j++) if (checkStreakCell(i, j)) resetStreak();
     }
   }
   // }}}
@@ -500,8 +502,7 @@ public class EnricoFermi implements MNKPlayer {
   // finds the first cell the enemy needs to copmlete a K-1 streak in any possible direction
   private MNKCell findOneMoveLoss(final MNKGameState loss_state) {
     MNKCell random_cell = null;
-    if (board.getFreeCells().length == 1
-        || (random_cell = pickRandomNonClosingCell(null)) == null)
+    if (board.getFreeCells().length == 1 || (random_cell = pickRandomNonClosingCell(null)) == null)
       return null; // cannot check for enemy's next move when it doesn't exist
 
     board.markCell(random_cell.i, random_cell.j);
@@ -517,13 +518,15 @@ public class EnricoFermi implements MNKPlayer {
       board.unmarkCell();
       return null;
     }
-    MNKGameState result = board.markCell(random_cell.i, random_cell.j); // let the enemy take the random ane
+    MNKGameState result =
+        board.markCell(random_cell.i, random_cell.j); // let the enemy take the random ane
     board.unmarkCell();
     board.unmarkCell();
     return result == loss_state ? random_cell : null;
   }
 
-  private static final int winCutoff = 2; // 2 represents a certain win, and therefore we can cutoff search
+  private static final int winCutoff =
+      2; // 2 represents a certain win, and therefore we can cutoff search
   // evaluate a state (either heuristically or in a deterministic way) regardless
   // of its depth. The depth will be taken into account later to allow for caching
   private int evaluate(final Board board) {
@@ -538,24 +541,22 @@ public class EnricoFermi implements MNKPlayer {
   }
 
   private Tuple<Integer, Integer, MNKCell> mem(Tuple<Integer, Integer, MNKCell> result) {
-    if(result.second > 1)
-      cache.put(board.toString(), new Pair<>(result.first.intValue(), board.getMarkedCells().length));
+    if (result.second > 1)
+      cache.put(
+          board.toString(), new Pair<>(result.first.intValue(), board.getMarkedCells().length));
     return result;
   }
 
   private Pair<Integer, Integer> unmem() {
-    if(cache.containsKey(board.toString()))
-      return cache.get(board.toString());
-    else
-      return null;
+    if (cache.containsKey(board.toString())) return cache.get(board.toString());
+    else return null;
   }
 
   private Tuple<Integer, Integer, MNKCell> minimax(Action action, int depth, double a, double b) {
     Pair<Integer, Integer> cached;
     if (depth > 0 && (cached = unmem()) != null) {
       cache_hits++;
-      return new Tuple<>(
-          cached.first, cached.second, null);
+      return new Tuple<>(cached.first, cached.second, null);
     } else cache_misses++;
 
     if (board.gameState() != MNKGameState.OPEN || depth == maxDepth)
@@ -575,8 +576,7 @@ public class EnricoFermi implements MNKPlayer {
         // if there have been placed
         // enough cells to make one happen
         ((omc = findOneMoveWin(action == Action.MAXIMIZE ? MY_WIN : ENEMY_WIN)) != null
-            || (omc = findOneMoveLoss(action == Action.MAXIMIZE ? ENEMY_WIN : MY_WIN))
-                != null)) {
+            || (omc = findOneMoveLoss(action == Action.MAXIMIZE ? ENEMY_WIN : MY_WIN)) != null)) {
       // if we know we are acting on the root we can just return without
       // evaluating the value of the move, as this won't be used anywhere
       series_found++; // found once cell in a k-1 series
@@ -596,10 +596,12 @@ public class EnricoFermi implements MNKPlayer {
       Tuple<Integer, Integer, MNKCell> result = minimax(opposite(action), depth + 1, a, b);
       board.unmarkCell();
 
-      if(result.first == HALT) break;
+      if (result.first == HALT) break;
 
       double value =
-          action == Action.MAXIMIZE ? (double) result.first / result.second : (double) result.first * result.second;
+          action == Action.MAXIMIZE
+              ? (double) result.first / result.second
+              : (double) result.first * result.second;
 
       if ((action == Action.MAXIMIZE && value > best)
           || (action == Action.MINIMIZE && value < best)) {
@@ -630,8 +632,8 @@ public class EnricoFermi implements MNKPlayer {
     cache.clear();
 
     // clear screen
-    if(clear) {
-      System.out.print("\033[H\033[2J");  
+    if (clear) {
+      System.out.print("\033[H\033[2J");
       System.out.flush();
     }
   }
@@ -669,9 +671,7 @@ public class EnricoFermi implements MNKPlayer {
               + perc
               + "%");
       System.out.println(
-          playerName()
-              + "\t: took " + (System.currentTimeMillis()-start_time)/1000d + "s"
-          );
+          playerName() + "\t: took " + (System.currentTimeMillis() - start_time) / 1000d + "s");
 
       // TODO: remove in prod
       if (FC.length != board.getFreeCells().length) {
