@@ -24,6 +24,9 @@ best: build
 vs: build
 	$(JVM) $(JVMFLAGS) $(MAIN) $(M) $(N) $(K) $(PLAYERS).$(BEST) $(PLAYERS).$(OLD)
 
+vs1: build
+	$(JVM) $(JVMFLAGS) $(MAIN) $(M) $(N) $(K) $(PLAYERS).$(OLD) $(PLAYERS).$(BEST)
+
 test: build
 	$(JVM) $(JVMFLAGS) mnkgame.MNKPlayerTester $(M) $(N) $(K) $(PLAYERS).$(BEST) $(PLAYERS).$(OLD) -v -r $(REPS)
 
