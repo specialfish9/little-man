@@ -209,7 +209,8 @@ public class FrancoRasetti implements MNKPlayer {
 
   private boolean shouldHalt() {
     // TODO: tweak values
-    return (System.currentTimeMillis() - start_time) / 1000.0 > timeout * 0.85; // livin' on the edge
+    return (System.currentTimeMillis() - start_time) / 1000.0
+        > timeout * 0.85; // livin' on the edge
   }
 
   private boolean shouldHalt(long endTime) {
@@ -265,7 +266,8 @@ public class FrancoRasetti implements MNKPlayer {
 
   // evaluate a state (either heuristically or in a deterministic way) regardless
   // of its depth. The depth will be taken into account later to allow for caching
-  private static final int winCutoff = 2; // 2 represents a certain win, and therefore we can cutoff search
+  private static final int winCutoff =
+      2; // 2 represents a certain win, and therefore we can cutoff search
   // values for board evaluation:
   // - negative for heuristics
   // - positive for deterministic
@@ -287,13 +289,19 @@ public class FrancoRasetti implements MNKPlayer {
 
       evaluated++;
       // keep the heuristic evaluation between 1 and -1
-      int res = Math.min(Math.max((int) (Chances.winningChances(board, ME) - Chances.winningChances(board, ENEMY)), -1), 1);
+      int res =
+          Math.min(
+              Math.max(
+                  (int) (Chances.winningChances(board, ME) - Chances.winningChances(board, ENEMY)),
+                  -1),
+              1);
       cache.put(board.toString(), res);
       return res;
     }
   }
 
-  private Tuple<Integer, Integer, Boolean> minimax(Action action, int depth, long endTime, int a, int b) {
+  private Tuple<Integer, Integer, Boolean> minimax(
+      Action action, int depth, long endTime, int a, int b) {
     MNKGameState state = board.gameState();
     if (state != MNKGameState.OPEN || depth == 0)
       return new Tuple<>(evaluate(board), depth, state == MNKGameState.OPEN);
@@ -317,7 +325,8 @@ public class FrancoRasetti implements MNKPlayer {
       return result;
     }
 
-    int best = action == Action.MAXIMIZE ? Integer.MIN_VALUE : Integer.MAX_VALUE, best_depth = depth - 1;
+    int best = action == Action.MAXIMIZE ? Integer.MIN_VALUE : Integer.MAX_VALUE,
+        best_depth = depth - 1;
     boolean is_best_heuristic = false;
     int len = board.getFreeCells().length;
     // TODO: (?) shuffle(series.noseries);
@@ -332,7 +341,8 @@ public class FrancoRasetti implements MNKPlayer {
       // TODO: factor in len-depth
 
       if ((action == Action.MAXIMIZE && result.first > best)
-          || (action == Action.MINIMIZE && result.first < best) || (result.first == best && is_best_heuristic && !result.third)) {
+          || (action == Action.MINIMIZE && result.first < best)
+          || (result.first == best && is_best_heuristic && !result.third)) {
         best = result.first;
         best_depth = result.second;
         is_best_heuristic = result.third;
@@ -348,28 +358,36 @@ public class FrancoRasetti implements MNKPlayer {
 
   public Pair<Integer, Boolean> iterativeDeepeningRating(long endTime) {
     int depth = 1;
-    Pair<Integer, Boolean> result = new Pair<>(Integer.MIN_VALUE,false);
+    Pair<Integer, Boolean> result = new Pair<>(Integer.MIN_VALUE, false);
 
     // as long as we can deepen the tree for this move
-    while(!shouldHalt(endTime)) {
+    while (!shouldHalt(endTime)) {
       // TODO: remove in production
-      if(depth-1 > board.getFreeCells().length)
-        System.out.println("FATAL: iterativeDeepening exceeded allowable depth with a depth of: " + depth);
+      if (depth - 1 > board.getFreeCells().length)
+        System.out.println(
+            "FATAL: iterativeDeepening exceeded allowable depth with a depth of: " + depth);
 
-      Tuple<Integer, Integer, Boolean> val = minimax(Action.MINIMIZE, depth, endTime, Integer.MIN_VALUE, Integer.MAX_VALUE);
-      result = new Pair<>(val.first, val.third); // always keep the last result as it's the most accurate
+      Tuple<Integer, Integer, Boolean> val =
+          minimax(Action.MINIMIZE, depth, endTime, Integer.MIN_VALUE, Integer.MAX_VALUE);
+      result =
+          new Pair<>(val.first, val.third); // always keep the last result as it's the most accurate
 
       // we can breack when we have a tuple of the type (x, x, false) which means
       // the minimax result was completely obtained by non-heuristics values
-      if(val.first == HALT || !val.third || result.first >= winCutoff)
-        break;
+      if (val.first == HALT || !val.third || result.first >= winCutoff) break;
 
       depth++;
     }
 
     // TODO: remove in production
-    if(verbose)
-      System.out.println("minimax for cell " + board.getMarkedCells()[board.getMarkedCells().length-1] + " finished at depth " + depth + " with value: " + result);
+    if (verbose)
+      System.out.println(
+          "minimax for cell "
+              + board.getMarkedCells()[board.getMarkedCells().length - 1]
+              + " finished at depth "
+              + depth
+              + " with value: "
+              + result);
     return result;
   }
 
@@ -381,14 +399,13 @@ public class FrancoRasetti implements MNKPlayer {
 
     MNKCell omc = null; // one move win/loss cell
     if (board.getMarkedCells().length >= (K - 1) * 2
-        && ((omc = findOneMoveWin(MY_WIN)) != null
-            || (omc = findOneMoveLoss(ENEMY_WIN)) != null)) {
+        && ((omc = findOneMoveWin(MY_WIN)) != null || (omc = findOneMoveLoss(ENEMY_WIN)) != null)) {
       series_found++; // found once cell in a k-1 series
       return omc;
     }
 
-    for(MNKCell c : board.getFreeCells()) {
-      long endTime = System.currentTimeMillis()+(timeout*850)/len;
+    for (MNKCell c : board.getFreeCells()) {
+      long endTime = System.currentTimeMillis() + (timeout * 850) / len;
       board.markCell(c.i, c.j);
       Pair<Integer, Boolean> score = iterativeDeepeningRating(endTime);
 
@@ -396,7 +413,8 @@ public class FrancoRasetti implements MNKPlayer {
 
       if (score.first >= winCutoff) return c;
 
-      if (score.first > best_value || (score.first == best_value && is_best_value_heuristic && !score.second)) {
+      if (score.first > best_value
+          || (score.first == best_value && is_best_value_heuristic && !score.second)) {
         best_value = score.first;
         is_best_value_heuristic = score.second;
         best_cell = c;

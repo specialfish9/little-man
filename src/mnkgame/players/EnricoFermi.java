@@ -475,7 +475,8 @@ public class EnricoFermi implements MNKPlayer {
 
   private boolean shouldHalt() {
     // TODO: tweak values
-    return (System.currentTimeMillis() - start_time) / 1000.0 > timeout * 0.98; // livin' on the edge
+    return (System.currentTimeMillis() - start_time) / 1000.0
+        > timeout * 0.98; // livin' on the edge
   }
 
   // finds the first cell needed to copmlete a K-1 streak in any possible direction
@@ -536,7 +537,11 @@ public class EnricoFermi implements MNKPlayer {
     else {
       evaluated++;
       // keep the heuristic evaluation between 1 and -1
-      return (int) Math.min(Math.max(Chances.winningChances(board, ME) - Chances.winningChances(board, ENEMY), -1), 1);
+      return (int)
+          Math.min(
+              Math.max(
+                  Chances.winningChances(board, ME) - Chances.winningChances(board, ENEMY), -1),
+              1);
     }
   }
 
