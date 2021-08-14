@@ -60,9 +60,10 @@ public class FrancoRasetti implements MNKPlayer {
     @Override
     public String toString() {
       String str = "";
-      for(int i = 0; i < M; i++) {
-        for(int j = 0; j < N; j++)
-          str += " " + (B[i][j] == MNKCellState.P1 ? 'x' : (B[i][j] == MNKCellState.P2 ? 'o' : '-'));
+      for (int i = 0; i < M; i++) {
+        for (int j = 0; j < N; j++)
+          str +=
+              " " + (B[i][j] == MNKCellState.P1 ? 'x' : (B[i][j] == MNKCellState.P2 ? 'o' : '-'));
         str += '\n';
       }
       return str;
@@ -193,8 +194,8 @@ public class FrancoRasetti implements MNKPlayer {
     cache.clear();
 
     // clear screen
-    if(clear) {
-      System.out.print("\033[H\033[2J");  
+    if (clear) {
+      System.out.print("\033[H\033[2J");
       System.out.flush();
     }
   }
@@ -214,7 +215,7 @@ public class FrancoRasetti implements MNKPlayer {
   }
 
   private boolean shouldHalt(long endTime) {
-    return System.currentTimeMillis()>=endTime;
+    return System.currentTimeMillis() >= endTime;
   }
 
   // finds the first cell needed to copmlete a K-1 streak in any possible direction
@@ -241,8 +242,7 @@ public class FrancoRasetti implements MNKPlayer {
   // finds the first cell the enemy needs to copmlete a K-1 streak in any possible direction
   private MNKCell findOneMoveLoss(final MNKGameState loss_state) {
     MNKCell random_cell = null;
-    if (board.getFreeCells().length == 1
-        || (random_cell = pickRandomNonClosingCell(null)) == null)
+    if (board.getFreeCells().length == 1 || (random_cell = pickRandomNonClosingCell(null)) == null)
       return null; // cannot check for enemy's next move when it doesn't exist
 
     board.markCell(random_cell.i, random_cell.j);
@@ -258,7 +258,8 @@ public class FrancoRasetti implements MNKPlayer {
       board.unmarkCell();
       return null;
     }
-    MNKGameState result = board.markCell(random_cell.i, random_cell.j); // let the enemy take the random ane
+    MNKGameState result =
+        board.markCell(random_cell.i, random_cell.j); // let the enemy take the random ane
     board.unmarkCell();
     board.unmarkCell();
     return result == loss_state ? random_cell : null;
@@ -266,7 +267,9 @@ public class FrancoRasetti implements MNKPlayer {
 
   // evaluate a state (either heuristically or in a deterministic way) regardless
   // of its depth. The depth will be taken into account later to allow for caching
-  private static final int winCutoff = 2; // 2 represents a certain win, and therefore we can cutoff search
+  private static final int winCutoff =
+      2; // 2 represents a certain win, and therefore we can cutoff search
+
   private int evaluate(final Board board) {
     if (board.gameState() == MY_WIN) return 2;
     else if (board.gameState() == ENEMY_WIN) return -2;
@@ -274,21 +277,21 @@ public class FrancoRasetti implements MNKPlayer {
     else {
       evaluated++;
       // keep the heuristic evaluation between 1 and -1
-      return (int) Math.min(Math.max(Chances.winningChances(board, ME) - Chances.winningChances(board, ENEMY), 1), -1);
+      return (int)
+          Math.min(
+              Math.max(Chances.winningChances(board, ME) - Chances.winningChances(board, ENEMY), 1),
+              -1);
     }
   }
 
   private Pair<Integer, Integer> mem(Pair<Integer, Integer> result) {
-    if(result.second > 1)
-      cache.put(board.toString(), result);
+    if (result.second > 1) cache.put(board.toString(), result);
     return result;
   }
 
   private Pair<Integer, Integer> unmem() {
-    if(cache.containsKey(board.toString()))
-      return cache.get(board.toString());
-    else
-      return null;
+    if (cache.containsKey(board.toString())) return cache.get(board.toString());
+    else return null;
   }
 
   private Pair<Integer, Integer> minimax(Action action, int depth, double a, double b) {
@@ -303,7 +306,7 @@ public class FrancoRasetti implements MNKPlayer {
       // return the evaluation of the current board with the last marked cell
       // as the decision which has brough up to this game state
       return mem(new Pair<>(evaluate(board), depth));
-    } else if(depth == maxDepth)
+    } else if (depth == maxDepth)
       return new Pair<>(evaluate(board), depth); // don't cache heuristic searches
 
     if (shouldHalt()) return new Pair<>(HALT, depth);
@@ -316,8 +319,7 @@ public class FrancoRasetti implements MNKPlayer {
         // if there have been placed
         // enough cells to make one happen
         ((omc = findOneMoveWin(action == Action.MAXIMIZE ? MY_WIN : ENEMY_WIN)) != null
-            || (omc = findOneMoveLoss(action == Action.MAXIMIZE ? ENEMY_WIN : MY_WIN))
-                != null)) {
+            || (omc = findOneMoveLoss(action == Action.MAXIMIZE ? ENEMY_WIN : MY_WIN)) != null)) {
       // if we know we are acting on the root we can just return without
       // evaluating the value of the move, as this won't be used anywhere
       series_found++; // found once cell in a k-1 series
@@ -336,10 +338,12 @@ public class FrancoRasetti implements MNKPlayer {
       Pair<Integer, Integer> result = minimax(opposite(action), depth + 1, a, b);
       board.unmarkCell();
 
-      if(result.first == HALT) break;
+      if (result.first == HALT) break;
 
       double value =
-          action == Action.MAXIMIZE ? (double) result.first / result.second : (double) result.first * result.second;
+          action == Action.MAXIMIZE
+              ? (double) result.first / result.second
+              : (double) result.first * result.second;
 
       if ((action == Action.MAXIMIZE && value > best)
           || (action == Action.MINIMIZE && value < best)) {
@@ -361,19 +365,15 @@ public class FrancoRasetti implements MNKPlayer {
     int result = Integer.MIN_VALUE;
 
     // as long as we can deepen the tree for this move
-    while(true) {
+    while (true) {
       long currTime = System.currentTimeMillis();
-      if(currTime >= endTime || finite)
-        break;
+      if (currTime >= endTime || finite) break;
 
       Pair<Integer, Integer> val = minimax(Action.MINIMIZE, 0, -Double.MAX_VALUE, Double.MAX_VALUE);
 
-      if(val.first == HALT)
-        break;
-      else if(val.first >= winCutoff)
-        return val.first;
-      else
-        result = val.first;
+      if (val.first == HALT) break;
+      else if (val.first >= winCutoff) return val.first;
+      else result = val.first;
 
       maxDepth++;
     }
@@ -384,16 +384,15 @@ public class FrancoRasetti implements MNKPlayer {
     int len = board.getFreeCells().length;
     int best_value = Integer.MIN_VALUE;
     MNKCell best_cell = null;
-    for(MNKCell c : board.getFreeCells()) {
-      long endTime = System.currentTimeMillis()+(timeout*999)/len;
+    for (MNKCell c : board.getFreeCells()) {
+      long endTime = System.currentTimeMillis() + (timeout * 999) / len;
       board.markCell(c.i, c.j);
       int score = iterativeDeepeningRating(endTime);
       board.unmarkCell();
 
-      if(score >= winCutoff)
-        return c;
+      if (score >= winCutoff) return c;
 
-      if(score > best_value) {
+      if (score > best_value) {
         best_value = score;
         best_cell = c;
       }
@@ -412,9 +411,14 @@ public class FrancoRasetti implements MNKPlayer {
 
     try {
       MNKCell result = find();
-          // minimax(Action.MAXIMIZE, 0, -Double.MAX_VALUE, Double.MAX_VALUE);
+      // minimax(Action.MAXIMIZE, 0, -Double.MAX_VALUE, Double.MAX_VALUE);
       System.out.println(
-          playerName() + "\t: visited " + visited + " nodes, ended with result: (x,x," + result + ")");
+          playerName()
+              + "\t: visited "
+              + visited
+              + " nodes, ended with result: (x,x,"
+              + result
+              + ")");
       System.out.println(
           playerName()
               + "\t: found a total of "
@@ -434,9 +438,7 @@ public class FrancoRasetti implements MNKPlayer {
               + perc
               + "%");
       System.out.println(
-          playerName()
-              + "\t: took " + (System.currentTimeMillis()-start_time)/1000d + "s"
-          );
+          playerName() + "\t: took " + (System.currentTimeMillis() - start_time) / 1000d + "s");
 
       // TODO: remove in prod
       if (FC.length != board.getFreeCells().length) {
