@@ -1,4 +1,4 @@
-gVMFLAGS = -cp build
+JVMFLAGS = -cp build
 JCFLAGS = -cp src -d build
 JC = javac
 JVM= java 
@@ -12,8 +12,8 @@ M:=3
 N:=3
 K:=3
 REPS:=5
-BEST:=EnricoFermi
-OLD:=DavidHilbert
+BEST:=FrancoRasetti
+OLD:=EnricoFermi
 
 .SUFFIXES: .java .class
 .PHONY: build

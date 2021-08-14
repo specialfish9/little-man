@@ -14,6 +14,21 @@ import mnkgame.*;
  */
 public class EnricoFermi implements MNKPlayer {
   // {{{ tuple
+  private static class Pair<A, B> {
+    public A first;
+    public B second;
+
+    public Pair(A first, B second) {
+      this.first = first;
+      this.second = second;
+    }
+
+    @Override
+    public String toString() {
+      return "(" + first + "," + second + ")";
+    }
+  }
+
   private static class Tuple<A, B, C> {
     public A first;
     public B second;
@@ -44,11 +59,94 @@ public class EnricoFermi implements MNKPlayer {
       // otherwhise the hashes of the columns would not have been computed correctly
       return Arrays.deepHashCode(this.B);
     }
+
+    @Override
+    public String toString() {
+      String str = "";
+      for(int i = 0; i < M; i++) {
+        for(int j = 0; j < N; j++)
+          str += " " + (B[i][j] == MNKCellState.P1 ? 'x' : (B[i][j] == MNKCellState.P2 ? 'o' : '-'));
+        str += '\n';
+      }
+      return str;
+    }
   }
   // }}}
 
-  // {{{ improved series
-  public void seriesCheck() {}
+  // {{{ streak search
+  private static enum StreakCellState {
+    NONE(0), K3(1), K2(2), K1(3);
+    private final int n;
+    private StreakCellState(int n) {
+      this.n = n;
+    }
+
+    public boolean isBetter(StreakCellState s) {
+      return s.n > this.n;
+    }
+  }
+  private static enum StreakDirection { HORIZONTAL, VERTICAL, DIAGONAL, ANTIDIAGONAL; }
+
+  private static int streak = 0, streak_free = 0;
+  private static MNKCellState streak_enemy;
+  private static StreakCellState[] streak_states = StreakCellState.values();
+  private static StreakCellState[][] SB;
+  private static StreakDirection streakDirection;
+
+  // adds the cell at the given position to the curret streak and computes if
+  // we should care about it. Returns true if the streak has been interrupted
+  private boolean checkStreakCell(int i, int j) {
+    MNKCellState c = board.cellState(i, j);
+    if(c == streak_enemy)
+      return true;
+    else {
+      streak++;
+      if(c == MNKCellState.FREE)
+        streak_free++;
+    }
+
+    if(streak == K && streak_free <= 3)
+      markStreakCell(i, j);
+    return false;
+  }
+
+  private void markStreakCell(int i, int j) {
+    StreakCellState s = streak_states[streak_free];
+    switch(streakDirection) {
+      case HORIZONTAL:
+        for(int x = i; x > i-K; x--)
+          if(SB[x][j].isBetter(s))
+            SB[x][j] = s;
+      break;
+
+      default:
+      break;
+    }
+
+    // decrease the streak by 1 so we count further cells;
+    streak--;
+    streak_free--;
+  }
+
+  private void resetStreak() {
+    streak = streak_free = 0;
+  }
+
+  private void findStreaks(MNKCellState player) {
+    streak_enemy = opponent(player);
+
+    for (int i = 0; i < M; i++)
+      for (int j = 0; j < N; j++)
+        SB[i][j] = StreakCellState.NONE;
+
+    // iterate over all rows
+    for(int i = 0; i < M; i++) {
+      resetStreak();
+      for(int j = 0; j < N; j++)
+        if(checkStreakCell(i, j))
+          resetStreak();
+    }
+  }
   // }}}
 
   // {{{ series
@@ -354,10 +452,11 @@ public class EnricoFermi implements MNKPlayer {
   private long start_time, timeout;
   private int maxDepth;
   private Board board;
-  private HashMap<Board, Integer> cache;
+  private HashMap<String, Pair<Integer, Integer>> cache = new HashMap<>();
 
   // NOTE: profiling
   private static int visited, series_found, evaluated, cache_hits, cache_misses;
+  private static boolean clear = false;
 
   enum Action {
     MINIMIZE,
@@ -374,9 +473,57 @@ public class EnricoFermi implements MNKPlayer {
 
   private boolean shouldHalt() {
     // TODO: tweak values
-    return (System.currentTimeMillis() - start_time) / 1000.0 > timeout * (95.0 / 100.0);
+    return (System.currentTimeMillis() - start_time) / 1000.0 > timeout * 0.95;
   }
 
+  // finds the first cell needed to copmlete a K-1 streak in any possible direction
+  private MNKCell findOneMoveWin(final MNKGameState win_state) {
+    for (MNKCell c : board.getFreeCells()) {
+      MNKGameState result = board.markCell(c.i, c.j);
+      board.unmarkCell();
+      if (result == win_state) return c;
+    }
+    return null;
+  }
+
+  private MNKCell pickRandomNonClosingCell(MNKCell previous) {
+    for (MNKCell c : board.getFreeCells()) {
+      // avoiding the should_halt check here, kinda superflous
+      MNKGameState result = board.markCell(c.i, c.j);
+      board.unmarkCell();
+      if (result == MNKGameState.OPEN
+          && (previous == null || previous.i != c.i || previous.j != c.j)) return c;
+    }
+    return null;
+  }
+
+  // finds the first cell the enemy needs to copmlete a K-1 streak in any possible direction
+  private MNKCell findOneMoveLoss(final MNKGameState loss_state) {
+    MNKCell random_cell = null;
+    if (board.getFreeCells().length == 1
+        || (random_cell = pickRandomNonClosingCell(null)) == null)
+      return null; // cannot check for enemy's next move when it doesn't exist
+
+    board.markCell(random_cell.i, random_cell.j);
+    MNKCell c = findOneMoveWin(loss_state);
+    board.unmarkCell(); // remove the marked random_cell
+    if (c != null) return c;
+
+    // test the random_cell we selected at first. It may be a one-move loss cell
+    // get a new random cell different from the previous and call it safe_cell
+    MNKCell cc = pickRandomNonClosingCell(random_cell);
+    if (board.markCell(cc.i, cc.j) != MNKGameState.OPEN) {
+      // random_cell puts us in a draw, ignore that
+      board.unmarkCell();
+      return null;
+    }
+    MNKGameState result = board.markCell(random_cell.i, random_cell.j); // let the enemy take the random ane
+    board.unmarkCell();
+    board.unmarkCell();
+    return result == loss_state ? random_cell : null;
+  }
+
+  private static final int winCutoff = 2; // 2 represents a certain win, and therefore we can cutoff search
   // evaluate a state (either heuristically or in a deterministic way) regardless
   // of its depth. The depth will be taken into account later to allow for caching
   private int evaluate(final Board board) {
@@ -386,68 +533,73 @@ public class EnricoFermi implements MNKPlayer {
     else {
       evaluated++;
       // keep the heuristic evaluation between 1 and -1
-      double v = Chances.winningChances(board, ME) - Chances.winningChances(board, ENEMY);
-      if (v > 0) return 1;
-      else if (v < 0) return -1;
-      else return 0;
+      return (int) Math.min(Math.max(Chances.winningChances(board, ME) - Chances.winningChances(board, ENEMY), 1), -1);
     }
   }
 
-  private Tuple<Integer, Integer, MNKCell> ret(Tuple<Integer, Integer, MNKCell> result, int depth) {
-    if (depth >= 2 * K - 1) cache.put(board, result.first.intValue());
+  private Tuple<Integer, Integer, MNKCell> mem(Tuple<Integer, Integer, MNKCell> result) {
+    if(result.second > 1)
+      cache.put(board.toString(), new Pair<>(result.first.intValue(), board.getMarkedCells().length));
     return result;
   }
 
+  private Pair<Integer, Integer> unmem() {
+    if(cache.containsKey(board.toString()))
+      return cache.get(board.toString());
+    else
+      return null;
+  }
+
   private Tuple<Integer, Integer, MNKCell> minimax(Action action, int depth, double a, double b) {
-    visited++;
-    // handle the first move by placing ourselves at the center, which is the best postition for any
-    // mnk
-    // TODO: readd as it's correct, just not using it to measure performance
-    // if(board.getMarkedCells().length == 0)
-    //   return new Pair<>(Double.MAX_VALUE, new MNKCell(N/2, M/2, ME));
-    if (cache.containsKey(board)) {
+    Pair<Integer, Integer> cached;
+    if (depth > 0 && (cached = unmem()) != null) {
       cache_hits++;
       return new Tuple<>(
-          cache.get(board), depth, board.getMarkedCells()[board.getMarkedCells().length - 1]);
+          cached.first, cached.second, null);
     } else cache_misses++;
 
     if (board.gameState() != MNKGameState.OPEN || depth == maxDepth)
       // return the evaluation of the current board with the last marked cell
       // as the decision which has brough up to this game state
-      return ret(
+      return mem(
           new Tuple<>(
-              evaluate(board), depth, board.getMarkedCells()[board.getMarkedCells().length - 1]),
-          depth);
+              evaluate(board), depth, board.getMarkedCells()[board.getMarkedCells().length - 1]));
 
     if (shouldHalt()) return new Tuple<>(HALT, depth, board.getFreeCells()[0]);
 
-    Series.Result series = Series.findSeries(board, action == Action.MAXIMIZE ? ME : ENEMY);
+    visited++;
 
-    // instantly pick one-move win/loss prevention moves (k-1 seires, for both players)
-    // as they are certainly the best for the game outcome
-    if (series.k1.size() > 0) {
-      MNKCell c = series.k1.get(0);
+    MNKCell omc = null; // one move win/loss cell
+    if (board.getMarkedCells().length >= (K - 1) * 2
+        && // only check for one-win-moves
+        // if there have been placed
+        // enough cells to make one happen
+        ((omc = findOneMoveWin(action == Action.MAXIMIZE ? MY_WIN : ENEMY_WIN)) != null
+            || (omc = findOneMoveLoss(action == Action.MAXIMIZE ? ENEMY_WIN : MY_WIN))
+                != null)) {
       // if we know we are acting on the root we can just return without
       // evaluating the value of the move, as this won't be used anywhere
-      // if(depth == 0)
-      //   return new Pair<>(0d, c);
+      series_found++; // found once cell in a k-1 series
 
-      board.markCell(c.i, c.j);
+      board.markCell(omc.i, omc.j);
       Tuple<Integer, Integer, MNKCell> result = minimax(opposite(action), depth + 1, a, b);
       board.unmarkCell();
-      return ret(new Tuple<>(result.first, result.second, c), depth);
+      return mem(new Tuple<>(result.first, result.second, omc));
     }
 
     double best = action == Action.MAXIMIZE ? -Double.MAX_VALUE : Double.MAX_VALUE;
     int best_value = Integer.MIN_VALUE, best_depth = depth + 1;
     MNKCell best_cell = null;
     // TODO: (?) shuffle(series.noseries);
-    for (MNKCell c : series.kn) {
+    for (MNKCell c : board.getFreeCells()) {
       board.markCell(c.i, c.j);
       Tuple<Integer, Integer, MNKCell> result = minimax(opposite(action), depth + 1, a, b);
       board.unmarkCell();
+
+      if(result.first == HALT) break;
+
       double value =
-          action == Action.MAXIMIZE ? result.first * result.second : result.first / result.second;
+          action == Action.MAXIMIZE ? (double) result.first / result.second : (double) result.first * result.second;
 
       if ((action == Action.MAXIMIZE && value > best)
           || (action == Action.MINIMIZE && value < best)) {
@@ -459,9 +611,9 @@ public class EnricoFermi implements MNKPlayer {
       if (action == Action.MAXIMIZE && best > a) a = best;
       else if (action == Action.MINIMIZE && best < b) b = best;
 
-      if (b <= a || result.first == HALT) break;
+      if (b <= a) break;
     }
-    return ret(new Tuple<>(best_value, best_depth, best_cell), depth);
+    return mem(new Tuple<>(best_value, best_depth, best_cell));
   }
 
   public void initPlayer(int M, int N, int K, boolean first, int timeout_in_secs) {
@@ -475,14 +627,19 @@ public class EnricoFermi implements MNKPlayer {
     ME = first ? MNKCellState.P1 : MNKCellState.P2;
     ENEMY = first ? MNKCellState.P2 : MNKCellState.P1;
     board = new Board(M, N, K);
-    cache = new HashMap<>();
+    cache.clear();
+
+    // clear screen
+    if(clear) {
+      System.out.print("\033[H\033[2J");  
+      System.out.flush();
+    }
   }
 
   public MNKCell selectCell(MNKCell[] FC, MNKCell[] MC) {
     start_time = System.currentTimeMillis();
-    cache.clear(); // TODO: better clearing method
-    visited = series_found = evaluated = cache_hits = 0;
-    maxDepth = 10; // TODO: dynamic
+    visited = series_found = evaluated = cache_hits = cache_misses = 0;
+    maxDepth = 6; // TODO: dynamic
 
     if (MC.length > 0)
       board.markCell(
@@ -511,6 +668,10 @@ public class EnricoFermi implements MNKPlayer {
               + ". rate: "
               + perc
               + "%");
+      System.out.println(
+          playerName()
+              + "\t: took " + (System.currentTimeMillis()-start_time)/1000d + "s"
+          );
 
       // TODO: remove in prod
       if (FC.length != board.getFreeCells().length) {
