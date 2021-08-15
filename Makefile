@@ -13,7 +13,7 @@ N:=8
 K:=4
 REPS:=5
 BEST:=FrancoRasetti
-OLD:=QuasiRandomPlayer
+OLD:=EnricoFermi
 
 .SUFFIXES: .java .class
 .PHONY: build

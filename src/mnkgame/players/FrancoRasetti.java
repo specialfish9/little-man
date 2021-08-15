@@ -272,7 +272,7 @@ public class FrancoRasetti implements MNKPlayer {
                 zobristReady.set(true);
                 // TODO: remove
                 System.out.println(
-                    "cache ready, in another thread after "
+                    playerName() + "\t: cache ready, in another thread after "
                         + (System.currentTimeMillis() - startTime) / 1000d
                         + "s");
               });
@@ -280,7 +280,7 @@ public class FrancoRasetti implements MNKPlayer {
     } else {
       zobristReady.set(true);
       // TODO: remove
-      System.out.println("cache ready, no thread needed");
+      System.out.println(playerName() + "\t: cache ready, no thread needed");
     }
 
     // TODO: remove in production
