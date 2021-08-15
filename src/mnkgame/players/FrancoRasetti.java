@@ -4,7 +4,6 @@ import java.util.Comparator;
 import java.util.HashMap;
 import java.util.Random;
 import java.util.concurrent.atomic.AtomicBoolean;
-
 import mnkgame.*;
 
 /*
@@ -251,8 +250,8 @@ public class FrancoRasetti implements MNKPlayer {
     zobrist = new long[M * N][2];
     int i;
     for (i = 0; i < zobrist.length; i++) {
-      if(i % 10 == 0 && shouldHalt()) // check every 10 iterations
-        break;
+      if (i % 10 == 0 && shouldHalt()) // check every 10 iterations
+      break;
 
       zobrist[i][0] = r.nextLong();
       zobrist[i][1] = r.nextLong();
@@ -260,18 +259,20 @@ public class FrancoRasetti implements MNKPlayer {
 
     // it did not finish in time, continue in a separate thread
     // NOTE: we can safely modify the zobrist array across threads as it's only
-    // read from after the 
-    if(i != zobrist.length-1) {
+    // read from after the
+    if (i != zobrist.length - 1) {
       final int j = i;
-      Thread t = new Thread(() -> {
-        for (int k = j; k < zobrist.length; k++) {
-          zobrist[k][0] = r.nextLong();
-          zobrist[k][1] = r.nextLong();
-        }
-        zobristReady.set(true);
-        // TODO: remove
-        System.out.println("cache ready, in another thread");
-      });
+      Thread t =
+          new Thread(
+              () -> {
+                for (int k = j; k < zobrist.length; k++) {
+                  zobrist[k][0] = r.nextLong();
+                  zobrist[k][1] = r.nextLong();
+                }
+                zobristReady.set(true);
+                // TODO: remove
+                System.out.println("cache ready, in another thread");
+              });
       t.start();
     } else {
       zobristReady.set(true);
@@ -298,8 +299,7 @@ public class FrancoRasetti implements MNKPlayer {
 
   private boolean shouldHalt() {
     // TODO: tweak values
-    return (System.currentTimeMillis() - startTime) / 1000.0
-        > timeout * 0.90; // livin' on the edge
+    return (System.currentTimeMillis() - startTime) / 1000.0 > timeout * 0.90; // livin' on the edge
   }
 
   private boolean shouldHalt(long endTime) {
@@ -377,13 +377,12 @@ public class FrancoRasetti implements MNKPlayer {
   }
 
   private SearchResult mem(SearchResult result) {
-    if(zobristReady.get())
-      cache.put(board.zobrist(), result);
+    if (zobristReady.get()) cache.put(board.zobrist(), result);
     return result;
   }
 
   private SearchResult unmem() {
-    if(zobristReady.get())
+    if (zobristReady.get())
       return cache.containsKey(board.zobrist()) ? cache.get(board.zobrist()) : null;
     else return null;
   }
