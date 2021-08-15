@@ -1,9 +1,9 @@
 package mnkgame.players;
 
+import java.util.Arrays;
 import java.util.Comparator;
 import java.util.HashMap;
 import java.util.Random;
-import java.util.Arrays;
 import java.util.concurrent.atomic.AtomicBoolean;
 import mnkgame.*;
 
@@ -420,7 +420,7 @@ public class FrancoRasetti implements MNKPlayer {
     visited++;
 
     MNKCell omc = null; // one move win/loss cell
-    if (board.getMarkedCells().length >= 2*K-1
+    if (board.getMarkedCells().length >= 2 * K - 1
         && // only check for one-win-moves
         // if there have been placed
         // enough cells to make one happen
@@ -551,11 +551,7 @@ public class FrancoRasetti implements MNKPlayer {
               + " nodes, ended with result: (x,x,"
               + result
               + ")");
-      System.out.println(
-          playerName()
-              + "\t: cut off "
-              + cutoff
-              + " branches");
+      System.out.println(playerName() + "\t: cut off " + cutoff + " branches");
       System.out.println(
           playerName()
               + "\t: found a total of "
