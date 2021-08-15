@@ -251,7 +251,7 @@ public class FrancoRasetti implements MNKPlayer {
     int i;
     for (i = 0; i < zobrist.length; i++) {
       if (i % 10 == 0 && shouldHalt()) // check every 10 iterations
-        break;
+      break;
 
       zobrist[i][0] = r.nextLong();
       zobrist[i][1] = r.nextLong();
@@ -271,7 +271,10 @@ public class FrancoRasetti implements MNKPlayer {
                 }
                 zobristReady.set(true);
                 // TODO: remove
-                System.out.println("cache ready, in another thread after " + (System.currentTimeMillis() - startTime) / 1000d + "s");
+                System.out.println(
+                    "cache ready, in another thread after "
+                        + (System.currentTimeMillis() - startTime) / 1000d
+                        + "s");
               });
       t.start();
     } else {
@@ -299,7 +302,8 @@ public class FrancoRasetti implements MNKPlayer {
 
   private boolean shouldHalt() {
     // TODO: tweak values
-    return (System.currentTimeMillis() - startTime) / 1000.0 >= timeout * 0.90; // livin' on the edge
+    return (System.currentTimeMillis() - startTime) / 1000.0
+        >= timeout * 0.90; // livin' on the edge
   }
 
   private boolean shouldHalt(long endTime) {
