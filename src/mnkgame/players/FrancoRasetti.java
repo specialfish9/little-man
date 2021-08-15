@@ -3,6 +3,12 @@ package mnkgame.players;
 import java.util.Arrays;
 import java.util.HashMap;
 import java.util.Random;
+import java.util.List;
+import java.util.ArrayList;
+import java.util.TreeSet;
+import java.util.Comparator;
+import java.lang.Comparable;
+import java.util.Iterator;
 import mnkgame.*;
 
 /*
@@ -11,7 +17,7 @@ import mnkgame.*;
  */
 public class FrancoRasetti implements MNKPlayer {
   // {{{ tuple
-  private static class Pair<A, B> {
+  private static class Pair<A extends Comparable<A>, B> {
     public A first;
     public B second;
 
@@ -23,6 +29,13 @@ public class FrancoRasetti implements MNKPlayer {
     @Override
     public String toString() {
       return "(" + first + "," + second + ")";
+    }
+  }
+
+  private static class PairComparator<A extends Comparable<A>, B> implements Comparator<Pair<A, B>> {
+    @Override
+    public int compare(Pair<A, B> c1, Pair<A, B> c2) {
+      return c1.first.compareTo(c2.first);
     }
   }
 
@@ -46,15 +59,33 @@ public class FrancoRasetti implements MNKPlayer {
 
   // {{{ board
   private static class Board extends MNKBoard {
+    private long key = 0;
+
     public Board(int M, int N, int K) {
       super(M, N, K);
     }
 
     @Override
-    public int hashCode() {
-      // deep hash code of the contents of the array as it's multi dimensional,
-      // otherwhise the hashes of the columns would not have been computed correctly
-      return Arrays.deepHashCode(this.B);
+    public MNKGameState markCell(int i, int j) {
+      MNKGameState result = super.markCell(i, j);
+      updateZobrist(i*M+j, currentPlayer);
+      return result;
+    }
+
+    @Override
+    public void unmarkCell() {
+      MNKCell last = MC.get(MC.size()-1);
+      updateZobrist(last.i*M + last.j, currentPlayer);
+      super.unmarkCell();
+    }
+
+    // computes the new/old hash (xor works both ways)
+    private void updateZobrist(int index, int player) {
+      key ^= zobrist[index][player];
+    }
+
+    public long zobrist() {
+      return key;
     }
 
     @Override
@@ -165,18 +196,41 @@ public class FrancoRasetti implements MNKPlayer {
   }
   // }}}
 
-  private final int HALT = 1337;
+  // {{{ search result
+  private static class SearchResult {
+    public double value;
+    public int depth;
+    public boolean heuristic;
+
+    public SearchResult(double value, int depth, boolean heuristic) {
+      this.value = value;
+      this.depth = depth;
+      this.heuristic = heuristic;
+    }
+
+    @Override
+    public String toString() {
+      return "(value=" + value + ",depth=" + depth + ",heuristic=" + heuristic + ")";
+    }
+  }
+  // }}}
+
+  private static final double HALT = Double.MIN_VALUE;
+  private static final double MIN = -Double.MAX_VALUE, MAX = Double.MAX_VALUE;
   private MNKCellState ME, ENEMY;
   private MNKGameState MY_WIN, ENEMY_WIN;
   private int M, N, K;
   private long start_time, timeout;
+  private Random r;
   private Board board;
 
-  private HashMap<String, Integer> cache = new HashMap<>();
+  // transposition table hashed using zobrist method
+  private HashMap<Long, SearchResult> cache = new HashMap<>();
+  private static long[][] zobrist;
 
   // NOTE: profiling
   private static int visited, series_found, evaluated, cache_hits, cache_misses;
-  private static boolean clear = false, verbose = false;
+  private static boolean clear = false, verbose = true;
 
   public void initPlayer(int M, int N, int K, boolean first, int timeoutInSecs) {
     this.M = M;
@@ -188,8 +242,14 @@ public class FrancoRasetti implements MNKPlayer {
     ENEMY_WIN = first ? MNKGameState.WINP2 : MNKGameState.WINP1;
     ME = first ? MNKCellState.P1 : MNKCellState.P2;
     ENEMY = first ? MNKCellState.P2 : MNKCellState.P1;
+    r = new Random(System.currentTimeMillis());
     board = new Board(M, N, K);
     cache.clear();
+    zobrist = new long[M*N][2];
+    for(int i = 0; i < zobrist.length; i++) {
+      zobrist[i][0] = r.nextLong();
+      zobrist[i][1] = r.nextLong();
+    }
 
     // clear screen
     if (clear) {
@@ -266,47 +326,49 @@ public class FrancoRasetti implements MNKPlayer {
 
   // evaluate a state (either heuristically or in a deterministic way) regardless
   // of its depth. The depth will be taken into account later to allow for caching
-  private static final int winCutoff =
-      2; // 2 represents a certain win, and therefore we can cutoff search
-  // values for board evaluation:
-  // - negative for heuristics
-  // - positive for deterministic
-  // - (deterministic) 1 = loss, 2 = draw, 3 = win
-  // - (heuristic) -1 = loss, -2 = draw, -3 = win
-  // we use the oddness of the number and its sign to slightly manipulate it and
-  // use it for alpha/beta values
-  private int evaluate(final Board board) {
+  private static final double winCutoff = 2d; // represents a certain win, and therefore we can cutoff search
+  private double evaluate() {
     // check for draws first, most lickely
     if (board.gameState() == MNKGameState.DRAW) return 0;
-    else if (board.gameState() == MY_WIN) return 1;
-    else if (board.gameState() == ENEMY_WIN) return -1;
+    else if (board.gameState() == MY_WIN) return 2*M*N; // 2 times max depth
+    else if (board.gameState() == ENEMY_WIN) return -2;
     else {
-      // TODO: only check caching here. FIX?
-      if (cache.containsKey(board.toString())) {
-        cache_hits++;
-        return cache.get(board.toString());
-      } else cache_misses++;
-
       evaluated++;
       // keep the heuristic evaluation between 1 and -1
-      int res =
+      double res =
           Math.min(
               Math.max(
                   (int) (Chances.winningChances(board, ME) - Chances.winningChances(board, ENEMY)),
                   -1),
               1);
-      cache.put(board.toString(), res);
       return res;
     }
   }
 
-  private Tuple<Integer, Integer, Boolean> minimax(
-      Action action, int depth, long endTime, int a, int b) {
-    MNKGameState state = board.gameState();
-    if (state != MNKGameState.OPEN || depth == 0)
-      return new Tuple<>(evaluate(board), depth, state == MNKGameState.OPEN);
+  private SearchResult mem(SearchResult result) {
+    cache.put(board.zobrist(), result);
+    return result;
+  }
 
-    if (shouldHalt(endTime)) return new Tuple<>(HALT, depth, true);
+  private SearchResult minimax(
+      Action action, int depth, long endTime, Double a, Double b) {
+    if (board.gameState() != MNKGameState.OPEN) {
+      double value = evaluate();
+      int actualDepth = Math.max(board.getFreeCells().length - depth, 1);
+      return mem(new SearchResult(action == Action.MAXIMIZE ? value / actualDepth : value * actualDepth, depth, false));
+    }
+    // TODO: check conflicts
+    else if(cache.containsKey(board.zobrist()) && cache.get(board.zobrist()).depth == depth) {
+      cache_hits++;
+      return cache.get(board.zobrist());
+    } else cache_misses++;
+
+    if(depth == 0) {
+      double value = evaluate();
+      int actualDepth = Math.max(board.getFreeCells().length - depth, 1);
+      return mem(new SearchResult(action == Action.MAXIMIZE ? value / actualDepth : value * actualDepth, depth, true));
+    }
+    if (shouldHalt(endTime)) return new SearchResult(HALT, depth, true);
 
     visited++;
 
@@ -320,82 +382,48 @@ public class FrancoRasetti implements MNKPlayer {
       series_found++; // found once cell in a k-1 series
 
       board.markCell(omc.i, omc.j);
-      Tuple<Integer, Integer, Boolean> result = minimax(opposite(action), depth - 1, endTime, a, b);
+      // NOTE: must memoize here as oterwhise we'll use the unmarked board hash
+      SearchResult result = mem(minimax(opposite(action), depth - 1, endTime, a, b));
       board.unmarkCell();
       return result;
     }
 
-    int best = action == Action.MAXIMIZE ? Integer.MIN_VALUE : Integer.MAX_VALUE,
-        best_depth = depth - 1;
-    boolean is_best_heuristic = false;
-    int len = board.getFreeCells().length;
+    double best = action == Action.MAXIMIZE ? MIN : MAX;
+    boolean isBestHeuristic = false;
     // TODO: (?) shuffle(series.noseries);
-    for (MNKCell c : board.getFreeCells()) {
+    for(MNKCell c : board.getFreeCells()) {
       board.markCell(c.i, c.j);
-      Tuple<Integer, Integer, Boolean> result = minimax(opposite(action), depth - 1, endTime, a, b);
+      SearchResult result = minimax(opposite(action), depth - 1, endTime, a, b);
       board.unmarkCell();
 
-      if (result.first == HALT) break;
+      if (result.value == HALT) break;
 
-      // refer to the comment on the evaluate function
-      // TODO: factor in len-depth
-
-      if ((action == Action.MAXIMIZE && result.first > best)
-          || (action == Action.MINIMIZE && result.first < best)
-          || (result.first == best && is_best_heuristic && !result.third)) {
-        best = result.first;
-        best_depth = result.second;
-        is_best_heuristic = result.third;
+      if ((action == Action.MAXIMIZE && result.value > best)
+          || (action == Action.MINIMIZE && result.value < best)
+          || (result.value == best && isBestHeuristic && !result.heuristic)) {
+        best = result.value;
+        isBestHeuristic = result.heuristic;
       }
       if (action == Action.MAXIMIZE && best > a) a = best;
       else if (action == Action.MINIMIZE && best < b) b = best;
 
-      // TODO: check back
-      if (b <= a /*|| (action == Action.MAXIMIZE && best_value >= winCutoff)*/) break;
+      if (b <= a) break;
     }
-    return new Tuple<>(best, best_depth, is_best_heuristic);
+    if(best == MAX || best == MIN)
+      return new SearchResult(HALT, depth, true);
+    else
+      return mem(new SearchResult(best, depth, isBestHeuristic));
+    // TODO: careful about the third value. Should it be like this? when we find
+    // a configuration we like that is not heuristic we stop. But maybe others have
+    // been evaluated wrongly with heurisitc, recieved a lower score, and were ignored
+    // They could still be valuable. We wanna investigate that.
   }
 
-  public Pair<Integer, Boolean> iterativeDeepeningRating(long endTime) {
-    int depth = 1;
-    Pair<Integer, Boolean> result = new Pair<>(Integer.MIN_VALUE, false);
-
-    // as long as we can deepen the tree for this move
-    while (!shouldHalt(endTime)) {
-      // TODO: remove in production
-      if (depth - 1 > board.getFreeCells().length)
-        System.out.println(
-            "FATAL: iterativeDeepening exceeded allowable depth with a depth of: " + depth);
-
-      Tuple<Integer, Integer, Boolean> val =
-          minimax(Action.MINIMIZE, depth, endTime, Integer.MIN_VALUE, Integer.MAX_VALUE);
-      result =
-          new Pair<>(val.first, val.third); // always keep the last result as it's the most accurate
-
-      // we can breack when we have a tuple of the type (x, x, false) which means
-      // the minimax result was completely obtained by non-heuristics values
-      if (val.first == HALT || !val.third || result.first >= winCutoff) break;
-
-      depth++;
-    }
-
-    // TODO: remove in production
-    if (verbose)
-      System.out.println(
-          "minimax for cell "
-              + board.getMarkedCells()[board.getMarkedCells().length - 1]
-              + " finished at depth "
-              + depth
-              + " with value: "
-              + result);
-    return result;
-  }
-
-  public MNKCell find() {
+  public MNKCell iterativeDeepening() {
     int len = board.getFreeCells().length;
-    int best_value = Integer.MIN_VALUE;
-    boolean is_best_value_heuristic = false;
-    MNKCell best_cell = null;
+    double best = MIN;
+    boolean isBestHeuristic = false;
+    MNKCell bestCell = null;
 
     MNKCell omc = null; // one move win/loss cell
     if (board.getMarkedCells().length >= (K - 1) * 2
@@ -407,20 +435,55 @@ public class FrancoRasetti implements MNKPlayer {
     for (MNKCell c : board.getFreeCells()) {
       long endTime = System.currentTimeMillis() + (timeout * 850) / len;
       board.markCell(c.i, c.j);
-      Pair<Integer, Boolean> score = iterativeDeepeningRating(endTime);
+      int depth = 1;
+      SearchResult result = new SearchResult(0, 1, false);
 
+      // as long as we can deepen the tree for this move
+      // {{{ deepening
+      while (!shouldHalt(endTime)) {
+        SearchResult latest = minimax(Action.MINIMIZE, depth, endTime, MIN, MAX);
+        if(latest.value == HALT)
+          break;
+
+        result = latest; // always keep the last result as it's the most accurate
+
+        // we can breack when we have a tuple of the type (x, x, false) which means
+        // the minimax result was completely obtained by non-heuristics values
+        // we can also break when we find a state which will grant us certain win
+        if (!result.heuristic || result.value >= winCutoff) break;
+
+        depth++;
+      }
+      // }}}
+
+      // TODO: remove in production
+      if (depth - 1 > board.getFreeCells().length) {
+        throw new Error(
+            "FATAL: iterativeDeepening exceeded allowable depth with a depth of: " + depth);
+      }
+
+
+      // TODO: remove in production
+      if (verbose)
+        System.out.println(
+            "minimax for cell "
+                + board.getMarkedCells()[board.getMarkedCells().length - 1]
+                + " finished at depth "
+                + depth
+                + " with value: " + result.value + ", heuristic: " + result.heuristic);
       board.unmarkCell();
 
-      if (score.first >= winCutoff) return c;
+      // stop the search if we found a winning node
+      if (result.value >= winCutoff) return c;
 
-      if (score.first > best_value
-          || (score.first == best_value && is_best_value_heuristic && !score.second)) {
-        best_value = score.first;
-        is_best_value_heuristic = score.second;
-        best_cell = c;
+      if (result.value > best
+          || (result.value == best && isBestHeuristic && !result.heuristic)) {
+        best = result.value;
+        isBestHeuristic = result.heuristic;
+        bestCell = c;
       }
     }
-    return best_cell;
+    return bestCell;
   }
 
   public MNKCell selectCell(MNKCell[] FC, MNKCell[] MC) {
@@ -432,7 +495,7 @@ public class FrancoRasetti implements MNKPlayer {
           MC[MC.length - 1].i, MC[MC.length - 1].j); // keep track of the opponent's marks
 
     try {
-      MNKCell result = find();
+      MNKCell result = iterativeDeepening();
       System.out.println(
           playerName()
               + "\t: visited "
