@@ -3,6 +3,8 @@ package mnkgame.players;
 import java.util.Comparator;
 import java.util.HashMap;
 import java.util.Random;
+import java.util.concurrent.atomic.AtomicBoolean;
+
 import mnkgame.*;
 
 /*
@@ -105,32 +107,32 @@ public class FrancoRasetti implements MNKPlayer {
     private static double klog;
     private static MNKCellState player;
 
-    private static int curr_streak, curr_streak_free;
+    private static int currStreak, currStreakFree;
 
     private static double checkCell(int i, int j) {
       MNKCellState c = board.cellState(i, j);
       if (c == player || c == MNKCellState.FREE) {
-        curr_streak++;
-        curr_streak_free++;
-      } else curr_streak = curr_streak_free = 0;
+        currStreak++;
+        currStreakFree++;
+      } else currStreak = currStreakFree = 0;
 
       double value = 0;
-      if (curr_streak >= K) {
-        // we know for a fact that curr_stack_free > 0, oterwhise this method
+      if (currStreak >= K) {
+        // we know for a fact that currStreakFree > 0, oterwhise this method
         // won't be called as the evaluation can be done in a deterministic way
-        value = Math.log(curr_streak / curr_streak_free) / klog;
-        // should be 1 when curr_streak_free == 1 which is the best value and
+        value = Math.log(currStreak / currStreakFree) / klog;
+        // should be 1 when currStreakFree == 1 which is the best value and
         // the greatest chance to win (only need to mark 1 cell) whereas
-        // should get closer to 0 as curr_streak_free increases. It's effectively
-        // log_k(curr_streak/curr_streak_free)
-        curr_streak--;
-        curr_streak_free--;
+        // should get closer to 0 as currStreakFree increases. It's effectively
+        // log_k(currStreak/currStreakFree)
+        currStreak--;
+        currStreakFree--;
       }
       return value;
     }
 
     private static void reset() {
-      curr_streak = curr_streak_free = 0;
+      currStreak = currStreakFree = 0;
     }
 
     // Returns the number of possible series the player could streak to win the game
@@ -145,15 +147,15 @@ public class FrancoRasetti implements MNKPlayer {
       double chance = 0;
 
       // check all columns
-      for (int i = 0; i < M && M - i + curr_streak >= K; i++) {
+      for (int i = 0; i < M && M - i + currStreak >= K; i++) {
         reset();
-        for (int j = 0; j < N && N - j + curr_streak >= K; j++) chance += checkCell(i, j);
+        for (int j = 0; j < N && N - j + currStreak >= K; j++) chance += checkCell(i, j);
       }
 
       // check all rows
-      for (int j = 0; j < N && N - j + curr_streak >= K; j++) {
+      for (int j = 0; j < N && N - j + currStreak >= K; j++) {
         reset();
-        for (int i = 0; i < M && M - i + curr_streak >= K; i++) chance += checkCell(i, j);
+        for (int i = 0; i < M && M - i + currStreak >= K; i++) chance += checkCell(i, j);
       }
 
       // iterate over all diagonals
@@ -215,17 +217,18 @@ public class FrancoRasetti implements MNKPlayer {
   private MNKCellState ME, ENEMY;
   private MNKGameState MY_WIN, ENEMY_WIN;
   private int M, N, K;
-  private long start_time, timeout;
+  private long startTime, timeout;
   private Random r;
   private Board board;
 
   // transposition table hashed using zobrist method
   private HashMap<Long, SearchResult> cache = new HashMap<>();
+  private AtomicBoolean zobristReady = new AtomicBoolean(false);
   private static long[][] zobrist;
 
   // NOTE: profiling
-  private static int visited, series_found, evaluated, cache_hits, cache_misses;
-  private static boolean clear = false, verbose = true;
+  private static int visited, seriesFound, evaluated, cacheHits, cacheMisses;
+  private static boolean clear = false, verbose = false;
 
   public void initPlayer(int M, int N, int K, boolean first, int timeoutInSecs) {
     this.M = M;
@@ -240,12 +243,43 @@ public class FrancoRasetti implements MNKPlayer {
     r = new Random(System.currentTimeMillis());
     board = new Board(M, N, K);
     cache.clear();
+
+    // continue filling the table for the zobrist hashing function in another
+    // thread as to avoid failing initialization
+    zobristReady.set(false);
+    startTime = System.currentTimeMillis();
     zobrist = new long[M * N][2];
-    for (int i = 0; i < zobrist.length; i++) {
+    int i;
+    for (i = 0; i < zobrist.length; i++) {
+      if(i % 10 == 0 && shouldHalt()) // check every 10 iterations
+        break;
+
       zobrist[i][0] = r.nextLong();
       zobrist[i][1] = r.nextLong();
     }
 
+    // it did not finish in time, continue in a separate thread
+    // NOTE: we can safely modify the zobrist array across threads as it's only
+    // read from after the 
+    if(i != zobrist.length-1) {
+      final int j = i;
+      Thread t = new Thread(() -> {
+        for (int k = j; k < zobrist.length; k++) {
+          zobrist[k][0] = r.nextLong();
+          zobrist[k][1] = r.nextLong();
+        }
+        zobristReady.set(true);
+        // TODO: remove
+        System.out.println("cache ready, in another thread");
+      });
+      t.start();
+    } else {
+      zobristReady.set(true);
+      // TODO: remove
+      System.out.println("cache ready, no thread needed");
+    }
+
+    // TODO: remove in production
     // clear screen
     if (clear) {
       System.out.print("\033[H\033[2J");
@@ -264,8 +298,8 @@ public class FrancoRasetti implements MNKPlayer {
 
   private boolean shouldHalt() {
     // TODO: tweak values
-    return (System.currentTimeMillis() - start_time) / 1000.0
-        > timeout * 0.85; // livin' on the edge
+    return (System.currentTimeMillis() - startTime) / 1000.0
+        > timeout * 0.90; // livin' on the edge
   }
 
   private boolean shouldHalt(long endTime) {
@@ -273,18 +307,18 @@ public class FrancoRasetti implements MNKPlayer {
   }
 
   // finds the first cell needed to copmlete a K-1 streak in any possible direction
-  private MNKCell findOneMoveWin(final MNKGameState win_state) {
+  private MNKCell findOneMoveWin(final MNKGameState winState) {
     for (MNKCell c : board.getFreeCells()) {
       MNKGameState result = board.markCell(c.i, c.j);
       board.unmarkCell();
-      if (result == win_state) return c;
+      if (result == winState) return c;
     }
     return null;
   }
 
   private MNKCell pickRandomNonClosingCell(MNKCell previous) {
     for (MNKCell c : board.getFreeCells()) {
-      // avoiding the should_halt check here, kinda superflous
+      // avoiding the shouldHalt check here, kinda superflous
       MNKGameState result = board.markCell(c.i, c.j);
       board.unmarkCell();
       if (result == MNKGameState.OPEN
@@ -294,29 +328,29 @@ public class FrancoRasetti implements MNKPlayer {
   }
 
   // finds the first cell the enemy needs to copmlete a K-1 streak in any possible direction
-  private MNKCell findOneMoveLoss(final MNKGameState loss_state) {
-    MNKCell random_cell = null;
-    if (board.getFreeCells().length == 1 || (random_cell = pickRandomNonClosingCell(null)) == null)
+  private MNKCell findOneMoveLoss(final MNKGameState lossState) {
+    MNKCell randomCell = null;
+    if (board.getFreeCells().length == 1 || (randomCell = pickRandomNonClosingCell(null)) == null)
       return null; // cannot check for enemy's next move when it doesn't exist
 
-    board.markCell(random_cell.i, random_cell.j);
-    MNKCell c = findOneMoveWin(loss_state);
-    board.unmarkCell(); // remove the marked random_cell
+    board.markCell(randomCell.i, randomCell.j);
+    MNKCell c = findOneMoveWin(lossState);
+    board.unmarkCell(); // remove the marked randomCell
     if (c != null) return c;
 
-    // test the random_cell we selected at first. It may be a one-move loss cell
-    // get a new random cell different from the previous and call it safe_cell
-    MNKCell cc = pickRandomNonClosingCell(random_cell);
+    // test the randomCell we selected at first. It may be a one-move loss cell
+    // get a new random cell different from the previous and call it cc
+    MNKCell cc = pickRandomNonClosingCell(randomCell);
     if (board.markCell(cc.i, cc.j) != MNKGameState.OPEN) {
-      // random_cell puts us in a draw, ignore that
+      // randomCell puts us in a draw, ignore that
       board.unmarkCell();
       return null;
     }
     MNKGameState result =
-        board.markCell(random_cell.i, random_cell.j); // let the enemy take the random ane
+        board.markCell(randomCell.i, randomCell.j); // let the enemy take the random ane
     board.unmarkCell();
     board.unmarkCell();
-    return result == loss_state ? random_cell : null;
+    return result == lossState ? randomCell : null;
   }
 
   // evaluate a state (either heuristically or in a deterministic way) regardless
@@ -343,8 +377,15 @@ public class FrancoRasetti implements MNKPlayer {
   }
 
   private SearchResult mem(SearchResult result) {
-    cache.put(board.zobrist(), result);
+    if(zobristReady.get())
+      cache.put(board.zobrist(), result);
     return result;
+  }
+
+  private SearchResult unmem() {
+    if(zobristReady.get())
+      return cache.containsKey(board.zobrist()) ? cache.get(board.zobrist()) : null;
+    else return null;
   }
 
   private SearchResult minimax(Action action, int depth, long endTime, Double a, Double b) {
@@ -356,10 +397,11 @@ public class FrancoRasetti implements MNKPlayer {
               action == Action.MAXIMIZE ? value / actualDepth : value * actualDepth, depth, false));
     }
     // TODO: check conflicts
-    else if (cache.containsKey(board.zobrist()) && cache.get(board.zobrist()).depth == depth) {
-      cache_hits++;
-      return cache.get(board.zobrist());
-    } else cache_misses++;
+    SearchResult cached;
+    if ((cached = unmem()) != null && cached.depth == depth) {
+      cacheHits++;
+      return cached;
+    } else cacheMisses++;
 
     if (depth == 0) {
       double value = evaluate();
@@ -379,7 +421,7 @@ public class FrancoRasetti implements MNKPlayer {
         // enough cells to make one happen
         ((omc = findOneMoveWin(action == Action.MAXIMIZE ? MY_WIN : ENEMY_WIN)) != null
             || (omc = findOneMoveLoss(action == Action.MAXIMIZE ? ENEMY_WIN : MY_WIN)) != null)) {
-      series_found++; // found once cell in a k-1 series
+      seriesFound++; // found once cell in a k-1 series
 
       board.markCell(omc.i, omc.j);
       // NOTE: must memoize here as oterwhise we'll use the unmarked board hash
@@ -426,12 +468,12 @@ public class FrancoRasetti implements MNKPlayer {
     MNKCell omc = null; // one move win/loss cell
     if (board.getMarkedCells().length >= (K - 1) * 2
         && ((omc = findOneMoveWin(MY_WIN)) != null || (omc = findOneMoveLoss(ENEMY_WIN)) != null)) {
-      series_found++; // found once cell in a k-1 series
+      seriesFound++; // found once cell in a k-1 series
       return omc;
     }
 
     for (MNKCell c : board.getFreeCells()) {
-      long endTime = System.currentTimeMillis() + (timeout * 850) / len;
+      long endTime = System.currentTimeMillis() + (timeout * 900) / len;
       board.markCell(c.i, c.j);
       int depth = 1;
       SearchResult result = new SearchResult(0, 1, false);
@@ -485,8 +527,8 @@ public class FrancoRasetti implements MNKPlayer {
   }
 
   public MNKCell selectCell(MNKCell[] FC, MNKCell[] MC) {
-    start_time = System.currentTimeMillis();
-    visited = series_found = evaluated = cache_hits = cache_misses = 0;
+    startTime = System.currentTimeMillis();
+    visited = seriesFound = evaluated = cacheHits = cacheMisses = 0;
 
     if (MC.length > 0)
       board.markCell(
@@ -504,23 +546,23 @@ public class FrancoRasetti implements MNKPlayer {
       System.out.println(
           playerName()
               + "\t: found a total of "
-              + series_found
+              + seriesFound
               + " free cells in series (up to k-3)");
       System.out.println(playerName() + "\t: heuristically evaluated " + evaluated + " boards");
-      int perc = (int) (((double) cache_hits / (cache_misses + cache_hits)) * 100);
+      int perc = (int) (((double) cacheHits / (cacheMisses + cacheHits)) * 100);
       System.out.println(
           playerName()
               + "\t: cached "
               + cache.size()
               + " elements, hit: "
-              + cache_hits
+              + cacheHits
               + ", misses: "
-              + cache_misses
+              + cacheMisses
               + ". rate: "
               + perc
               + "%");
       System.out.println(
-          playerName() + "\t: took " + (System.currentTimeMillis() - start_time) / 1000d + "s");
+          playerName() + "\t: took " + (System.currentTimeMillis() - startTime) / 1000d + "s");
 
       // TODO: remove in prod
       if (FC.length != board.getFreeCells().length) {
