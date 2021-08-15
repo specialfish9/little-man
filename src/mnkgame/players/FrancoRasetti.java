@@ -556,7 +556,7 @@ public class FrancoRasetti implements MNKPlayer {
           playerName()
               + "\t: found a total of "
               + seriesFound
-              + " free cells in series (up to k-3)");
+              + " free cells in series (up to k-1)");
       System.out.println(playerName() + "\t: heuristically evaluated " + evaluated + " boards");
       int perc = (int) (((double) cacheHits / (cacheMisses + cacheHits)) * 100);
       System.out.println(
