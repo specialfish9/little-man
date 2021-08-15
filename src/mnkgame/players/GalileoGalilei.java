@@ -68,12 +68,14 @@ public class GalileoGalilei implements MNKPlayer {
       key = nextZobrist(last.i, last.j);
     }
 
-    // computes the hash for a new mark (xor works both ways, but pay attention to the currentPlayer)
+    // computes the hash for a new mark (xor works both ways, but pay attention to the
+    // currentPlayer)
     public long nextZobrist(int i, int j) {
-      return key ^ zobrist[i * M + j][(currentPlayer+1)%2];
+      return key ^ zobrist[i * M + j][(currentPlayer + 1) % 2];
     }
 
-    // computes the hash for the removal of the last mark (xor works both ways, but we gotta change the currentPlayer)
+    // computes the hash for the removal of the last mark (xor works both ways, but we gotta change
+    // the currentPlayer)
     public long prevZobrist(int i, int j) {
       return key ^ zobrist[i * M + j][currentPlayer];
     }
@@ -109,8 +111,7 @@ public class GalileoGalilei implements MNKPlayer {
       MNKCellState c = board.cellState(i, j);
       if (c == player || c == MNKCellState.FREE) {
         currStreak++;
-        if(c == MNKCellState.FREE)
-          currStreakFree++;
+        if (c == MNKCellState.FREE) currStreakFree++;
       } else reset();
 
       double value = 0;
@@ -148,8 +149,7 @@ public class GalileoGalilei implements MNKPlayer {
       for (int i = 0; i < M; i++) {
         reset();
         for (int j = 0; j < N; j++) {
-          if(N - j + currStreak < K)
-            break;
+          if (N - j + currStreak < K) break;
 
           chance += checkCell(i, j);
         }
@@ -159,8 +159,7 @@ public class GalileoGalilei implements MNKPlayer {
       for (int j = 0; j < N; j++) {
         reset();
         for (int i = 0; i < M; i++) {
-          if(M - i + currStreak < K)
-            break;
+          if (M - i + currStreak < K) break;
 
           chance += checkCell(i, j);
         }
@@ -329,7 +328,7 @@ public class GalileoGalilei implements MNKPlayer {
     // test the randomCell we selected at first. It may be a one-move loss cell
     // get a new random cell different from the previous and call it cc
     MNKCell cc = pickRandomNonClosingCell(randomCell);
-    if(cc == null) return null; // the enemy has no other moves
+    if (cc == null) return null; // the enemy has no other moves
     if (board.markCell(cc.i, cc.j) != MNKGameState.OPEN) {
       // randomCell puts us in a draw, ignore that
       board.unmarkCell();
@@ -351,14 +350,17 @@ public class GalileoGalilei implements MNKPlayer {
     else {
       evaluated++;
       // keep the heuristic evaluation between 1 and -1
-      double res = Math.min(Math.max(Chances.winningChances(board, ME) - Chances.winningChances(board, ENEMY), -1), 1);
+      double res =
+          Math.min(
+              Math.max(
+                  Chances.winningChances(board, ME) - Chances.winningChances(board, ENEMY), -1),
+              1);
       return res;
     }
   }
 
   private double mem(double result, int depth, MNKCell c) {
-    if(depth == maxDepth)
-      bestCell = c;
+    if (depth == maxDepth) bestCell = c;
 
     if (zobristReady.get()) cache.put(board.zobrist(), new Pair<>(result, depth));
     return result;
@@ -421,7 +423,7 @@ public class GalileoGalilei implements MNKPlayer {
       // NOTE: must memoize here as oterwhise we'll use the unmarked board hash
       // treat this as a negascout certain best move (which we know it is) in
       // order to evaluate this with a small alpha-beta frame and speed up the process
-      double score = -negascout(depth-1, -b, -a, -color);
+      double score = -negascout(depth - 1, -b, -a, -color);
       board.unmarkCell();
       return mem(score, depth, omc);
     }
@@ -432,11 +434,11 @@ public class GalileoGalilei implements MNKPlayer {
     double[] ratings = new double[cells.length];
     for (int i = 0; i < cells.length; i++) {
       long hash = board.nextZobrist(cells[i].i, cells[i].j);
-      if(cache.containsKey(hash)) {
+      if (cache.containsKey(hash)) {
         Pair<Double, Integer> value = cache.get(hash);
         // -2 because the previous depth was lower by 1 and there were the children
         // of the previous search so another -1 is needed
-        ratings[i] = value.second == depth-2 ? -color*value.first : 0;
+        ratings[i] = value.second == depth - 2 ? -color * value.first : 0;
       } else ratings[i] = 0;
     }
 
@@ -446,9 +448,8 @@ public class GalileoGalilei implements MNKPlayer {
       MNKCell c = cells[i];
 
       board.markCell(c.i, c.j);
-      double score = -negascout(depth-1, -b, -a, -color);
-      if(score > a && score < b && i > 0)
-        score = -negascout(depth-1, -b, -score, -color);
+      double score = -negascout(depth - 1, -b, -a, -color);
+      if (score > a && score < b && i > 0) score = -negascout(depth - 1, -b, -score, -color);
       board.unmarkCell();
 
       if (score == HALT) break;
@@ -457,7 +458,7 @@ public class GalileoGalilei implements MNKPlayer {
         a = score;
       }
 
-      if(a >= b) {
+      if (a >= b) {
         cutoff += board.getFreeCells().length - 1 - i;
         break;
       }
