@@ -8,10 +8,11 @@ CLASSES=$(wildcard *.java)
 PKG=mnkgame
 MAIN=$(PKG).MNKGame 
 PLAYERS=$(PKG).players
-M:=3
-N:=3
+M:=4
+N:=4
 K:=3
 REPS:=5
+TIME:=2
 BEST:=GalileoGalilei
 OLD:=FrancoRasetti
 
@@ -34,10 +35,10 @@ test1: build
 	$(JVM) $(JVMFLAGS) mnkgame.MNKPlayerTester $(M) $(N) $(K) $(PLAYERS).$(OLD) $(PLAYERS).$(BEST) -v -r $(REPS)
 
 constrained: build
-	$(JVM) $(JVMFLAGS) mnkgame.MNKPlayerTester $(M) $(N) $(K) $(PLAYERS).$(OLD) $(PLAYERS).$(BEST) -v -t 2 -r $(REPS)
+	$(JVM) $(JVMFLAGS) mnkgame.MNKPlayerTester $(M) $(N) $(K) $(PLAYERS).$(OLD) $(PLAYERS).$(BEST) -v -t $(TIME) -r $(REPS)
 
 constrained1: build
-	$(JVM) $(JVMFLAGS) mnkgame.MNKPlayerTester $(M) $(N) $(K) $(PLAYERS).$(BEST) $(PLAYERS).$(OLD) -v -t 2 -r $(REPS)
+	$(JVM) $(JVMFLAGS) mnkgame.MNKPlayerTester $(M) $(N) $(K) $(PLAYERS).$(BEST) $(PLAYERS).$(OLD) -v -t $(TIME) -r $(REPS)
 
 franco: build
 	$(JVM) $(JVMFLAGS) $(MAIN) $(M) $(N) $(K) $(PLAYERS).FrancoRasetti

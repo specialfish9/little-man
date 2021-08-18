@@ -9,7 +9,7 @@ import java.util.Random;
 import mnkgame.*;
 
 /*
- * Minimax + Alpha Beta + k-1,k-2,k-3 heuristics + euristic evaluation at fixed-depth
+ * Minimax + Alpha Beta + k-1 heuristics + euristic evaluation at fixed-depth
  * + caching (memoization)
  */
 public class EnricoFermi implements MNKPlayer {
