@@ -200,7 +200,8 @@ public class GalileoGalilei implements MNKPlayer {
 
   private static final double HALT = Double.MIN_VALUE;
   private static final double MIN = -100, MAX = 2;
-  private static final double winCutoff = MAX; // represents a certain win, and therefore we can cutoff search
+  private static final double winCutoff =
+      MAX; // represents a certain win, and therefore we can cutoff search
 
   private MNKCellState ME, ENEMY;
   private MNKGameState MY_WIN, ENEMY_WIN;
@@ -357,7 +358,7 @@ public class GalileoGalilei implements MNKPlayer {
   private double evaluate(int depth) {
     // check for draws first, most lickely
     if (board.gameState() == MNKGameState.DRAW) return 0;
-    else if (board.gameState() == MY_WIN) return .5d + 1/depth;
+    else if (board.gameState() == MY_WIN) return .5d + 1 / depth;
     else if (board.gameState() == ENEMY_WIN) return -1 - (-.25 * depth);
     else {
       evaluated++;
@@ -398,10 +399,10 @@ public class GalileoGalilei implements MNKPlayer {
     double entry[] = {0, 0, -1, 0, 0}; // [value, depth, index, lower, upper]
     // only use a cached value if it was computed with the same depth - and
     // therefore the same ammount of knowledge (as this call) could be extracted.
-    if(cache.containsKey(board.zobrist()) && (entry = cache.get(board.zobrist()))[1] >= depth) {
+    if (cache.containsKey(board.zobrist()) && (entry = cache.get(board.zobrist()))[1] >= depth) {
       cacheHits++;
-      if(entry[3] >= beta) return entry[3];
-      if(entry[4] <= alpha) return entry[4];
+      if (entry[3] >= beta) return entry[3];
+      if (entry[4] <= alpha) return entry[4];
       alpha = Math.max(alpha, entry[3]);
       beta = Math.min(beta, entry[4]);
     } else cacheMisses++;
@@ -413,14 +414,14 @@ public class GalileoGalilei implements MNKPlayer {
       // take into account the depth of the move when computing the score
       // expression:
       // color (1 for ME, -1 for ENEMY) * value (/ for ME, * for ENEMY) relativeDepth
-      // a = color*evaluate() * (color < 0 ? 1d/Math.max(maxDepth-depth, 1) : Math.max(maxDepth-depth, 1));
-      a = evaluate(maxDepth-depth);
-    else if(shouldHalt())
-      a = HALT;
+      // a = color*evaluate() * (color < 0 ? 1d/Math.max(maxDepth-depth, 1) :
+      // Math.max(maxDepth-depth, 1));
+      a = evaluate(maxDepth - depth);
+    else if (shouldHalt()) a = HALT;
     else if (board.getMarkedCells().length >= (K - 1) * 2
         && ((bc = findOneMoveWin(MY_WIN)) != null || (bc = findOneMoveLoss(ENEMY_WIN)) != null)) {
       board.markCell(bc.i, bc.j);
-      a = -pvs(depth-1, -beta, -alpha, -color);
+      a = -pvs(depth - 1, -beta, -alpha, -color);
       board.unmarkCell();
     } else {
       // {{{ sorting based on previous evaluations
@@ -431,8 +432,7 @@ public class GalileoGalilei implements MNKPlayer {
         if (cache.containsKey(hash)) {
           double values[] = cache.get(hash);
           ratings[i] = values[1] >= depth ? -color * values[0] : 0;
-          if(ratings[i] != 0)
-            cacheHits++;
+          if (ratings[i] != 0) cacheHits++;
         } else {
           ratings[i] = 0;
           cacheMisses++;
@@ -460,8 +460,8 @@ public class GalileoGalilei implements MNKPlayer {
           a = t;
           bc = c;
         }
-        if ( a >= b ) {
-          cutoff += board.getFreeCells().length-i;
+        if (a >= b) {
+          cutoff += board.getFreeCells().length - i;
           break;
         }
         b = a + 1; // null window for the next call
@@ -489,9 +489,9 @@ public class GalileoGalilei implements MNKPlayer {
     int cell[] = {0, 0};
 
     maxDepth = 1;
-    while(!shouldHalt() && maxDepth < len) {
+    while (!shouldHalt() && maxDepth < len) {
       double latest = pvs(maxDepth, MIN, MAX, 1);
-      if(Math.abs(latest) == HALT) break;
+      if (Math.abs(latest) == HALT) break;
 
       value = latest;
       int i = (int) cache.get(board.zobrist())[2];
@@ -506,7 +506,13 @@ public class GalileoGalilei implements MNKPlayer {
         System.out.println(
             "minimax went to depth "
                 + maxDepth
-                + " with value: (" + value + ", (" + cell[0] +"," + cell[1]+ "))");
+                + " with value: ("
+                + value
+                + ", ("
+                + cell[0]
+                + ","
+                + cell[1]
+                + "))");
 
       maxDepth++;
     }
