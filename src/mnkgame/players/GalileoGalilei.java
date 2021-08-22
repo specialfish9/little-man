@@ -156,10 +156,13 @@ public class GalileoGalilei implements MNKPlayer {
       else if (state == MNKCellState.P2) queueP2++;
       queue.add(state);
       if (queueP1 + queueFree == K) return (me == MNKCellState.P1 ? 1 : -1) * (1d * queueP1 / K);
-      else if (queueP2 + queueFree == K) return (me == MNKCellState.P2 ? 1 : -1) * (1d * queueP2 / K);
-      // else if(queueP1 == 1 && queueP2+queueFree+1 == K) return (me == MNKCellState.P2 ? 1 : -1) * (1d * queueP2 / K);
+      else if (queueP2 + queueFree == K)
+        return (me == MNKCellState.P2 ? 1 : -1) * (1d * queueP2 / K);
+      // else if(queueP1 == 1 && queueP2+queueFree+1 == K) return (me == MNKCellState.P2 ? 1 : -1) *
+      // (1d * queueP2 / K);
       else return 0;
-      // else if(queueFree == K) return 0; // TODO: value empty streaks more than filled useless ones
+      // else if(queueFree == K) return 0; // TODO: value empty streaks more than filled useless
+      // ones
     }
 
     @Override
@@ -201,7 +204,7 @@ public class GalileoGalilei implements MNKPlayer {
     this.N = N;
     this.K = K;
     this.minMN = Math.min(M, N);
-    this.winCutoff = MAX/(M*N);
+    this.winCutoff = MAX / (M * N);
     timeout = timeoutInSecs;
     startTime = System.currentTimeMillis();
     MY_WIN = first ? MNKGameState.WINP1 : MNKGameState.WINP2;
@@ -377,12 +380,11 @@ public class GalileoGalilei implements MNKPlayer {
     minimaxed++;
     if (board.gameState() != MNKGameState.OPEN || depth <= 0) {
       a = evaluate(maxDepth - depth);
-      if(depth <= 0)
-        System.out.println(board + " -----> " + a);
+      if (depth <= 0) System.out.println(board + " -----> " + a);
     } else if (shouldHalt()) a = HALT;
     else if (board.getMarkedCells().length >= (K - 1) * 2
         && ((bc = findOneMoveWin(MY_WIN)) != null || (bc = findOneMoveLoss(ENEMY_WIN)) != null)) {
-      seriesFound++; 
+      seriesFound++;
       board.markCell(bc.i, bc.j);
       a = -pvs(depth - 1, -beta, -alpha, -color);
       board.unmarkCell();
