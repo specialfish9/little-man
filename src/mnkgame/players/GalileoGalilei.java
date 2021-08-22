@@ -48,7 +48,7 @@ public class GalileoGalilei implements MNKPlayer {
     private int minMN;
     private final MNKCellState me;
     private long key = 0;
-    private int queueP1 = 0, queueP2, queueFree;
+    private int queueP1 = 0, queueP2 = 0, queueFree = 0;
     private Queue<MNKCellState> queue = new LinkedList<>();
     private Stack<Double> previousValues = new Stack<>();
     private double value = 0;
@@ -112,16 +112,19 @@ public class GalileoGalilei implements MNKPlayer {
       double value = 0;
  
       // column
+      queueClear();
       for(int ii = Math.max(i-K, 0); ii < Math.min(i+K, M-1); ii++)
         value += weightCell(B[ii][j]);
 
       // row
+      queueClear();
       for(int jj = Math.max(j-K, 0); jj < Math.min(j+K, N-1); jj++)
         value += weightCell(B[i][jj]);
 
       // diagonal
       int ku = Math.min(K, Math.min(i, j)), kl = Math.min(K, Math.min(M-1-i, N-1-j)),
           ii = i-ku, jj = j-ku, iim = i+kl, jjm = j+kl;
+      queueClear();
       for(; ii < iim && jj < jjm; ii++, jj++)
         value += weightCell(B[ii][jj]);
 
@@ -135,6 +138,11 @@ public class GalileoGalilei implements MNKPlayer {
         queuePop();
 
       return queuePush(c);
+    }
+
+    private void queueClear() {
+      queueP1 = queueP2 = queueFree = 0;
+      queue.clear();
     }
 
     private void queuePop() {
@@ -357,11 +365,6 @@ public class GalileoGalilei implements MNKPlayer {
       System.out.print("\033[H\033[2J");
       System.out.flush();
     }
-  }
-
-  enum Action {
-    MINIMIZE,
-    MAXIMIZE
   }
 
   private static Action opposite(final Action a) {
