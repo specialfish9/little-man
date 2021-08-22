@@ -3,8 +3,8 @@ package mnkgame.players;
 import java.util.HashMap;
 import java.util.LinkedList;
 import java.util.Queue;
-import java.util.Stack;
 import java.util.Random;
+import java.util.Stack;
 import java.util.concurrent.atomic.AtomicBoolean;
 import mnkgame.*;
 
@@ -59,9 +59,7 @@ public class GalileoGalilei implements MNKPlayer {
       this.minMN = minMN;
       this.me = me;
       this.V = new double[M][N];
-      for(int i = 0; i < M; i++)
-        for(int j = 0; j < M; j++)
-          this.V[i][j] = 0;
+      for (int i = 0; i < M; i++) for (int j = 0; j < M; j++) this.V[i][j] = 0;
     }
 
     @Override
@@ -107,32 +105,35 @@ public class GalileoGalilei implements MNKPlayer {
     public long zobrist() {
       return key;
     }
-    
+
     private double eval(int i, int j) {
       double value = 0;
- 
+
       // column
-      for(int ii = Math.max(i-K, 0); ii < Math.min(i+K, M-1); ii++)
+      for (int ii = Math.max(i - K, 0); ii < Math.min(i + K, M - 1); ii++)
         value += weightCell(B[ii][j]);
 
       // row
-      for(int jj = Math.max(j-K, 0); jj < Math.min(j+K, N-1); jj++)
+      for (int jj = Math.max(j - K, 0); jj < Math.min(j + K, N - 1); jj++)
         value += weightCell(B[i][jj]);
 
       // diagonal
-      int ku = Math.min(K, Math.min(i, j)), kl = Math.min(K, Math.min(M-1-i, N-1-j)),
-          ii = i-ku, jj = j-ku, iim = i+kl, jjm = j+kl;
-      for(; ii < iim && jj < jjm; ii++, jj++)
-        value += weightCell(B[ii][jj]);
+      int ku = Math.min(K, Math.min(i, j)),
+          kl = Math.min(K, Math.min(M - 1 - i, N - 1 - j)),
+          ii = i - ku,
+          jj = j - ku,
+          iim = i + kl,
+          jjm = j + kl;
+      for (; ii < iim && jj < jjm; ii++, jj++) value += weightCell(B[ii][jj]);
 
       // TODO: counter diagonal
 
-      return value*(1/M*N);
+      return value * (1 / M * N);
     }
 
     private double weightCell(MNKCellState c) {
-      if(queue.size() >= K) // useless >
-        queuePop();
+      if (queue.size() >= K) // useless >
+      queuePop();
 
       return queuePush(c);
     }
@@ -150,10 +151,8 @@ public class GalileoGalilei implements MNKPlayer {
       else if (state == MNKCellState.P2) queueP2++;
       queue.add(state);
       if (queue.size() == K) {
-        if (queueP1 + queueFree == K)
-          return (me == MNKCellState.P1 ? 1 : -1) * (queueP1 / K);
-        else if (queueP2 + queueFree == K)
-          return (me == MNKCellState.P2 ? 1 : -1) * (queueP2 / K);
+        if (queueP1 + queueFree == K) return (me == MNKCellState.P1 ? 1 : -1) * (queueP1 / K);
+        else if (queueP2 + queueFree == K) return (me == MNKCellState.P2 ? 1 : -1) * (queueP2 / K);
         else return 0; // TODO: value empty streaks more than filled useless ones
       }
       return 0;
@@ -284,7 +283,8 @@ public class GalileoGalilei implements MNKPlayer {
   private MNKGameState MY_WIN, ENEMY_WIN;
   private int M, N, K, minMN, maxDepth = 1;
   private long startTime, timeout;
-  private Random r; private Board board;
+  private Random r;
+  private Board board;
 
   // transposition table hashed using zobrist method
   private HashMap<Long, double[]> cache = new HashMap<>();
