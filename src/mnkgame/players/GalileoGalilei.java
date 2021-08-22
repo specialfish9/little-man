@@ -333,8 +333,8 @@ public class GalileoGalilei implements MNKPlayer {
     // check for draws first, most lickely
     MNKGameState state = board.gameState();
     if (state == MNKGameState.DRAW) return 0;
-    else if (state == MY_WIN) return (M*N) / Math.min(depth, 1);
-    else if (state == ENEMY_WIN) return -(M*N) / Math.min(depth, 1);
+    else if (state == MY_WIN) return (M * N) / Math.min(depth, 1);
+    else if (state == ENEMY_WIN) return -(M * N) / Math.min(depth, 1);
     else {
       evaluated++;
       return board.value();
