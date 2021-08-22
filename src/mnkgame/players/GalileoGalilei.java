@@ -111,20 +111,23 @@ public class GalileoGalilei implements MNKPlayer {
 
       // column
       queueClear();
-      for(int ii = Math.max(i-K, 0); ii < Math.min(i+K, M-1); ii++)
+      for (int ii = Math.max(i - K, 0); ii < Math.min(i + K, M - 1); ii++)
         value += weightCell(B[ii][j]);
 
       // row
       queueClear();
-      for(int jj = Math.max(j-K, 0); jj < Math.min(j+K, N-1); jj++)
+      for (int jj = Math.max(j - K, 0); jj < Math.min(j + K, N - 1); jj++)
         value += weightCell(B[i][jj]);
 
       // diagonal
-      int ku = Math.min(K, Math.min(i, j)), kl = Math.min(K, Math.min(M-1-i, N-1-j)),
-          ii = i-ku, jj = j-ku, iim = i+kl, jjm = j+kl;
+      int ku = Math.min(K, Math.min(i, j)),
+          kl = Math.min(K, Math.min(M - 1 - i, N - 1 - j)),
+          ii = i - ku,
+          jj = j - ku,
+          iim = i + kl,
+          jjm = j + kl;
       queueClear();
-      for(; ii < iim && jj < jjm; ii++, jj++)
-        value += weightCell(B[ii][jj]);
+      for (; ii < iim && jj < jjm; ii++, jj++) value += weightCell(B[ii][jj]);
 
       // TODO: counter diagonal
 
