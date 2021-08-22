@@ -1,14 +1,19 @@
 package mnkgame.players;
 
+import java.util.Arrays;
 import java.util.HashMap;
-import java.util.LinkedList;
-import java.util.Queue;
 import java.util.Random;
+import java.util.Queue;
 import java.util.Stack;
+import java.util.LinkedList;
 import java.util.concurrent.atomic.AtomicBoolean;
 import mnkgame.*;
 
-public class GalileoGalilei implements MNKPlayer {
+/*
+ * Minimax + Alpha Beta + Iterative Deepening + k-1 heuristics
+ * + euristic evaluation at iterative depth + caching (memoization)
+ */
+public class FrancoRasetti implements MNKPlayer {
   // {{{ tuple
   private static class Pair<A extends Comparable<A>, B> {
     public A first;
@@ -126,8 +131,6 @@ public class GalileoGalilei implements MNKPlayer {
       for (; ii <= iim && jj <= jjm; ii++, jj++) value += weightCell(B[ii][jj]);
 
       // TODO: counter diagonal
-
-      System.out.println("eval: " + value);
       return value;
     }
 
@@ -176,32 +179,142 @@ public class GalileoGalilei implements MNKPlayer {
   }
   // }}}
 
+  // {{{ chances
+  // TODO: check per entrambi i giocatori uno come per Series (?)
+  private static class Chances {
+    private static Board board;
+    private static int M, N, K;
+    private static double klog;
+    private static MNKCellState player;
+
+    private static int currStreak, currStreakFree;
+
+    private static double checkCell(int i, int j) {
+      MNKCellState c = board.cellState(i, j);
+      if (c == player || c == MNKCellState.FREE) {
+        currStreak++;
+        currStreakFree++;
+      } else currStreak = currStreakFree = 0;
+
+      double value = 0;
+      if (currStreak >= K) {
+        // we know for a fact that currStreakFree > 0, oterwhise this method
+        // won't be called as the evaluation can be done in a deterministic way
+        value = Math.log(currStreak / currStreakFree) / klog;
+        // should be 1 when currStreakFree == 1 which is the best value and
+        // the greatest chance to win (only need to mark 1 cell) whereas
+        // should get closer to 0 as currStreakFree increases. It's effectively
+        // log_k(currStreak/currStreakFree)
+        currStreak--;
+        currStreakFree--;
+      }
+      return value;
+    }
+
+    private static void reset() {
+      currStreak = currStreakFree = 0;
+    }
+
+    // Returns the number of possible series the player could streak to win the game
+    public static double winningChances(final Board b, final MNKCellState p) {
+      board = b;
+      player = p;
+      M = board.M;
+      N = board.N;
+      K = board.K;
+      klog = Math.log(K);
+
+      double chance = 0;
+
+      // check all columns
+      for (int i = 0; i < M && M - i + currStreak >= K; i++) {
+        reset();
+        for (int j = 0; j < N && N - j + currStreak >= K; j++) chance += checkCell(i, j);
+      }
+
+      // check all rows
+      for (int j = 0; j < N && N - j + currStreak >= K; j++) {
+        reset();
+        for (int i = 0; i < M && M - i + currStreak >= K; i++) chance += checkCell(i, j);
+      }
+
+      // iterate over all diagonals
+      int nDiagonals = (Math.min(N, M) - K) * 2 + 1;
+      for (int x = 0; x < nDiagonals; x++) {
+        reset();
+        int i = 0, j = 0;
+        if (x != 0 && x % 2 == 0) i = x / 2;
+        else if (x != 0) j = x;
+
+        // TODO: don't check useless cells like in prev loops
+        while (i < M && j < N) {
+          checkCell(i, j);
+          j++;
+          i++;
+        }
+      }
+
+      // iterate over all counter diagonals
+      for (int x = 0; x < nDiagonals; x++) {
+        reset();
+        int i = 0, j = N - 1;
+        if (x != 0 && x % 2 == 0) i = x / 2;
+        else if (x != 0) j = N - 1 - x;
+
+        while (i < M && j >= 0) {
+          checkCell(i, j);
+          j--;
+          i++;
+        }
+      }
+
+      return chance;
+    }
+  }
+  // }}}
+
+  // {{{ search result
+  private static class SearchResult {
+    public double value;
+    public int depth;
+    public boolean heuristic;
+
+    public SearchResult(double value, int depth, boolean heuristic) {
+      this.value = value;
+      this.depth = depth;
+      this.heuristic = heuristic;
+    }
+
+    @Override
+    public String toString() {
+      return "(value=" + value + ",depth=" + depth + ",heuristic=" + heuristic + ")";
+    }
+  }
+  // }}}
+
   private static final double HALT = Double.MIN_VALUE;
   private static final double MIN = -Double.MAX_VALUE, MAX = Double.MAX_VALUE;
-  private static double winCutoff; // represents a certain win, and therefore we can cutoff search
-
   private MNKCellState ME, ENEMY;
   private MNKGameState MY_WIN, ENEMY_WIN;
-  private int M, N, K, minMN, maxDepth = 1;
+  private int M, N, K, minMN;
   private long startTime, timeout;
   private Random r;
   private Board board;
 
   // transposition table hashed using zobrist method
-  private HashMap<Long, double[]> cache = new HashMap<>();
+  private HashMap<Long, SearchResult> cache = new HashMap<>();
   private AtomicBoolean zobristReady = new AtomicBoolean(false);
   private static long[][] zobrist;
 
   // NOTE: profiling
-  private static int minimaxed, cutoff, seriesFound, evaluated, cacheHits, cacheMisses;
-  private static boolean clear = false, verbose = true;
+  private static int visited, cutoff, seriesFound, evaluated, cacheHits, cacheMisses;
+  private static boolean clear = false, verbose = false;
 
   public void initPlayer(int M, int N, int K, boolean first, int timeoutInSecs) {
     this.M = M;
     this.N = N;
     this.K = K;
     this.minMN = Math.min(M, N);
-    this.winCutoff = MAX/(M*N);
     timeout = timeoutInSecs;
     startTime = System.currentTimeMillis();
     MY_WIN = first ? MNKGameState.WINP1 : MNKGameState.WINP2;
@@ -261,18 +374,26 @@ public class GalileoGalilei implements MNKPlayer {
     }
   }
 
+  enum Action {
+    MINIMIZE,
+    MAXIMIZE
+  }
+
+  private static Action opposite(final Action a) {
+    return a == Action.MAXIMIZE ? Action.MINIMIZE : Action.MAXIMIZE;
+  }
+
   private boolean shouldHalt() {
     // TODO: tweak values
     return (System.currentTimeMillis() - startTime) / 1000.0
-        >= timeout * 0.85; // livin' on the edge
+        >= timeout * 0.90; // livin' on the edge
   }
 
   private boolean shouldHalt(long endTime) {
     return System.currentTimeMillis() >= endTime;
   }
 
-  // finds the first cell needed to copmlete a K-1 streak in any possible
-  // direction
+  // finds the first cell needed to copmlete a K-1 streak in any possible direction
   private MNKCell findOneMoveWin(final MNKGameState winState) {
     for (MNKCell c : board.getFreeCells()) {
       MNKGameState result = board.markCell(c.i, c.j);
@@ -293,11 +414,10 @@ public class GalileoGalilei implements MNKPlayer {
     return null;
   }
 
-  // finds the first cell the enemy needs to copmlete a K-1 streak in any possible
-  // direction
+  // finds the first cell the enemy needs to copmlete a K-1 streak in any possible direction
   private MNKCell findOneMoveLoss(final MNKGameState lossState) {
     MNKCell randomCell = null;
-    if (board.getFreeCells().length > 2 || (randomCell = pickRandomNonClosingCell(null)) == null)
+    if (board.getFreeCells().length == 1 || (randomCell = pickRandomNonClosingCell(null)) == null)
       return null; // cannot check for enemy's next move when it doesn't exist
 
     board.markCell(randomCell.i, randomCell.j);
@@ -308,7 +428,6 @@ public class GalileoGalilei implements MNKPlayer {
     // test the randomCell we selected at first. It may be a one-move loss cell
     // get a new random cell different from the previous and call it cc
     MNKCell cc = pickRandomNonClosingCell(randomCell);
-    if (cc == null) return null; // cannot find a non-closing cell
     if (board.markCell(cc.i, cc.j) != MNKGameState.OPEN) {
       // randomCell puts us in a draw, ignore that
       board.unmarkCell();
@@ -323,207 +442,198 @@ public class GalileoGalilei implements MNKPlayer {
 
   // evaluate a state (either heuristically or in a deterministic way) regardless
   // of its depth. The depth will be taken into account later to allow for caching
-  // TODO: take depth into account. idea:
-  // - certain wins/losses = Math.max(1 / depth, 0.5), Math.max(-0.25*depth, -1);
-  // - heuristic values = 0 < win < 0.5, -0.5 < loss < 0
-  private double evaluate(int depth) {
+  private static final double winCutoff =
+      MAX; // represents a certain win, and therefore we can cutoff search
+
+  private double evaluate() {
     // check for draws first, most lickely
-    MNKGameState state = board.gameState();
-    if (state == MNKGameState.DRAW) return 0;
-    else if (state == MY_WIN) return (M*N) / Math.min(depth, 1);
-    else if (state == ENEMY_WIN) return -(M*N) / Math.min(depth, 1);
+    if (board.gameState() == MNKGameState.DRAW) return 0;
+    else if (board.gameState() == MY_WIN) return 2 * M * N; // 2 times max depth
+    else if (board.gameState() == ENEMY_WIN) return -2 * M * N;
     else {
       evaluated++;
+      // keep the heuristic evaluation between 1 and -1
       return board.value();
     }
   }
 
-  // selection sort for an array of MNKCells and relative evaluation data which
-  // places just one minimum/maximum at the beginning of the array.
-  // Has therefore a cost of O(n) and is simpler than the quick select
-  // algorithm with the median of medians partition function.
-  public void selectionSort(MNKCell[] vec, double[] values, int start, int color) {
-    int m = start;
-    // find the max/min in [start,end]
-    for (int i = start + 1; i < vec.length; i++)
-      if (color > 0 ? (values[i] > values[m]) : (values[i] < values[m])) m = i;
-
-    // if we found a new min/max put it in start
-    if (m != start) {
-      MNKCell tmp = vec[m];
-      vec[m] = vec[start];
-      vec[start] = tmp;
-
-      double tmp1 = values[m];
-      values[m] = values[start];
-      values[start] = tmp1;
-    }
+  private SearchResult mem(SearchResult result) {
+    if (zobristReady.get()) cache.put(board.zobrist(), result);
+    return result;
   }
 
-  private double pvs(int depth, double alpha, double beta, int color) {
-    double entry[] = {0, 0, -1, 0, 0}; // [value, depth, index, lower, upper]
-    // only use a cached value if it was computed with the same depth - and
-    // therefore the same ammount of knowledge (as this call) could be extracted.
-    // if (cache.containsKey(board.zobrist()) && (entry = cache.get(board.zobrist()))[1] >= depth) {
-    //   cacheHits++;
-    //   if (entry[3] >= beta) return entry[3];
-    //   if (entry[4] <= alpha) return entry[4];
-    //   alpha = Math.max(alpha, entry[3]);
-    //   beta = Math.min(beta, entry[4]);
-    // } else cacheMisses++;
-    MNKCell bc = null;
-    double a = alpha, b = beta;
+  private SearchResult unmem() {
+    if (zobristReady.get())
+      return cache.containsKey(board.zobrist()) ? cache.get(board.zobrist()) : null;
+    else return null;
+  }
 
-    minimaxed++;
-    if (board.gameState() != MNKGameState.OPEN || depth <= 0) {
-      a = evaluate(maxDepth - depth);
-      if(depth <= 0)
-        System.out.println(board + " -----> " + a);
-    } else if (shouldHalt()) a = HALT;
-    else if (board.getMarkedCells().length >= (K - 1) * 2
-        && ((bc = findOneMoveWin(MY_WIN)) != null || (bc = findOneMoveLoss(ENEMY_WIN)) != null)) {
-      seriesFound++; 
-      board.markCell(bc.i, bc.j);
-      a = -pvs(depth - 1, -beta, -alpha, -color);
+  private SearchResult minimax(Action action, int depth, long endTime, Double a, Double b) {
+    if (board.gameState() != MNKGameState.OPEN) {
+      double value = evaluate();
+      int actualDepth = Math.max(board.getFreeCells().length - depth, 1);
+      return mem(
+          new SearchResult(
+              action == Action.MAXIMIZE ? value / actualDepth : value * actualDepth, depth, false));
+    }
+    // TODO: check conflicts
+    SearchResult cached;
+    if ((cached = unmem()) != null && cached.depth == depth) {
+      cacheHits++;
+      return cached;
+    } else cacheMisses++;
+
+    if (depth == 0) {
+      double value = evaluate();
+      int actualDepth = Math.max(board.getFreeCells().length - depth, 1);
+      return mem(
+          new SearchResult(
+              action == Action.MAXIMIZE ? value / actualDepth : value * actualDepth, depth, true));
+    }
+    if (shouldHalt(endTime)) return new SearchResult(HALT, depth, true);
+
+    visited++;
+
+    MNKCell omc = null; // one move win/loss cell
+    if (board.getMarkedCells().length >= 2 * K - 1
+        && // only check for one-win-moves
+        // if there have been placed
+        // enough cells to make one happen
+        ((omc = findOneMoveWin(action == Action.MAXIMIZE ? MY_WIN : ENEMY_WIN)) != null
+            || (omc = findOneMoveLoss(action == Action.MAXIMIZE ? ENEMY_WIN : MY_WIN)) != null)) {
+      seriesFound++; // found once cell in a k-1 series
+
+      board.markCell(omc.i, omc.j);
+      // NOTE: must memoize here as oterwhise we'll use the unmarked board hash
+      SearchResult result = mem(minimax(opposite(action), depth - 1, endTime, a, b));
       board.unmarkCell();
-    } else {
-      // {{{ sorting based on previous evaluations
-      MNKCell[] cells = board.getFreeCells();
-      double[] ratings = new double[cells.length];
-      for (int i = 0; i < cells.length; i++) {
-        long hash = board.nextZobrist(cells[i].i, cells[i].j);
-        if (cache.containsKey(hash)) {
-          double values[] = cache.get(hash);
-          ratings[i] = values[1] >= depth ? -color * values[0] : 0;
-          if (ratings[i] != 0) cacheHits++;
-        } else {
-          ratings[i] = 0;
-          cacheMisses++;
-        }
-      }
-      // }}}
-
-      // {{{ minimax with alpha beta and pvs
-      int i = 0;
-      while (i < cells.length) {
-        selectionSort(cells, ratings, i, color);
-        MNKCell c = cells[i];
-        board.markCell(c.i, c.j);
-        double t;
-        if (i > 0) {
-          t = -pvs(depth - 1, -a - 1, -a, -color);
-          if (t > a && t < b) t = -pvs(depth - 1, -b, -t, -color);
-        } else t = -pvs(depth - 1, -b, -a, -color);
-        board.unmarkCell();
-        if (t == HALT) {
-          if (a == alpha) return HALT;
-          else break;
-        }
-        if (t > a) { // a = max(a,t)
-          a = t;
-          bc = c;
-        }
-        if (a >= b) {
-          cutoff += board.getFreeCells().length - i;
-          break;
-        }
-        b = a + 1; // null window for the next call
-        i++;
-      }
-      // }}}
+      return result;
     }
 
-    double lower = entry[3], upper = entry[4];
-    if (a <= alpha) upper = a;
-    if (a > alpha && a < beta) upper = lower = a;
-    if (a >= beta) lower = a;
+    double best = action == Action.MAXIMIZE ? MIN : MAX;
+    boolean isBestHeuristic = false;
+    // TODO: (?) shuffle(series.noseries);
+    for (MNKCell c : board.getFreeCells()) {
+      board.markCell(c.i, c.j);
+      SearchResult result = minimax(opposite(action), depth - 1, endTime, a, b);
+      board.unmarkCell();
 
-    // dummy values ignored regardless. Only the root value is taken into account
-    if (bc == null && board.getFreeCells().length > 0) bc = board.getFreeCells()[0];
+      if (result.value == HALT) break;
 
-    double[] val = {a, depth, bc.i * minMN + bc.j, lower, upper};
-    cache.put(board.zobrist(), val);
-    return a;
+      if ((action == Action.MAXIMIZE && result.value > best)
+          || (action == Action.MINIMIZE && result.value < best)
+          || (result.value == best && isBestHeuristic && !result.heuristic)) {
+        best = result.value;
+        isBestHeuristic = result.heuristic;
+      }
+      if (action == Action.MAXIMIZE && best > a) a = best;
+      else if (action == Action.MINIMIZE && best < b) b = best;
+
+      if (b <= a) {
+        cutoff += board.getFreeCells().length - 1 - Arrays.asList(board.getFreeCells()).indexOf(c);
+        break;
+      }
+    }
+    if (best == MAX || best == MIN) return new SearchResult(HALT, depth, true);
+    else return mem(new SearchResult(best, depth, isBestHeuristic));
+    // TODO: careful about the third value. Should it be like this? when we find
+    // a configuration we like that is not heuristic we stop. But maybe others have
+    // been evaluated wrongly with heurisitc, recieved a lower score, and were ignored
+    // They could still be valuable. We wanna investigate that.
   }
 
-  public Pair<Double, int[]> iterativeDeepening() {
+  public MNKCell iterativeDeepening() {
     int len = board.getFreeCells().length;
-    double value = MIN;
-    int cell[] = {0, 0};
+    double best = MIN;
+    boolean isBestHeuristic = false;
+    MNKCell bestCell = null;
 
-    maxDepth = 1;
-    while (!shouldHalt() && maxDepth < len) {
-      double latest = pvs(maxDepth, MIN, MAX, 1);
-      if (Math.abs(latest) == HALT) break;
+    MNKCell omc = null; // one move win/loss cell
+    if (board.getMarkedCells().length >= (K - 1) * 2
+        && ((omc = findOneMoveWin(MY_WIN)) != null || (omc = findOneMoveLoss(ENEMY_WIN)) != null)) {
+      seriesFound++; // found once cell in a k-1 series
+      return omc;
+    }
 
-      value = latest;
-      int i = (int) cache.get(board.zobrist())[2];
-      cell[0] = i / minMN;
-      cell[1] = i % minMN;
+    for (MNKCell c : board.getFreeCells()) {
+      long endTime = System.currentTimeMillis() + (timeout * 900) / len;
+      board.markCell(c.i, c.j);
+      int depth = 1;
+      SearchResult result = new SearchResult(0, 1, false);
 
-      // stop the search if we found a certain win
-      if (value >= winCutoff) break;
+      // as long as we can deepen the tree for this move
+      // {{{ deepening
+      while (!shouldHalt(endTime)) {
+        SearchResult latest = minimax(Action.MINIMIZE, depth, endTime, MIN, MAX);
+        if (latest.value == HALT) break;
+
+        result = latest; // always keep the last result as it's the most accurate
+
+        // we can breack when we have a tuple of the type (x, x, false) which means
+        // the minimax result was completely obtained by non-heuristics values
+        // we can also break when we find a state which will grant us certain win
+        if (!result.heuristic || result.value >= winCutoff) break;
+
+        depth++;
+      }
+      // }}}
+
+      // TODO: remove in production
+      if (depth - 1 > board.getFreeCells().length) {
+        throw new Error(
+            "FATAL: iterativeDeepening exceeded allowable depth with a depth of: " + depth);
+      }
 
       // TODO: remove in production
       if (verbose)
         System.out.println(
-            "minimax went to depth "
-                + maxDepth
-                + " with value: ("
-                + value
-                + ", ("
-                + cell[0]
-                + ","
-                + cell[1]
-                + "))");
+            "minimax for cell "
+                + board.getMarkedCells()[board.getMarkedCells().length - 1]
+                + " finished at depth "
+                + depth
+                + " with value: "
+                + result.value
+                + ", heuristic: "
+                + result.heuristic);
+      board.unmarkCell();
 
-      maxDepth++;
+      // stop the search if we found a winning node
+      if (result.value >= winCutoff) return c;
+
+      if (result.value > best || (result.value == best && isBestHeuristic && !result.heuristic)) {
+        best = result.value;
+        isBestHeuristic = result.heuristic;
+        bestCell = c;
+      }
     }
-
-    // TODO: remove in production
-    if (maxDepth - 1 > board.getFreeCells().length) {
-      throw new Error(
-          "FATAL: iterativeDeepening exceeded allowable depth with a depth of: " + maxDepth);
-    }
-
-    return new Pair<>(value, cell);
+    return bestCell;
   }
 
   public MNKCell selectCell(MNKCell[] FC, MNKCell[] MC) {
     startTime = System.currentTimeMillis();
-    minimaxed = cutoff = seriesFound = evaluated = cacheHits = cacheMisses = 0;
+    visited = cutoff = seriesFound = evaluated = cacheHits = cacheMisses = 0;
 
     if (MC.length > 0)
       board.markCell(
           MC[MC.length - 1].i, MC[MC.length - 1].j); // keep track of the opponent's marks
 
     try {
-      Pair<Double, int[]> result = iterativeDeepening();
+      MNKCell result = iterativeDeepening();
       System.out.println(
           playerName()
               + "\t: visited "
-              + minimaxed
-              + " nodes, ended with result: ("
-              + result.first
-              + ", ("
-              + result.second[0]
-              + ","
-              + result.second[1]
-              + "))");
-      System.out.println(
-          playerName()
-              + "\t: cut off "
-              + cutoff
-              + " branches ("
-              + (cutoff / Math.max(minimaxed, 1) * 100)
-              + "%)");
+              + visited
+              + " nodes, ended with result: (x,x,"
+              + result
+              + ")");
+      System.out.println(playerName() + "\t: cut off " + cutoff + " branches");
       System.out.println(
           playerName()
               + "\t: found a total of "
               + seriesFound
               + " free cells in series (up to k-1)");
       System.out.println(playerName() + "\t: heuristically evaluated " + evaluated + " boards");
-      int perc = (int) ((1d * cacheHits / (cacheMisses + cacheHits)) * 100);
+      int perc = (int) (((double) cacheHits / (cacheMisses + cacheHits)) * 100);
       System.out.println(
           playerName()
               + "\t: cached "
@@ -544,8 +654,8 @@ public class GalileoGalilei implements MNKPlayer {
         return FC[0];
       }
 
-      board.markCell(result.second[0], result.second[1]);
-      return new MNKCell(result.second[0], result.second[1], MNKCellState.FREE);
+      board.markCell(result.i, result.j);
+      return result;
     } catch (Exception e) {
       e.printStackTrace();
       return FC[new Random().nextInt(FC.length)];
@@ -553,6 +663,6 @@ public class GalileoGalilei implements MNKPlayer {
   }
 
   public String playerName() {
-    return "Galileo Galilei";
+    return "Franco Rasetti";
   }
 }
