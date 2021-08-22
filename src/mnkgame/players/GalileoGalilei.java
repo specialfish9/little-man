@@ -52,25 +52,22 @@ public class GalileoGalilei implements MNKPlayer {
     private Queue<MNKCellState> queue = new LinkedList<>();
     private Stack<Double> previousValues = new Stack<>();
     private double value = 0;
-    private double V[][];
 
     public Board(int M, int N, int K, int minMN, MNKCellState me) {
       super(M, N, K);
       this.minMN = minMN;
       this.me = me;
-      this.V = new double[M][N];
-      for (int i = 0; i < M; i++) for (int j = 0; j < M; j++) this.V[i][j] = 0;
     }
 
     @Override
     public MNKGameState markCell(int i, int j) {
       // mind the order of the calls
       key = nextZobrist(i, j);
+      previousValues.push(value);
+      double prevValue = eval(i, j);
       MNKGameState result = super.markCell(i, j);
       double newValue = eval(i, j);
-      value += newValue - V[i][j];
-      V[i][j] = newValue;
-      previousValues.push(value);
+      value += newValue - prevValue;
       return result;
     }
 
@@ -81,7 +78,6 @@ public class GalileoGalilei implements MNKPlayer {
       super.unmarkCell();
       key = nextZobrist(last.i, last.j);
       value = previousValues.pop();
-      V[last.i][last.j] = eval(last.i, last.j);
     }
 
     // computes the hash for a new mark (xor works both ways, but pay attention to
@@ -111,12 +107,12 @@ public class GalileoGalilei implements MNKPlayer {
 
       // column
       queueClear();
-      for (int ii = Math.max(i - K, 0); ii < Math.min(i + K, M - 1); ii++)
+      for (int ii = Math.max(i - K, 0); ii <= Math.min(i + K, M - 1); ii++)
         value += weightCell(B[ii][j]);
 
       // row
       queueClear();
-      for (int jj = Math.max(j - K, 0); jj < Math.min(j + K, N - 1); jj++)
+      for (int jj = Math.max(j - K, 0); jj <= Math.min(j + K, N - 1); jj++)
         value += weightCell(B[i][jj]);
 
       // diagonal
@@ -127,14 +123,15 @@ public class GalileoGalilei implements MNKPlayer {
           iim = i + kl,
           jjm = j + kl;
       queueClear();
-      for (; ii < iim && jj < jjm; ii++, jj++) value += weightCell(B[ii][jj]);
+      for (; ii <= iim && jj <= jjm; ii++, jj++) value += weightCell(B[ii][jj]);
 
       // TODO: counter diagonal
 
-      return value * (1 / M * N);
+      System.out.println("eval: " + value);
+      return value;
     }
 
-    private double weightCell(MNKCellState c) {
+    private double weightCell(final MNKCellState c) {
       if (queue.size() >= K) // useless >
       queuePop();
 
@@ -158,12 +155,11 @@ public class GalileoGalilei implements MNKPlayer {
       else if (state == MNKCellState.P1) queueP1++;
       else if (state == MNKCellState.P2) queueP2++;
       queue.add(state);
-      if (queue.size() == K) {
-        if (queueP1 + queueFree == K) return (me == MNKCellState.P1 ? 1 : -1) * (queueP1 / K);
-        else if (queueP2 + queueFree == K) return (me == MNKCellState.P2 ? 1 : -1) * (queueP2 / K);
-        else return 0; // TODO: value empty streaks more than filled useless ones
-      }
-      return 0;
+      if (queueP1 + queueFree == K) return (me == MNKCellState.P1 ? 1 : -1) * (1d * queueP1 / K);
+      else if (queueP2 + queueFree == K) return (me == MNKCellState.P2 ? 1 : -1) * (1d * queueP2 / K);
+      // else if(queueP1 == 1 && queueP2+queueFree+1 == K) return (me == MNKCellState.P2 ? 1 : -1) * (1d * queueP2 / K);
+      else return 0;
+      // else if(queueFree == K) return 0; // TODO: value empty streaks more than filled useless ones
     }
 
     @Override
@@ -180,112 +176,9 @@ public class GalileoGalilei implements MNKPlayer {
   }
   // }}}
 
-  // {{{ chances
-  // TODO: check per entrambi i giocatori uno come per Series (?)
-  private static class Chances {
-    private static Board board;
-    private static int M, N, K;
-    private static MNKCellState player;
-
-    private static int currStreak, currStreakFree;
-
-    private static double checkCell(int i, int j) {
-      MNKCellState c = board.cellState(i, j);
-      if (c == player || c == MNKCellState.FREE) {
-        currStreak++;
-        if (c == MNKCellState.FREE) currStreakFree++;
-      } else reset();
-
-      double value = 0;
-      if (currStreak >= K && currStreakFree < K) {
-        value = 1;
-        // TODO: redo (?)
-        // we know for a fact that currStreakFree > 0, oterwhise this method
-        // won't be called as the evaluation can be done in a deterministic way
-        // value = Math.log(currStreak / currStreakFree) / klog;
-        // should be 1 when currStreakFree == 1 which is the best value and
-        // the greatest chance to win (only need to mark 1 cell) whereas
-        // should get closer to 0 as currStreakFree increases. It's effectively
-        // log_k(currStreak/currStreakFree)
-        currStreak--;
-        currStreakFree--;
-      }
-      return value;
-    }
-
-    private static void reset() {
-      currStreak = currStreakFree = 0;
-    }
-
-    // Returns the number of possible series the player could streak to win the game
-    public static double winningChances(final Board b, final MNKCellState p) {
-      board = b;
-      player = p;
-      M = board.M;
-      N = board.N;
-      K = board.K;
-
-      double chance = 0;
-
-      // check all rows
-      for (int i = 0; i < M; i++) {
-        reset();
-        for (int j = 0; j < N; j++) {
-          if (N - j + currStreak < K) break;
-
-          chance += checkCell(i, j);
-        }
-      }
-
-      // check all columns
-      for (int j = 0; j < N; j++) {
-        reset();
-        for (int i = 0; i < M; i++) {
-          if (M - i + currStreak < K) break;
-
-          chance += checkCell(i, j);
-        }
-      }
-
-      // iterate over all diagonals
-      int nDiagonals = (Math.min(N, M) - K) * 2 + 1;
-      for (int x = 0; x < nDiagonals; x++) {
-        reset();
-        int i = 0, j = 0;
-        if (x != 0 && x % 2 == 0) i = x / 2;
-        else if (x != 0) j = x;
-
-        // TODO: don't check useless cells like in prev loops
-        while (i < M && j < N) {
-          chance += checkCell(i, j);
-          j++;
-          i++;
-        }
-      }
-
-      // iterate over all counter diagonals
-      for (int x = 0; x < nDiagonals; x++) {
-        reset();
-        int i = 0, j = N - 1;
-        if (x != 0 && x % 2 == 0) i = x / 2;
-        else if (x != 0) j = N - 1 - x;
-
-        while (i < M && j >= 0) {
-          chance += checkCell(i, j);
-          j--;
-          i++;
-        }
-      }
-
-      return chance;
-    }
-  }
-  // }}}
-
   private static final double HALT = Double.MIN_VALUE;
-  private static final double MIN = -100, MAX = 2;
-  private static final double winCutoff =
-      MAX; // represents a certain win, and therefore we can cutoff search
+  private static final double MIN = -Double.MAX_VALUE, MAX = Double.MAX_VALUE;
+  private static double winCutoff; // represents a certain win, and therefore we can cutoff search
 
   private MNKCellState ME, ENEMY;
   private MNKGameState MY_WIN, ENEMY_WIN;
@@ -301,13 +194,14 @@ public class GalileoGalilei implements MNKPlayer {
 
   // NOTE: profiling
   private static int minimaxed, cutoff, seriesFound, evaluated, cacheHits, cacheMisses;
-  private static boolean clear = false, verbose = false;
+  private static boolean clear = false, verbose = true;
 
   public void initPlayer(int M, int N, int K, boolean first, int timeoutInSecs) {
     this.M = M;
     this.N = N;
     this.K = K;
     this.minMN = Math.min(M, N);
+    this.winCutoff = MAX/(M*N);
     timeout = timeoutInSecs;
     startTime = System.currentTimeMillis();
     MY_WIN = first ? MNKGameState.WINP1 : MNKGameState.WINP2;
@@ -434,9 +328,10 @@ public class GalileoGalilei implements MNKPlayer {
   // - heuristic values = 0 < win < 0.5, -0.5 < loss < 0
   private double evaluate(int depth) {
     // check for draws first, most lickely
-    if (board.gameState() == MNKGameState.DRAW) return 0;
-    else if (board.gameState() == MY_WIN) return .5d + 1 / depth;
-    else if (board.gameState() == ENEMY_WIN) return -1 - (-.25 * depth);
+    MNKGameState state = board.gameState();
+    if (state == MNKGameState.DRAW) return 0;
+    else if (state == MY_WIN) return MAX / Math.min(depth, 1);
+    else if (state == ENEMY_WIN) return -(M*N*K) / Math.min(depth, 1);
     else {
       evaluated++;
       // keep the heuristic evaluation between 1 and -1
@@ -481,16 +376,14 @@ public class GalileoGalilei implements MNKPlayer {
     double a = alpha, b = beta;
 
     minimaxed++;
-    if (board.gameState() != MNKGameState.OPEN || depth == 0)
-      // take into account the depth of the move when computing the score
-      // expression:
-      // color (1 for ME, -1 for ENEMY) * value (/ for ME, * for ENEMY) relativeDepth
-      // a = color*evaluate() * (color < 0 ? 1d/Math.max(maxDepth-depth, 1) :
-      // Math.max(maxDepth-depth, 1));
+    if (board.gameState() != MNKGameState.OPEN || depth <= 0) {
       a = evaluate(maxDepth - depth);
-    else if (shouldHalt()) a = HALT;
+      if(depth <= 0)
+        System.out.println(board + " -----> " + a);
+    } else if (shouldHalt()) a = HALT;
     else if (board.getMarkedCells().length >= (K - 1) * 2
         && ((bc = findOneMoveWin(MY_WIN)) != null || (bc = findOneMoveLoss(ENEMY_WIN)) != null)) {
+      seriesFound++; 
       board.markCell(bc.i, bc.j);
       a = -pvs(depth - 1, -beta, -alpha, -color);
       board.unmarkCell();
@@ -631,7 +524,7 @@ public class GalileoGalilei implements MNKPlayer {
               + seriesFound
               + " free cells in series (up to k-1)");
       System.out.println(playerName() + "\t: heuristically evaluated " + evaluated + " boards");
-      int perc = (int) (((double) cacheHits / (cacheMisses + cacheHits)) * 100);
+      int perc = (int) ((1d * cacheHits / (cacheMisses + cacheHits)) * 100);
       System.out.println(
           playerName()
               + "\t: cached "
