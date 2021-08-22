@@ -364,10 +364,6 @@ public class GalileoGalilei implements MNKPlayer {
     }
   }
 
-  private static Action opposite(final Action a) {
-    return a == Action.MAXIMIZE ? Action.MINIMIZE : Action.MAXIMIZE;
-  }
-
   private boolean shouldHalt() {
     // TODO: tweak values
     return (System.currentTimeMillis() - startTime) / 1000.0
