@@ -386,10 +386,11 @@ public class FrancoRasetti implements MNKPlayer {
     return a == Action.MAXIMIZE ? Action.MINIMIZE : Action.MAXIMIZE;
   }
 
+  private static double timePerc = 0.8;
   private boolean shouldHalt() {
     // TODO: tweak values
     return (System.currentTimeMillis() - startTime) / 1000.0
-        >= timeout * 0.90; // livin' on the edge
+        >= timeout * timePerc; // livin' on the edge
   }
 
   private boolean shouldHalt(long endTime) {
@@ -559,7 +560,7 @@ public class FrancoRasetti implements MNKPlayer {
     }
 
     for (MNKCell c : board.getFreeCells()) {
-      long endTime = System.currentTimeMillis() + (timeout * 900) / len;
+      long endTime = System.currentTimeMillis() + ((long) (timeout * timePerc * 1000) / len);
       board.markCell(c.i, c.j);
       int depth = 1;
       SearchResult result = new SearchResult(0, 1, false);

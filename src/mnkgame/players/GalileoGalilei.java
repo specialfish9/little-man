@@ -219,7 +219,7 @@ public class GalileoGalilei implements MNKPlayer {
       evaluated,
       cacheHits,
       cacheMisses;
-  private static boolean clear = false, verbose = true;
+  private static boolean clear = false, verbose = false;
 
   public void initPlayer(int M, int N, int K, boolean first, int timeoutInSecs) {
     this.M = M;
@@ -289,11 +289,7 @@ public class GalileoGalilei implements MNKPlayer {
   private boolean shouldHalt() {
     // TODO: tweak values
     return (System.currentTimeMillis() - startTime) / 1000.0
-        >= timeout * 0.85; // livin' on the edge
-  }
-
-  private boolean shouldHalt(long endTime) {
-    return System.currentTimeMillis() >= endTime;
+        >= timeout * 0.9; // livin' on the edge
   }
 
   // finds the first cell needed to copmlete a K-1 streak in any possible direction
@@ -497,7 +493,7 @@ public class GalileoGalilei implements MNKPlayer {
 
   public MNKCell selectCell(MNKCell[] FC, MNKCell[] MC) {
     startTime = System.currentTimeMillis();
-    minimaxed = cutoff = seriesFound = evaluated = cacheHits = cacheMisses = 0;
+    minimaxed = failed = failedDepth = cutoff = seriesFound = evaluated = cacheHits = cacheMisses = 0;
 
     if (MC.length > 0)
       board.markCell(
