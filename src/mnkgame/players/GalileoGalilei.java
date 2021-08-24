@@ -126,7 +126,10 @@ public class GalileoGalilei implements MNKPlayer {
       for (; ii <= iim && jj <= jjm; ii++, jj++) value += pushCell(B[ii][jj]);
 
       // counter diagonal
-      ii = i-ku; jj=j+ku; iim=i+kl; jjm=j-kl;
+      ii = i - ku;
+      jj = j + ku;
+      iim = i + kl;
+      jjm = j - kl;
       for (; ii <= iim && jj <= jjm; ii++, jj--) value += pushCell(B[ii][jj]);
 
       return value;
@@ -146,17 +149,20 @@ public class GalileoGalilei implements MNKPlayer {
 
     private double pushCell(final MNKCellState state) {
       if (queue.size() >= K) // useless >
-        popCell();
+      popCell();
 
       if (state == MNKCellState.FREE) queueFree++;
       else if (state == MNKCellState.P1) queueP1++;
       else if (state == MNKCellState.P2) queueP2++;
       queue.add(state);
       if (queueP1 + queueFree == K) return (me == MNKCellState.P1 ? 1 : -1) * (1d * queueP1 / K);
-      else if (queueP2 + queueFree == K) return (me == MNKCellState.P2 ? 1 : -1) * (1d * queueP2 / K);
-      // else if(queueP1 == 1 && queueP2+queueFree+1 == K) return (me == MNKCellState.P2 ? 1 : -1) * (1d * queueP2 / K);
+      else if (queueP2 + queueFree == K)
+        return (me == MNKCellState.P2 ? 1 : -1) * (1d * queueP2 / K);
+      // else if(queueP1 == 1 && queueP2+queueFree+1 == K) return (me == MNKCellState.P2 ? 1 : -1) *
+      // (1d * queueP2 / K);
       else return 0;
-      // else if(queueFree == K) return 0; // TODO: value empty streaks more than filled useless ones
+      // else if(queueFree == K) return 0; // TODO: value empty streaks more than filled useless
+      // ones
     }
 
     @Override
@@ -319,8 +325,8 @@ public class GalileoGalilei implements MNKPlayer {
     double depth = Math.max(board.getMarkedCells().length, 1);
     MNKGameState state = board.gameState();
     if (state == MNKGameState.DRAW) return 0;
-    else if (state == MY_WIN) return (M*N) / depth;
-    else if (state == ENEMY_WIN) return -(M*N) / depth;
+    else if (state == MY_WIN) return (M * N) / depth;
+    else if (state == ENEMY_WIN) return -(M * N) / depth;
     else {
       evaluated++;
       return board.value() / depth;
@@ -398,8 +404,7 @@ public class GalileoGalilei implements MNKPlayer {
         MNKCell c = cells[i];
         board.markCell(c.i, c.j);
         double t;
-        if(i == 0)
-          t = -pvs(depth - 1, -b, -a, -color);
+        if (i == 0) t = -pvs(depth - 1, -b, -a, -color);
         else {
           t = -pvs(depth - 1, -a - 1, -a, -color); // null-window search
           if (t > a && t < b)
