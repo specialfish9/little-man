@@ -155,14 +155,27 @@ public class GalileoGalilei implements MNKPlayer {
       else if (state == MNKCellState.P1) queueP1++;
       else if (state == MNKCellState.P2) queueP2++;
       queue.add(state);
-      if (queueP1 + queueFree == K) return (me == MNKCellState.P1 ? 1 : -1) * (1d * queueP1 / K);
-      else if (queueP2 + queueFree == K)
-        return (me == MNKCellState.P2 ? 1 : -1) * (1d * queueP2 / K);
+      if (queueP1 + queueFree == K) return (me == MNKCellState.P1 ? 1 : -1) * seriesValue(queueFree);
+      else if (queueP2 + queueFree == K && queueFree < 3)
+        return (me == MNKCellState.P2 ? 1 : -1) * seriesValue(queueFree);
       // else if(queueP1 == 1 && queueP2+queueFree+1 == K) return (me == MNKCellState.P2 ? 1 : -1) *
       // (1d * queueP2 / K);
       else return 0;
       // else if(queueFree == K) return 0; // TODO: value empty streaks more than filled useless
       // ones
+    }
+
+    private static int seriesValue(int free) {
+      switch(free) {
+        case 3:
+          return 1;
+        case 2:
+          return 10;
+        case 1:
+          return 10;
+        default:
+          return 0;
+      }
     }
 
     @Override
@@ -194,10 +207,11 @@ public class GalileoGalilei implements MNKPlayer {
   private HashMap<Long, double[]> cache = new HashMap<>();
   private AtomicBoolean zobristReady = new AtomicBoolean(false);
   private static long[][] zobrist;
+  private MNKCell bestCell = null;
 
   // NOTE: profiling
-  private static int minimaxed, cutoff, seriesFound, evaluated, cacheHits, cacheMisses;
-  private static boolean clear = true, verbose = true;
+  private static int minimaxed, failed, failedDepth, cutoff, seriesFound, evaluated, cacheHits, cacheMisses;
+  private static boolean clear = false, verbose = true;
 
   public void initPlayer(int M, int N, int K, boolean first, int timeoutInSecs) {
     this.M = M;
@@ -372,7 +386,6 @@ public class GalileoGalilei implements MNKPlayer {
     minimaxed++;
     if (board.gameState() != MNKGameState.OPEN || depth <= 0) {
       a = color * evaluate();
-      if (depth > 0) System.out.println(board + " -----> " + a);
     } else if (shouldHalt()) a = HALT;
     else if (board.getMarkedCells().length >= (K - 1) * 2 - 1
         && ((bc = findOneMoveWin(MY_WIN)) != null || (bc = findOneMoveLoss(ENEMY_WIN)) != null)) {
@@ -407,8 +420,11 @@ public class GalileoGalilei implements MNKPlayer {
         if (i == 0) t = -pvs(depth - 1, -b, -a, -color);
         else {
           t = -pvs(depth - 1, -a - 1, -a, -color); // null-window search
-          if (t > a && t < b)
+          if (t > a && t < b) {
+            failed++;
+            failedDepth += depth;
             t = -pvs(depth - 1, -b, -t, -color); // if we fail between a and b do a proper search
+          }
         }
         board.unmarkCell();
         if (t == HALT) {
@@ -427,6 +443,8 @@ public class GalileoGalilei implements MNKPlayer {
       }
       // }}}
     }
+    if(a == HALT)
+      return HALT;
 
     double lower = entry[3], upper = entry[4];
     if (a <= alpha) upper = a;
@@ -435,13 +453,13 @@ public class GalileoGalilei implements MNKPlayer {
 
     double[] val = {a, depth, bc == null ? -1 : bc.i * minMN + bc.j, lower, upper};
     cache.put(board.zobrist(), val);
+    bestCell = bc;
     return a;
   }
 
-  public Pair<Double, int[]> iterativeDeepening() {
+  public Pair<Double, MNKCell> iterativeDeepening() {
     int len = board.getFreeCells().length;
     double value = MIN;
-    int cell[] = {0, 0};
 
     maxDepth = 1;
     while (!shouldHalt() && maxDepth <= len) {
@@ -449,9 +467,6 @@ public class GalileoGalilei implements MNKPlayer {
       if (Math.abs(latest) == HALT) break;
 
       value = latest;
-      int i = (int) cache.get(board.zobrist())[2];
-      cell[0] = i / minMN;
-      cell[1] = i % minMN;
 
       // stop the search if we found a certain win
       if (value >= winCutoff) break;
@@ -463,11 +478,9 @@ public class GalileoGalilei implements MNKPlayer {
                 + maxDepth
                 + " with value: ("
                 + value
-                + ", ("
-                + cell[0]
-                + ","
-                + cell[1]
-                + "))");
+                + ", "
+                + bestCell
+                + ")");
 
       maxDepth++;
     }
@@ -478,7 +491,7 @@ public class GalileoGalilei implements MNKPlayer {
           "FATAL: iterativeDeepening exceeded allowable depth with a depth of: " + maxDepth);
     }
 
-    return new Pair<>(value, cell);
+    return new Pair<>(value, bestCell);
   }
 
   public MNKCell selectCell(MNKCell[] FC, MNKCell[] MC) {
@@ -490,25 +503,23 @@ public class GalileoGalilei implements MNKPlayer {
           MC[MC.length - 1].i, MC[MC.length - 1].j); // keep track of the opponent's marks
 
     try {
-      Pair<Double, int[]> result = iterativeDeepening();
+      Pair<Double, MNKCell> result = iterativeDeepening();
       System.out.println(
           playerName()
               + "\t: visited "
               + minimaxed
               + " nodes, ended with result: ("
               + result.first
-              + ", ("
-              + result.second[0]
-              + ","
-              + result.second[1]
-              + "))");
+              + ", "
+              + result.second
+              + ")");
       System.out.println(
           playerName()
               + "\t: cut off "
               + cutoff
               + " branches ("
               + (cutoff / Math.max(minimaxed, 1) * 100)
-              + "%)");
+              + "%). failed pvs " + failed + " times with an average depth of " + (failedDepth*1d)/failed);
       System.out.println(
           playerName()
               + "\t: found a total of "
@@ -536,11 +547,13 @@ public class GalileoGalilei implements MNKPlayer {
         return FC[0];
       }
 
-      board.markCell(result.second[0], result.second[1]);
-      return new MNKCell(result.second[0], result.second[1], MNKCellState.FREE);
+      board.markCell(result.second.i, result.second.j);
+      return result.second;
     } catch (Exception e) {
       e.printStackTrace();
-      return FC[new Random().nextInt(FC.length)];
+      MNKCell c = FC[new Random().nextInt(FC.length)];
+      board.markCell(c.i, c.j);
+      return c;
     }
   }
 
