@@ -2,10 +2,10 @@ package mnkgame.players;
 
 import java.util.Arrays;
 import java.util.HashMap;
-import java.util.Random;
-import java.util.Queue;
-import java.util.Stack;
 import java.util.LinkedList;
+import java.util.Queue;
+import java.util.Random;
+import java.util.Stack;
 import java.util.concurrent.atomic.AtomicBoolean;
 import mnkgame.*;
 
@@ -159,10 +159,13 @@ public class FrancoRasetti implements MNKPlayer {
       else if (state == MNKCellState.P2) queueP2++;
       queue.add(state);
       if (queueP1 + queueFree == K) return (me == MNKCellState.P1 ? 1 : -1) * (1d * queueP1 / K);
-      else if (queueP2 + queueFree == K) return (me == MNKCellState.P2 ? 1 : -1) * (1d * queueP2 / K);
-      // else if(queueP1 == 1 && queueP2+queueFree+1 == K) return (me == MNKCellState.P2 ? 1 : -1) * (1d * queueP2 / K);
+      else if (queueP2 + queueFree == K)
+        return (me == MNKCellState.P2 ? 1 : -1) * (1d * queueP2 / K);
+      // else if(queueP1 == 1 && queueP2+queueFree+1 == K) return (me == MNKCellState.P2 ? 1 : -1) *
+      // (1d * queueP2 / K);
       else return 0;
-      // else if(queueFree == K) return 0; // TODO: value empty streaks more than filled useless ones
+      // else if(queueFree == K) return 0; // TODO: value empty streaks more than filled useless
+      // ones
     }
 
     @Override
