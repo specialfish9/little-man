@@ -155,7 +155,8 @@ public class GalileoGalilei implements MNKPlayer {
       else if (state == MNKCellState.P1) queueP1++;
       else if (state == MNKCellState.P2) queueP2++;
       queue.add(state);
-      if (queueP1 + queueFree == K) return (me == MNKCellState.P1 ? 1 : -1) * seriesValue(queueFree);
+      if (queueP1 + queueFree == K)
+        return (me == MNKCellState.P1 ? 1 : -1) * seriesValue(queueFree);
       else if (queueP2 + queueFree == K && queueFree < 3)
         return (me == MNKCellState.P2 ? 1 : -1) * seriesValue(queueFree);
       // else if(queueP1 == 1 && queueP2+queueFree+1 == K) return (me == MNKCellState.P2 ? 1 : -1) *
@@ -166,7 +167,7 @@ public class GalileoGalilei implements MNKPlayer {
     }
 
     private static int seriesValue(int free) {
-      switch(free) {
+      switch (free) {
         case 3:
           return 1;
         case 2:
@@ -210,7 +211,14 @@ public class GalileoGalilei implements MNKPlayer {
   private MNKCell bestCell = null;
 
   // NOTE: profiling
-  private static int minimaxed, failed, failedDepth, cutoff, seriesFound, evaluated, cacheHits, cacheMisses;
+  private static int minimaxed,
+      failed,
+      failedDepth,
+      cutoff,
+      seriesFound,
+      evaluated,
+      cacheHits,
+      cacheMisses;
   private static boolean clear = false, verbose = true;
 
   public void initPlayer(int M, int N, int K, boolean first, int timeoutInSecs) {
@@ -443,8 +451,7 @@ public class GalileoGalilei implements MNKPlayer {
       }
       // }}}
     }
-    if(a == HALT)
-      return HALT;
+    if (a == HALT) return HALT;
 
     double lower = entry[3], upper = entry[4];
     if (a <= alpha) upper = a;
@@ -474,13 +481,7 @@ public class GalileoGalilei implements MNKPlayer {
       // TODO: remove in production
       if (verbose)
         System.out.println(
-            "minimax went to depth "
-                + maxDepth
-                + " with value: ("
-                + value
-                + ", "
-                + bestCell
-                + ")");
+            "minimax went to depth " + maxDepth + " with value: (" + value + ", " + bestCell + ")");
 
       maxDepth++;
     }
@@ -519,7 +520,10 @@ public class GalileoGalilei implements MNKPlayer {
               + cutoff
               + " branches ("
               + (cutoff / Math.max(minimaxed, 1) * 100)
-              + "%). failed pvs " + failed + " times with an average depth of " + (failedDepth*1d)/failed);
+              + "%). failed pvs "
+              + failed
+              + " times with an average depth of "
+              + (failedDepth * 1d) / failed);
       System.out.println(
           playerName()
               + "\t: found a total of "
