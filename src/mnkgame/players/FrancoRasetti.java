@@ -387,6 +387,7 @@ public class FrancoRasetti implements MNKPlayer {
   }
 
   private static double timePerc = 0.8;
+
   private boolean shouldHalt() {
     // TODO: tweak values
     return (System.currentTimeMillis() - startTime) / 1000.0
