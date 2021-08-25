@@ -463,6 +463,7 @@ public class GalileoGalilei implements MNKPlayer {
   public Pair<Double, MNKCell> iterativeDeepening() {
     int len = board.getFreeCells().length;
     double value = MIN;
+    MNKCell bc = null;
 
     maxDepth = 1;
     while (!shouldHalt() && maxDepth <= len) {
@@ -470,6 +471,7 @@ public class GalileoGalilei implements MNKPlayer {
       if (Math.abs(latest) == HALT) break;
 
       value = latest;
+      bc = bestCell;
 
       // stop the search if we found a certain win
       if (value >= winCutoff) break;
@@ -477,7 +479,7 @@ public class GalileoGalilei implements MNKPlayer {
       // TODO: remove in production
       if (verbose)
         System.out.println(
-            "minimax went to depth " + maxDepth + " with value: (" + value + ", " + bestCell + ")");
+            "minimax went to depth " + maxDepth + " with value: (" + value + ", " + bc + ")");
 
       maxDepth++;
     }
@@ -488,7 +490,7 @@ public class GalileoGalilei implements MNKPlayer {
           "FATAL: iterativeDeepening exceeded allowable depth with a depth of: " + maxDepth);
     }
 
-    return new Pair<>(value, bestCell);
+    return new Pair<>(value, bc);
   }
 
   public MNKCell selectCell(MNKCell[] FC, MNKCell[] MC) {
