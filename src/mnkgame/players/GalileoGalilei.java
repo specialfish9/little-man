@@ -3,7 +3,9 @@ package mnkgame.players;
 import java.util.HashMap;
 import java.util.LinkedList;
 import java.util.Queue;
-import java.util.Random; import java.util.Stack; import java.util.concurrent.atomic.AtomicBoolean;
+import java.util.Random;
+import java.util.Stack;
+import java.util.concurrent.atomic.AtomicBoolean;
 import mnkgame.*;
 
 public class GalileoGalilei implements MNKPlayer {
