@@ -116,19 +116,21 @@ public class GalileoGalilei implements MNKPlayer {
         value += pushCell(B[i][jj]);
 
       // diagonal
-      int ku = Math.min(K, Math.min(i, j)), kl = Math.min(K, Math.min(M - 1 - i, N - 1 - j)), ii = i - ku, jj = j - ku,
-          iim = i + kl, jjm = j + kl;
+      int ku = Math.min(K, Math.min(i, j)),
+          kl = Math.min(K, Math.min(M - 1 - i, N - 1 - j)),
+          ii = i - ku,
+          jj = j - ku,
+          iim = i + kl,
+          jjm = j + kl;
       queueClear();
-      for (; ii <= iim && jj <= jjm; ii++, jj++)
-        value += pushCell(B[ii][jj]);
+      for (; ii <= iim && jj <= jjm; ii++, jj++) value += pushCell(B[ii][jj]);
 
       // counter diagonal
       ii = i - ku;
       jj = j + ku;
       iim = i + kl;
       jjm = j - kl;
-      for (; ii <= iim && jj <= jjm; ii++, jj--)
-        value += pushCell(B[ii][jj]);
+      for (; ii <= iim && jj <= jjm; ii++, jj--) value += pushCell(B[ii][jj]);
 
       return value;
     }
@@ -140,24 +142,18 @@ public class GalileoGalilei implements MNKPlayer {
 
     private void popCell() {
       MNKCellState state = queue.poll();
-      if (state == MNKCellState.FREE)
-        queueFree--;
-      else if (state == MNKCellState.P1)
-        queueP1--;
-      else if (state == MNKCellState.P2)
-        queueP2--;
+      if (state == MNKCellState.FREE) queueFree--;
+      else if (state == MNKCellState.P1) queueP1--;
+      else if (state == MNKCellState.P2) queueP2--;
     }
 
     private double pushCell(final MNKCellState state) {
       if (queue.size() >= K) // useless >
-        popCell();
+      popCell();
 
-      if (state == MNKCellState.FREE)
-        queueFree++;
-      else if (state == MNKCellState.P1)
-        queueP1++;
-      else if (state == MNKCellState.P2)
-        queueP2++;
+      if (state == MNKCellState.FREE) queueFree++;
+      else if (state == MNKCellState.P1) queueP1++;
+      else if (state == MNKCellState.P2) queueP2++;
       queue.add(state);
       if (queueP1 + queueFree == K)
         return (me == MNKCellState.P1 ? 1 : -1) * (seriesValue(queueFree) + queueP1 / K);
@@ -166,20 +162,16 @@ public class GalileoGalilei implements MNKPlayer {
       // else if(queueP1 == 1 && queueP2+queueFree+1 == K) return (me ==
       // MNKCellState.P2 ? 1 : -1) *
       // (1d * queueP2 / K);
-      else
-        return 0;
+      else return 0;
       // else if(queueFree == K) return 0; // TODO: value empty streaks more than
       // filled useless
       // ones
     }
 
     private int seriesValue(final int free) {
-      if (K > 4 && free == 3)
-        return 1000;
-      if (K > 3 && free == 2)
-        return 10000;
-      if (K > 2 && free == 1)
-        return 100000;
+      if (K > 4 && free == 3) return 1000;
+      if (K > 3 && free == 2) return 10000;
+      if (K > 2 && free == 1) return 100000;
 
       return 0;
     }
@@ -189,7 +181,8 @@ public class GalileoGalilei implements MNKPlayer {
       String str = "";
       for (int i = 0; i < M; i++) {
         for (int j = 0; j < N; j++)
-          str += " " + (B[i][j] == MNKCellState.P1 ? 'x' : (B[i][j] == MNKCellState.P2 ? 'o' : '-'));
+          str +=
+              " " + (B[i][j] == MNKCellState.P1 ? 'x' : (B[i][j] == MNKCellState.P2 ? 'o' : '-'));
         str += '\n';
       }
       return str;
@@ -215,7 +208,14 @@ public class GalileoGalilei implements MNKPlayer {
   private MNKCell bestCell = null;
 
   // NOTE: profiling
-  private static int minimaxed, failed, failedDepth, cutoff, seriesFound, evaluated, cacheHits, cacheMisses;
+  private static int minimaxed,
+      failed,
+      failedDepth,
+      cutoff,
+      seriesFound,
+      evaluated,
+      cacheHits,
+      cacheMisses;
   private static boolean clear = false, verbose = false;
 
   public void initPlayer(int M, int N, int K, boolean first, int timeoutInSecs) {
@@ -242,7 +242,7 @@ public class GalileoGalilei implements MNKPlayer {
     int i;
     for (i = 0; i < zobrist.length; i++) {
       if (i % 10 == 0 && shouldHalt()) // check every 10 iterations
-        break;
+      break;
 
       zobrist[i][0] = r.nextLong();
       zobrist[i][1] = r.nextLong();
@@ -253,16 +253,21 @@ public class GalileoGalilei implements MNKPlayer {
     // read from after the
     if (i != zobrist.length) {
       final int j = i;
-      Thread t = new Thread(() -> {
-        for (int k = j; k < zobrist.length; k++) {
-          zobrist[k][0] = r.nextLong();
-          zobrist[k][1] = r.nextLong();
-        }
-        zobristReady.set(true);
-        // TODO: remove
-        System.out.println(playerName() + "\t: cache ready, in another thread after "
-            + (System.currentTimeMillis() - startTime) / 1000d + "s");
-      });
+      Thread t =
+          new Thread(
+              () -> {
+                for (int k = j; k < zobrist.length; k++) {
+                  zobrist[k][0] = r.nextLong();
+                  zobrist[k][1] = r.nextLong();
+                }
+                zobristReady.set(true);
+                // TODO: remove
+                System.out.println(
+                    playerName()
+                        + "\t: cache ready, in another thread after "
+                        + (System.currentTimeMillis() - startTime) / 1000d
+                        + "s");
+              });
       t.start();
     } else {
       zobristReady.set(true);
@@ -289,8 +294,7 @@ public class GalileoGalilei implements MNKPlayer {
     for (MNKCell c : board.getFreeCells()) {
       MNKGameState result = board.markCell(c.i, c.j);
       board.unmarkCell();
-      if (result == winState)
-        return c;
+      if (result == winState) return c;
     }
     return null;
   }
@@ -300,8 +304,8 @@ public class GalileoGalilei implements MNKPlayer {
       // avoiding the shouldHalt check here, kinda superflous
       MNKGameState result = board.markCell(c.i, c.j);
       board.unmarkCell();
-      if (result == MNKGameState.OPEN && (previous == null || previous.i != c.i || previous.j != c.j))
-        return c;
+      if (result == MNKGameState.OPEN
+          && (previous == null || previous.i != c.i || previous.j != c.j)) return c;
     }
     return null;
   }
@@ -316,16 +320,15 @@ public class GalileoGalilei implements MNKPlayer {
     board.markCell(randomCell.i, randomCell.j);
     MNKCell c = findOneMoveWin(lossState);
     board.unmarkCell(); // remove the marked randomCell
-    if (c != null)
-      return c;
+    if (c != null) return c;
 
     // test the randomCell we selected at first. It may be a one-move loss cell
     // get a new random cell different from the previous and call it cc
     MNKCell cc = pickRandomNonClosingCell(randomCell);
-    if (cc == null)
-      return null;
+    if (cc == null) return null;
     board.markCell(cc.i, cc.j);
-    MNKGameState result = board.markCell(randomCell.i, randomCell.j); // let the enemy take the random ane
+    MNKGameState result =
+        board.markCell(randomCell.i, randomCell.j); // let the enemy take the random ane
     board.unmarkCell();
     board.unmarkCell();
     return result == lossState ? randomCell : null;
@@ -337,12 +340,9 @@ public class GalileoGalilei implements MNKPlayer {
     // check for draws first, most lickely
     double depth = Math.max(board.getMarkedCells().length, 1);
     MNKGameState state = board.gameState();
-    if (state == MNKGameState.DRAW)
-      return 0;
-    else if (state == MY_WIN)
-      return (MAX - 1) / depth;
-    else if (state == ENEMY_WIN)
-      return -(MIN + 1) / depth;
+    if (state == MNKGameState.DRAW) return 0;
+    else if (state == MY_WIN) return (MAX - 1) / depth;
+    else if (state == ENEMY_WIN) return -(MIN + 1) / depth;
     else {
       evaluated++;
       return board.value() / depth;
@@ -357,8 +357,7 @@ public class GalileoGalilei implements MNKPlayer {
     int m = start;
     // find the max/min in [start,end]
     for (int i = start + 1; i < vec.length; i++)
-      if (color > 0 ? (values[i] > values[m]) : (values[i] < values[m]))
-        m = i;
+      if (color > 0 ? (values[i] > values[m]) : (values[i] < values[m])) m = i;
 
     // if we found a new min/max put it in start
     if (m != start) {
@@ -373,27 +372,23 @@ public class GalileoGalilei implements MNKPlayer {
   }
 
   private double pvs(int depth, double alpha, double beta, int color) {
-    double entry[] = { 0, 0, -1, 0, 0 }; // [value, depth, index, lower, upper]
+    double entry[] = {0, 0, -1, 0, 0}; // [value, depth, index, lower, upper]
     // only use a cached value if it was computed with the same depth - and
     // therefore the same ammount of knowledge (as this call) could be extracted.
     if (cache.containsKey(board.zobrist()) && (entry = cache.get(board.zobrist()))[1] >= depth) {
       cacheHits++;
-      if (entry[3] >= beta)
-        return entry[3];
-      if (entry[4] <= alpha)
-        return entry[4];
+      if (entry[3] >= beta) return entry[3];
+      if (entry[4] <= alpha) return entry[4];
       alpha = Math.max(alpha, entry[3]);
       beta = Math.min(beta, entry[4]);
-    } else
-      cacheMisses++;
+    } else cacheMisses++;
     MNKCell bc = null;
     double a = alpha, b = beta;
 
     minimaxed++;
     if (board.gameState() != MNKGameState.OPEN || depth <= 0) {
       a = color * evaluate();
-    } else if (shouldHalt())
-      a = HALT;
+    } else if (shouldHalt()) a = HALT;
     else if (board.getMarkedCells().length >= (K - 1) * 2 - 1
         && ((bc = findOneMoveWin(MY_WIN)) != null || (bc = findOneMoveLoss(ENEMY_WIN)) != null)) {
       seriesFound++;
@@ -409,14 +404,11 @@ public class GalileoGalilei implements MNKPlayer {
         if (cache.containsKey(hash)) {
           double values[] = cache.get(hash);
           ratings[i] = values[1] >= depth ? values[0] : 0;
-        } else
-          ratings[i] = 0;
+        } else ratings[i] = 0;
 
         // TODO: remove in production
-        if (ratings[i] != 0)
-          cacheHits++;
-        else
-          cacheMisses++;
+        if (ratings[i] != 0) cacheHits++;
+        else cacheMisses++;
       }
       // }}}
 
@@ -427,8 +419,7 @@ public class GalileoGalilei implements MNKPlayer {
         MNKCell c = cells[i];
         board.markCell(c.i, c.j);
         double t;
-        if (i == 0)
-          t = -pvs(depth - 1, -b, -a, -color);
+        if (i == 0) t = -pvs(depth - 1, -b, -a, -color);
         else {
           t = -pvs(depth - 1, -a - 1, -a, -color); // null-window search
           if (t > a && t < b) {
@@ -439,10 +430,8 @@ public class GalileoGalilei implements MNKPlayer {
         }
         board.unmarkCell();
         if (t == HALT) {
-          if (a == alpha)
-            return HALT;
-          else
-            break;
+          if (a == alpha) return HALT;
+          else break;
         }
         if (t > a) { // a = max(a,t)
           a = t;
@@ -456,18 +445,14 @@ public class GalileoGalilei implements MNKPlayer {
       }
       // }}}
     }
-    if (a == HALT)
-      return HALT;
+    if (a == HALT) return HALT;
 
     double lower = entry[3], upper = entry[4];
-    if (a <= alpha)
-      upper = a;
-    if (a > alpha && a < beta)
-      upper = lower = a;
-    if (a >= beta)
-      lower = a;
+    if (a <= alpha) upper = a;
+    if (a > alpha && a < beta) upper = lower = a;
+    if (a >= beta) lower = a;
 
-    double[] val = { a, depth, bc == null ? -1 : bc.i * minMN + bc.j, lower, upper };
+    double[] val = {a, depth, bc == null ? -1 : bc.i * minMN + bc.j, lower, upper};
     cache.put(board.zobrist(), val);
     bestCell = bc;
     return a;
@@ -481,26 +466,26 @@ public class GalileoGalilei implements MNKPlayer {
     maxDepth = 1;
     while (!shouldHalt() && maxDepth <= len) {
       double latest = pvs(maxDepth, MIN, MAX, 1);
-      if (Math.abs(latest) == HALT)
-        break;
+      if (Math.abs(latest) == HALT) break;
 
       value = latest;
       bc = bestCell;
 
       // stop the search if we found a certain win
-      if (value >= winCutoff)
-        break;
+      if (value >= winCutoff) break;
 
       // TODO: remove in production
       if (verbose)
-        System.out.println("minimax went to depth " + maxDepth + " with value: (" + value + ", " + bc + ")");
+        System.out.println(
+            "minimax went to depth " + maxDepth + " with value: (" + value + ", " + bc + ")");
 
       maxDepth++;
     }
 
     // TODO: remove in production
     if (maxDepth - 1 > board.getFreeCells().length) {
-      throw new Error("FATAL: iterativeDeepening exceeded allowable depth with a depth of: " + maxDepth);
+      throw new Error(
+          "FATAL: iterativeDeepening exceeded allowable depth with a depth of: " + maxDepth);
     }
 
     return new Pair<>(value, bc);
@@ -508,24 +493,54 @@ public class GalileoGalilei implements MNKPlayer {
 
   public MNKCell selectCell(MNKCell[] FC, MNKCell[] MC) {
     startTime = System.currentTimeMillis();
-    minimaxed = failed = failedDepth = cutoff = seriesFound = evaluated = cacheHits = cacheMisses = 0;
+    minimaxed =
+        failed = failedDepth = cutoff = seriesFound = evaluated = cacheHits = cacheMisses = 0;
 
     if (MC.length > 0)
-      board.markCell(MC[MC.length - 1].i, MC[MC.length - 1].j); // keep track of the opponent's marks
+      board.markCell(
+          MC[MC.length - 1].i, MC[MC.length - 1].j); // keep track of the opponent's marks
 
     try {
       Pair<Double, MNKCell> result = iterativeDeepening();
-      System.out.println(playerName() + "\t: visited " + minimaxed + " nodes, ended with result: (" + result.first
-          + ", " + result.second + ")");
-      System.out
-          .println(playerName() + "\t: cut off " + cutoff + " branches (" + (cutoff / Math.max(minimaxed, 1) * 100)
-              + "%). failed pvs " + failed + " times with an average depth of " + (failedDepth * 1d) / failed);
-      System.out.println(playerName() + "\t: found a total of " + seriesFound + " free cells in series (up to k-1)");
+      System.out.println(
+          playerName()
+              + "\t: visited "
+              + minimaxed
+              + " nodes, ended with result: ("
+              + result.first
+              + ", "
+              + result.second
+              + ")");
+      System.out.println(
+          playerName()
+              + "\t: cut off "
+              + cutoff
+              + " branches ("
+              + (cutoff / Math.max(minimaxed, 1) * 100)
+              + "%). failed pvs "
+              + failed
+              + " times with an average depth of "
+              + (failedDepth * 1d) / failed);
+      System.out.println(
+          playerName()
+              + "\t: found a total of "
+              + seriesFound
+              + " free cells in series (up to k-1)");
       System.out.println(playerName() + "\t: heuristically evaluated " + evaluated + " boards");
       int perc = (int) ((1d * cacheHits / (cacheMisses + cacheHits)) * 100);
-      System.out.println(playerName() + "\t: cached " + cache.size() + " elements, hit: " + cacheHits + ", misses: "
-          + cacheMisses + ". rate: " + perc + "%");
-      System.out.println(playerName() + "\t: took " + (System.currentTimeMillis() - startTime) / 1000d + "s");
+      System.out.println(
+          playerName()
+              + "\t: cached "
+              + cache.size()
+              + " elements, hit: "
+              + cacheHits
+              + ", misses: "
+              + cacheMisses
+              + ". rate: "
+              + perc
+              + "%");
+      System.out.println(
+          playerName() + "\t: took " + (System.currentTimeMillis() - startTime) / 1000d + "s");
 
       // TODO: remove in prod
       if (FC.length != board.getFreeCells().length) {
