@@ -3,9 +3,7 @@ package mnkgame.players;
 import java.util.HashMap;
 import java.util.LinkedList;
 import java.util.Queue;
-import java.util.Random;
-import java.util.Stack;
-import java.util.concurrent.atomic.AtomicBoolean;
+import java.util.Random; import java.util.Stack; import java.util.concurrent.atomic.AtomicBoolean;
 import mnkgame.*;
 
 public class GalileoGalilei implements MNKPlayer {
@@ -405,11 +403,11 @@ public class GalileoGalilei implements MNKPlayer {
         if (cache.containsKey(hash)) {
           double values[] = cache.get(hash);
           ratings[i] = values[1] >= depth ? values[0] : 0;
-          if (ratings[i] != 0) cacheHits++;
-        } else {
-          ratings[i] = 0;
-          cacheMisses++;
-        }
+        } else ratings[i] = 0;
+
+        // TODO: remove in production
+        if (ratings[i] != 0) cacheHits++;
+        else cacheMisses++;
       }
       // }}}
 
