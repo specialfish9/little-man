@@ -107,13 +107,11 @@ public class GalileoGalilei implements MNKPlayer {
       // column
       queueClear();
       // for (int ii = Math.max(i - K, 0); ii <= Math.min(i + K, M - 1); ii++)
-      for (int ii = 0; ii < M; ii++)
-        value += pushCell(B[ii][j]);
+      for (int ii = 0; ii < M; ii++) value += pushCell(B[ii][j]);
 
       // row
       queueClear();
-      for (int jj = 0; jj < N; jj++)
-        value += pushCell(B[i][jj]);
+      for (int jj = 0; jj < N; jj++) value += pushCell(B[i][jj]);
 
       // diagonal
       int ku = Math.min(i, j),
@@ -156,8 +154,7 @@ public class GalileoGalilei implements MNKPlayer {
       else if (state == MNKCellState.P2) queueP2++;
       queue.add(state);
       int sign = me == MNKCellState.P1 ? 1 : -1;
-      if (queueP1 + queueFree == K)
-        return sign * (seriesValue(queueFree) + (queueP1 * 1d / K));
+      if (queueP1 + queueFree == K) return sign * (seriesValue(queueFree) + (queueP1 * 1d / K));
       else if (queueP2 + queueFree == K)
         return -sign * (seriesValue(queueFree) + (queueP2 * 1d / K));
       else return 0;
@@ -277,21 +274,21 @@ public class GalileoGalilei implements MNKPlayer {
       System.out.flush();
     }
 
-    board.markCell(6,4);
-    System.out.println(board +" -> " +board.value());
-    board.markCell(6,5);
-    System.out.println(board +" -> " +board.value());
-    board.markCell(5,4);
-    System.out.println(board +" -> " +board.value());
-    board.markCell(4,4);
-    System.out.println(board +" -> " +board.value());
+    board.markCell(6, 4);
+    System.out.println(board + " -> " + board.value());
+    board.markCell(6, 5);
+    System.out.println(board + " -> " + board.value());
+    board.markCell(5, 4);
+    System.out.println(board + " -> " + board.value());
+    board.markCell(4, 4);
+    System.out.println(board + " -> " + board.value());
 
-    board.markCell(6,2);
-    System.out.println(board +" -> " +board.value());
+    board.markCell(6, 2);
+    System.out.println(board + " -> " + board.value());
     board.unmarkCell();
 
-    board.markCell(5,3);
-    System.out.println(board +" -> " +board.value());
+    board.markCell(5, 3);
+    System.out.println(board + " -> " + board.value());
     board.unmarkCell();
 
     board.unmarkCell();
@@ -392,7 +389,8 @@ public class GalileoGalilei implements MNKPlayer {
     double entry[] = {0, 0, -1, 0, 0}; // [value, depth, index, lower, upper]
     // only use a cached value if it was computed with the same depth - and
     // therefore the same ammount of knowledge (as this call) could be extracted.
-    if (cache.containsKey(board.zobrist()) && (entry = cache.get(board.zobrist()))[1] >= searchDepth) {
+    if (cache.containsKey(board.zobrist())
+        && (entry = cache.get(board.zobrist()))[1] >= searchDepth) {
       cacheHits++;
       if (entry[3] >= beta) return entry[3];
       if (entry[4] <= alpha) return entry[4];
@@ -441,8 +439,13 @@ public class GalileoGalilei implements MNKPlayer {
           t = -pvs(searchDepth - 1, -a - 1, -a, -color); // null-window search
           if (t > a && t < b) {
             failed++;
-            failedDepth += searchDepth-1;
-            t = -pvs(searchDepth - 1, -b, -t, -color); // if we fail between a and b do a proper search
+            failedDepth += searchDepth - 1;
+            t =
+                -pvs(
+                    searchDepth - 1,
+                    -b,
+                    -t,
+                    -color); // if we fail between a and b do a proper search
           }
         }
         board.unmarkCell();
