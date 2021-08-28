@@ -4,7 +4,6 @@ import java.util.HashMap;
 import java.util.LinkedList;
 import java.util.Queue;
 import java.util.Random;
-import java.util.Arrays;
 import java.util.Stack;
 import java.util.concurrent.atomic.AtomicBoolean;
 import mnkgame.*;
@@ -400,7 +399,7 @@ public class GalileoGalilei implements MNKPlayer {
         ((omc = findOneMoveWin(color > 0 ? MY_WIN : ENEMY_WIN)) != null
             || (omc = findOneMoveLoss(color > 0 ? ENEMY_WIN : MY_WIN)) != null)) {
       board.markCell(omc.i, omc.j);
-      result = -pvs(-color, searchDepth-1, -beta, -alpha);
+      result = -pvs(-color, searchDepth - 1, -beta, -alpha);
       board.unmarkCell();
     } else {
       if (superVerbose) {
@@ -469,7 +468,7 @@ public class GalileoGalilei implements MNKPlayer {
             || (bestCell = findOneMoveLoss(ENEMY_WIN)) != null)) {
       Pair<MNKCell[], double[]> moves = getMoves(searchDepth);
       board.markCell(bestCell.i, bestCell.j);
-      bestValue = -pvs(-1, searchDepth-1, -beta, -alpha);
+      bestValue = -pvs(-1, searchDepth - 1, -beta, -alpha);
       board.unmarkCell();
     } else {
       int bestMove = 0;
@@ -495,8 +494,7 @@ public class GalileoGalilei implements MNKPlayer {
           if (score > alpha) alpha = score;
         }
         board.unmarkCell();
-        if (score == HALT)
-          return new Pair<>(HALT, null);
+        if (score == HALT) return new Pair<>(HALT, null);
         if (score > bestValue) {
           bestValue = score;
           bestMove = i;
