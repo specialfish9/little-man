@@ -4,6 +4,7 @@ import java.util.HashMap;
 import java.util.LinkedList;
 import java.util.Queue;
 import java.util.Random;
+import java.util.Arrays;
 import java.util.Stack;
 import java.util.concurrent.atomic.AtomicBoolean;
 import mnkgame.*;
@@ -183,7 +184,7 @@ public class GalileoGalilei implements MNKPlayer {
   // }}}
 
   private static final double HALT = Double.MIN_VALUE;
-  private static final double INFTY = 100000;
+  private static final double INFTY = 10000000;
   private static double winCutoff =
       INFTY; // represents a certain win, and therefore we can cutoff search
 
@@ -279,8 +280,7 @@ public class GalileoGalilei implements MNKPlayer {
     return (System.currentTimeMillis() - startTime) / 1000.0 >= timeout * 0.9; // livin' on the edge
   }
 
-  // finds the first cell needed to copmlete a K-1 streak in any possible
-  // direction
+  // finds the first cell needed to copmlete a K-1 streak in any possible direction
   private MNKCell findOneMoveWin(final MNKGameState winState) {
     for (MNKCell c : board.getFreeCells()) {
       MNKGameState result = board.markCell(c.i, c.j);
@@ -301,8 +301,7 @@ public class GalileoGalilei implements MNKPlayer {
     return null;
   }
 
-  // finds the first cell the enemy needs to copmlete a K-1 streak in any possible
-  // direction
+  // finds the first cell the enemy needs to copmlete a K-1 streak in any possible direction
   private MNKCell findOneMoveLoss(final MNKGameState lossState) {
     MNKCell randomCell = null;
     if (board.getFreeCells().length == 1 || (randomCell = pickRandomNonClosingCell(null)) == null)
@@ -316,8 +315,11 @@ public class GalileoGalilei implements MNKPlayer {
     // test the randomCell we selected at first. It may be a one-move loss cell
     // get a new random cell different from the previous and call it cc
     MNKCell cc = pickRandomNonClosingCell(randomCell);
-    if (cc == null) return null;
-    board.markCell(cc.i, cc.j);
+    if (board.markCell(cc.i, cc.j) != MNKGameState.OPEN) {
+      // randomCell puts us in a draw, ignore that
+      board.unmarkCell();
+      return null;
+    }
     MNKGameState result =
         board.markCell(randomCell.i, randomCell.j); // let the enemy take the random ane
     board.unmarkCell();
@@ -388,9 +390,19 @@ public class GalileoGalilei implements MNKPlayer {
     } else cacheMisses++;
 
     double result;
+    MNKCell omc = null;
     if (searchDepth <= 0 || board.gameState() != MNKGameState.OPEN) result = color * evaluate();
     else if (shouldHalt()) result = HALT;
-    else {
+    else if (board.getMarkedCells().length >= 2 * K - 1
+        && // only check for one-win-moves
+        // if there have been placed
+        // enough cells to make one happen
+        ((omc = findOneMoveWin(color > 0 ? MY_WIN : ENEMY_WIN)) != null
+            || (omc = findOneMoveLoss(color > 0 ? ENEMY_WIN : MY_WIN)) != null)) {
+      board.markCell(omc.i, omc.j);
+      result = -pvs(-color, searchDepth-1, -beta, -alpha);
+      board.unmarkCell();
+    } else {
       if (superVerbose) {
         for (int i = 0; i < board.getMarkedCells().length; i++) System.out.print("--");
         System.out.println("opened " + color + " ( " + alpha + " , " + beta + " )");
@@ -399,16 +411,16 @@ public class GalileoGalilei implements MNKPlayer {
       int bestMove = 0;
       selectionSort(moves.first, moves.second, 0, color);
       board.markCell(moves.first[bestMove].i, moves.first[bestMove].j);
-      double best = -pvs(-color, searchDepth - 1, -beta, -alpha);
+      result = -pvs(-color, searchDepth - 1, -beta, -alpha);
       if (superVerbose) {
         for (int i = 0; i < board.getMarkedCells().length; i++) System.out.print("--");
-        System.out.println(" best: " + best);
+        System.out.println(" best: " + result);
       }
       board.unmarkCell();
-      if (best == HALT) return HALT;
-      if (best > alpha) {
-        if (best >= beta) return best;
-        alpha = best;
+      if (result == HALT) return HALT;
+      if (result > alpha) {
+        if (result >= beta) return result;
+        alpha = result;
       }
 
       int i = 1, len = board.getFreeCells().length;
@@ -427,8 +439,8 @@ public class GalileoGalilei implements MNKPlayer {
         }
         board.unmarkCell();
         if (score == HALT) break;
-        if (score > best) {
-          best = score;
+        if (score > result) {
+          result = score;
           bestMove = i;
           if (score >= beta) break;
         }
@@ -436,9 +448,8 @@ public class GalileoGalilei implements MNKPlayer {
       }
       if (superVerbose) {
         for (int j = 0; j < board.getMarkedCells().length; j++) System.out.print("--");
-        System.out.println("closed " + best + " ( " + alpha + " , " + beta + " )");
+        System.out.println("closed " + result + " ( " + alpha + " , " + beta + " )");
       }
-      result = best;
     }
     if (result == HALT) return HALT;
 
@@ -448,38 +459,54 @@ public class GalileoGalilei implements MNKPlayer {
   }
 
   private Pair<Double, MNKCell> pvsRoot(int searchDepth, double alpha, double beta) {
-    Pair<MNKCell[], double[]> moves = getMoves(searchDepth);
-    int bestMove = 0;
-    selectionSort(moves.first, moves.second, 0, 1);
-    board.markCell(moves.first[bestMove].i, moves.first[bestMove].j);
-    double best = -pvs(-1, searchDepth - 1, -beta, -alpha);
-    board.unmarkCell();
-    if (best == HALT) return new Pair<>(HALT, null);
-    if (best > alpha) {
-      if (best >= beta) return new Pair<>(best, moves.first[bestMove]);
-      alpha = best;
-    }
-
-    int i = 1, len = board.getFreeCells().length;
-    while (i < len) {
-      selectionSort(moves.first, moves.second, i, 1);
-      board.markCell(moves.first[i].i, moves.first[i].j);
-      double score = -pvs(-1, searchDepth - 1, -alpha - 1, -alpha); // alphaBeta or zwSearch
-      if (score > alpha && score < beta && score != HALT) {
-        // research with window [alfa;beta]
-        score = -pvs(-1, searchDepth - 1, -beta, -alpha);
-        if (score > alpha) alpha = score;
-      }
+    double bestValue = -INFTY;
+    MNKCell bestCell = null;
+    if (board.getMarkedCells().length >= 2 * K - 1
+        && // only check for one-win-moves
+        // if there have been placed
+        // enough cells to make one happen
+        ((bestCell = findOneMoveWin(MY_WIN)) != null
+            || (bestCell = findOneMoveLoss(ENEMY_WIN)) != null)) {
+      Pair<MNKCell[], double[]> moves = getMoves(searchDepth);
+      board.markCell(bestCell.i, bestCell.j);
+      bestValue = -pvs(-1, searchDepth-1, -beta, -alpha);
       board.unmarkCell();
-      if (score == HALT) break;
-      if (score > best) {
-        best = score;
-        bestMove = i;
-        if (score >= beta) break;
+    } else {
+      int bestMove = 0;
+      Pair<MNKCell[], double[]> moves = getMoves(searchDepth);
+      selectionSort(moves.first, moves.second, 0, 1);
+      board.markCell(moves.first[bestMove].i, moves.first[bestMove].j);
+      bestValue = -pvs(-1, searchDepth - 1, -beta, -alpha);
+      board.unmarkCell();
+      if (bestValue == HALT) return new Pair<>(HALT, null);
+      if (bestValue > alpha) {
+        if (bestValue >= beta) return new Pair<>(bestValue, moves.first[bestMove]);
+        alpha = bestValue;
       }
-      i++;
+
+      int i = 1, len = board.getFreeCells().length;
+      while (i < len) {
+        selectionSort(moves.first, moves.second, i, 1);
+        board.markCell(moves.first[i].i, moves.first[i].j);
+        double score = -pvs(-1, searchDepth - 1, -alpha - 1, -alpha); // alphaBeta or zwSearch
+        if (score > alpha && score < beta && score != HALT) {
+          // research with window [alfa;beta]
+          score = -pvs(-1, searchDepth - 1, -beta, -alpha);
+          if (score > alpha) alpha = score;
+        }
+        board.unmarkCell();
+        if (score == HALT)
+          return new Pair<>(HALT, null);
+        if (score > bestValue) {
+          bestValue = score;
+          bestMove = i;
+          if (score >= beta) break;
+        }
+        i++;
+      }
+      bestCell = moves.first[bestMove];
     }
-    return new Pair<>(best, moves.first[bestMove]);
+    return new Pair<>(bestValue, bestCell);
   }
 
   public Pair<Double, MNKCell> iterativeDeepening() {
