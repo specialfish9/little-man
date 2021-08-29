@@ -163,9 +163,9 @@ public class GalileoGalilei implements MNKPlayer {
     }
 
     private int seriesValue(final int free) {
-      if (K > 4 && free == 3) return 1000;
-      if (K > 3 && free == 2) return 10000;
-      if (K > 2 && free == 1) return 100000;
+      if (K > 4 && free == 3) return 1000; // 1k
+      if (K > 3 && free == 2) return 100000; // 100k
+      if (K > 2 && free == 1) return 10000000; // 10M
 
       return 0;
     }
@@ -241,16 +241,16 @@ public class GalileoGalilei implements MNKPlayer {
   }
   // }}}
 
-  private static final int INFTY = 10000000;
-  private static final int HALT = -INFTY-1;
+  private static final int INFTY = 1000000000; // 1B
+  private static final int HALT = -INFTY * 2;  // -2B
   private static final double SAFETY_THRESHOLD = 0.9;
   // TODO: implement
   private static double winCutoff =
-      INFTY; // represents a certain win, and therefore we can cutoff search
+      INFTY; // represents a certain win, and therefore we can cutoff searc
 
   private MNKCellState ME, ENEMY;
   private MNKGameState MY_WIN, ENEMY_WIN;
-  private int M, N, K, minMN, maxDepth = 1;
+  private int M, N, K, minMN;
   private long startTime, timeout;
   private Random r;
   private Board board, cacheBoard;
@@ -269,7 +269,7 @@ public class GalileoGalilei implements MNKPlayer {
       evaluated,
       cacheHits,
       cacheMisses;
-  private static boolean clear = false, verbose = true, superVerbose = false;
+  private static boolean clear = false, verbose = true, superVerbose = false, winCutoffEnabled = true;
 
   public void initPlayer(int M, int N, int K, boolean first, int timeoutInSecs) {
     this.M = M;
@@ -318,7 +318,7 @@ public class GalileoGalilei implements MNKPlayer {
                     playerName()
                         + "\t: cache ready, in another thread after "
                         + (System.currentTimeMillis() - startTime)
-                        + "s");
+                        + "ms");
               })
           .start();
     } else {
@@ -442,6 +442,7 @@ public class GalileoGalilei implements MNKPlayer {
     return new Pair<>(cells, ratings);
   }
 
+  // {{{ Principal Variation Search for subtrees
   private int pvs(int color, int searchDepth, int alpha, int beta) {
     int[] entry = {-color * INFTY, searchDepth};
     if (cache.containsKey(board.zobrist())
@@ -518,7 +519,9 @@ public class GalileoGalilei implements MNKPlayer {
     cache.put(board.zobrist(), entry);
     return result;
   }
+  // }}}
 
+  // {{{ Principal Variation Search on root
   private Pair<Integer, MNKCell> pvsRoot(int searchDepth, int alpha, int beta) {
     int bestValue = -INFTY;
     MNKCell bestCell = null;
@@ -528,7 +531,6 @@ public class GalileoGalilei implements MNKPlayer {
         // enough cells to make one happen
         ((bestCell = findOneMoveWin(MY_WIN)) != null
             || (bestCell = findOneMoveLoss(ENEMY_WIN)) != null)) {
-      Pair<MNKCell[], int[]> moves = getMoves(searchDepth);
       board.markCell(bestCell.i, bestCell.j);
       bestValue = -pvs(-1, searchDepth - 1, -beta, -alpha);
       board.unmarkCell();
@@ -568,13 +570,14 @@ public class GalileoGalilei implements MNKPlayer {
     }
     return new Pair<>(bestValue, bestCell);
   }
+  // }}}
 
   // {{{ iterative deepening
   public Pair<Integer, MNKCell> iterativeDeepening() {
     int len = board.getFreeCells().length;
     Pair<Integer, MNKCell> value = null;
 
-    maxDepth = 1;
+    int maxDepth = 1;
     while (!shouldHalt() && maxDepth <= len) {
       Pair<Integer, MNKCell> latest = pvsRoot(maxDepth, -INFTY, INFTY);
       if (latest.first == HALT || latest.first == -HALT) break;
@@ -656,7 +659,7 @@ public class GalileoGalilei implements MNKPlayer {
               + perc
               + "%");
       System.out.println(
-          playerName() + "\t: took " + (System.currentTimeMillis() - startTime) + "s");
+          playerName() + "\t: took " + (System.currentTimeMillis() - startTime) + "ms");
 
       // TODO: remove in prod
       if (FC.length != board.getFreeCells().length) {
