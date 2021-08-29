@@ -242,7 +242,7 @@ public class GalileoGalilei implements MNKPlayer {
   // }}}
 
   private static final int INFTY = 1000000000; // 1B
-  private static final int HALT = -INFTY * 2;  // -2B
+  private static final int HALT = -INFTY * 2; // -2B
   private static final double SAFETY_THRESHOLD = 0.9;
   // TODO: implement
   private static double winCutoff =
@@ -269,7 +269,10 @@ public class GalileoGalilei implements MNKPlayer {
       evaluated,
       cacheHits,
       cacheMisses;
-  private static boolean clear = false, verbose = true, superVerbose = false, winCutoffEnabled = true;
+  private static boolean clear = false,
+      verbose = true,
+      superVerbose = false,
+      winCutoffEnabled = true;
 
   public void initPlayer(int M, int N, int K, boolean first, int timeoutInSecs) {
     this.M = M;
