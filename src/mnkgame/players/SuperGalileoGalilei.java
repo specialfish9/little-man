@@ -248,7 +248,7 @@ public class SuperGalileoGalilei implements MNKPlayer {
   // }}}
 
   private static final int INFTY = 1000000000; // 1B
-  private static final int HALT = -INFTY * 2;  // -2B
+  private static final int HALT = -INFTY * 2; // -2B
   private static final double SAFETY_THRESHOLD = 0.9;
 
   private MNKCellState ME, ENEMY;
@@ -417,10 +417,10 @@ public class SuperGalileoGalilei implements MNKPlayer {
 
   // swaps vec[a] with vec[b]
   private <T> void swap(T[] vec, int a, int b) {
-    if(a == b) return;
+    if (a == b) return;
 
     T tmp = vec[a];
-    vec[a] = vec[b]; 
+    vec[a] = vec[b];
     vec[b] = tmp;
   }
 
@@ -440,7 +440,7 @@ public class SuperGalileoGalilei implements MNKPlayer {
   }
 
   public void randomSelection(MNKCell[] vec, int start, int end) {
-    int i = start + r.nextInt(end-start);
+    int i = start + r.nextInt(end - start);
 
     // put the randomly selected item in place of the start item
     swap(vec, start, i);
@@ -451,17 +451,17 @@ public class SuperGalileoGalilei implements MNKPlayer {
     Integer[] ratings = new Integer[cells.length];
     int j = cells.length, i = 0; // limits for the [a,b] set containing all not-yet-looked-at cells
     // for (int i = 0; i < cells.length; i++) {
-    while(i < j) {
+    while (i < j) {
       long hash = board.nextZobrist(cells[i].i, cells[i].j);
       int values[];
-      if (cache.containsKey(hash) && (values = cache.get(hash))[1] >= searchDepth-1) {
+      if (cache.containsKey(hash) && (values = cache.get(hash))[1] >= searchDepth - 1) {
         ratings[i] = values[0];
         // TODO: remove in production
         cacheHits++;
         i++;
       } else {
-        swap(cells, i, j-1);
-        ratings[j-1] = 0;
+        swap(cells, i, j - 1);
+        ratings[j - 1] = 0;
         // TODO: remove in production
         cacheMisses++;
         j--;
@@ -500,10 +500,8 @@ public class SuperGalileoGalilei implements MNKPlayer {
       }
       Tuple<MNKCell[], Integer[], Integer> moves = getMoves(searchDepth);
       int bestMove = 0, len = moves.first.length;
-      if(bestMove > moves.third)
-        selectionSort(moves.first, moves.second, 0, len, color);
-      else
-        randomSelection(moves.first, bestMove, len);
+      if (bestMove > moves.third) selectionSort(moves.first, moves.second, 0, len, color);
+      else randomSelection(moves.first, bestMove, len);
       board.markCell(moves.first[bestMove].i, moves.first[bestMove].j);
       result = -pvs(-color, searchDepth - 1, -beta, -alpha);
       if (superVerbose) {
@@ -519,10 +517,8 @@ public class SuperGalileoGalilei implements MNKPlayer {
 
       int i = 1;
       while (i < len) {
-        if(i < moves.third)
-          selectionSort(moves.first, moves.second, i, moves.third, color);
-        else
-          randomSelection(moves.first, i, len);
+        if (i < moves.third) selectionSort(moves.first, moves.second, i, moves.third, color);
+        else randomSelection(moves.first, i, len);
 
         board.markCell(moves.first[i].i, moves.first[i].j);
         int score = -pvs(-color, searchDepth - 1, -alpha - 1, -alpha); // null window search
@@ -573,10 +569,8 @@ public class SuperGalileoGalilei implements MNKPlayer {
     } else {
       Tuple<MNKCell[], Integer[], Integer> moves = getMoves(searchDepth);
       int bestMove = 0, len = moves.first.length;
-      if(bestMove > moves.third)
-        selectionSort(moves.first, moves.second, 0, len, -1);
-      else
-        randomSelection(moves.first, bestMove, len);
+      if (bestMove > moves.third) selectionSort(moves.first, moves.second, 0, len, -1);
+      else randomSelection(moves.first, bestMove, len);
       board.markCell(moves.first[bestMove].i, moves.first[bestMove].j);
       bestValue = -pvs(-1, searchDepth - 1, -beta, -alpha);
       board.unmarkCell();
@@ -588,10 +582,8 @@ public class SuperGalileoGalilei implements MNKPlayer {
 
       int i = 1;
       while (i < len) {
-        if(i < moves.third)
-          selectionSort(moves.first, moves.second, i, moves.third, -1);
-        else
-          randomSelection(moves.first, i, len);
+        if (i < moves.third) selectionSort(moves.first, moves.second, i, moves.third, -1);
+        else randomSelection(moves.first, i, len);
 
         board.markCell(moves.first[i].i, moves.first[i].j);
         int score = -pvs(-1, searchDepth - 1, -alpha - 1, -alpha); // alphaBeta or zwSearch
@@ -627,7 +619,7 @@ public class SuperGalileoGalilei implements MNKPlayer {
       // (as it takes into account the absolute depth of the board) we can compute
       // a much tighter maximum value for alpha/beta and use this to achieve higher
       // cutoffs
-      int max = INFTY/(board.depth()+maxDepth);
+      int max = INFTY / (board.depth() + maxDepth);
       Pair<Integer, MNKCell> latest = pvsRoot(maxDepth, -max, max);
       if (latest.first == HALT || latest.first == -HALT) break;
 
@@ -722,7 +714,7 @@ public class SuperGalileoGalilei implements MNKPlayer {
         result.second = FC[new Random().nextInt(FC.length)];
       }
 
-      if(board.markCell(result.second.i, result.second.j) == MNKGameState.OPEN)
+      if (board.markCell(result.second.i, result.second.j) == MNKGameState.OPEN)
         cleanup(System.currentTimeMillis() + (long) (timeout * SAFETY_THRESHOLD), result.second);
       return result.second;
     } catch (Exception e) {
