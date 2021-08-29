@@ -673,8 +673,7 @@ public class GalileoGalilei implements MNKPlayer {
         result.second = FC[new Random().nextInt(FC.length)];
       }
 
-      cleanup(
-          System.currentTimeMillis() + (long) (timeout * SAFETY_THRESHOLD), result.second);
+      cleanup(System.currentTimeMillis() + (long) (timeout * SAFETY_THRESHOLD), result.second);
       board.markCell(result.second.i, result.second.j);
       return result.second;
     } catch (Exception e) {
