@@ -207,7 +207,9 @@ public class GalileoGalilei implements MNKPlayer {
     }
 
     private void remove(MNKCell root) {
-      if (shouldHalt()) return;
+      // prevent from removing any boards that have the chosen move
+      // marked as these boards could come in handy later
+      if (root == move || shouldHalt()) return;
 
       cacheBoard.markCell(root.i, root.j, false);
       if (cache.containsKey(board.zobrist())) {
@@ -221,7 +223,6 @@ public class GalileoGalilei implements MNKPlayer {
     public void run() {
       for (MNKCell c : cacheBoard.getFreeCells()) {
         if (Thread.currentThread().isInterrupted() || shouldHalt()) break;
-        if (c == move) continue;
 
         // TODO: recursive
         remove(c);
