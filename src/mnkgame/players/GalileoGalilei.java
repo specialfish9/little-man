@@ -62,13 +62,12 @@ public class GalileoGalilei implements MNKPlayer {
     public MNKGameState markCell(int i, int j, boolean updateValue) {
       // mind the order of the calls
       key = nextZobrist(i, j);
-      if(updateValue) {
+      if (updateValue) {
         previousValues.push(value);
         value -= eval(i, j);
       }
       MNKGameState result = super.markCell(i, j);
-      if(updateValue)
-        value += eval(i, j);
+      if (updateValue) value += eval(i, j);
       return result;
     }
 
@@ -82,8 +81,7 @@ public class GalileoGalilei implements MNKPlayer {
       MNKCell last = MC.getLast();
       super.unmarkCell();
       key = nextZobrist(last.i, last.j);
-      if(revertValue)
-        value = previousValues.pop();
+      if (revertValue) value = previousValues.pop();
     }
 
     @Override
@@ -203,31 +201,27 @@ public class GalileoGalilei implements MNKPlayer {
       endTime = e;
       move = m;
     }
-    
+
     private boolean shouldHalt() {
       return System.currentTimeMillis() >= endTime;
     }
 
     private void remove(MNKCell root) {
-      if(shouldHalt())
-        return;
-      
+      if (shouldHalt()) return;
+
       cacheBoard.markCell(root.i, root.j, false);
-      if(cache.containsKey(board.zobrist())) {
+      if (cache.containsKey(board.zobrist())) {
         cache.remove(board.zobrist());
-        if(cacheBoard.gameState() == MNKGameState.OPEN)
-          for(MNKCell node : cacheBoard.getFreeCells())
-            remove(node);
+        if (cacheBoard.gameState() == MNKGameState.OPEN)
+          for (MNKCell node : cacheBoard.getFreeCells()) remove(node);
       }
       cacheBoard.unmarkCell(false);
     }
 
     public void run() {
-      for(MNKCell c : cacheBoard.getFreeCells()) {
-        if(Thread.currentThread().isInterrupted() || shouldHalt())
-          break;
-        if(c == move)
-          continue;
+      for (MNKCell c : cacheBoard.getFreeCells()) {
+        if (Thread.currentThread().isInterrupted() || shouldHalt()) break;
+        if (c == move) continue;
 
         // TODO: recursive
         remove(c);
@@ -237,18 +231,19 @@ public class GalileoGalilei implements MNKPlayer {
   }
 
   private Thread cleanupThread = null;
+
   private void cleanup(long e, MNKCell m) {
     stopCleanup();
     cleanupThread = new Thread(new CleanupRunnable(e, m));
     cleanupThread.start();
   }
-  
+
   private void stopCleanup() {
-    if(cleanupThread != null && !cleanupThread.isAlive())
-      cleanupThread.interrupt();
+    if (cleanupThread != null && !cleanupThread.isAlive()) cleanupThread.interrupt();
     try {
-    cleanupThread.join();
-    } catch(Exception e) {}
+      cleanupThread.join();
+    } catch (Exception e) {
+    }
     cleanupThread = null;
   }
   // }}}
@@ -318,19 +313,20 @@ public class GalileoGalilei implements MNKPlayer {
     if (i != zobrist.length) {
       final int j = i;
       new Thread(
-          () -> {
-            for (int k = j; k < zobrist.length; k++) {
-              zobrist[k][0] = r.nextLong();
-              zobrist[k][1] = r.nextLong();
-            }
-            zobristReady.set(true);
-            // TODO: remove
-            System.out.println(
-                playerName()
-                    + "\t: cache ready, in another thread after "
-                    + (System.currentTimeMillis() - startTime) / 1000d
-                    + "s");
-          }).start();
+              () -> {
+                for (int k = j; k < zobrist.length; k++) {
+                  zobrist[k][0] = r.nextLong();
+                  zobrist[k][1] = r.nextLong();
+                }
+                zobristReady.set(true);
+                // TODO: remove
+                System.out.println(
+                    playerName()
+                        + "\t: cache ready, in another thread after "
+                        + (System.currentTimeMillis() - startTime) / 1000d
+                        + "s");
+              })
+          .start();
     } else {
       zobristReady.set(true);
       // TODO: remove
@@ -385,7 +381,8 @@ public class GalileoGalilei implements MNKPlayer {
     // test the randomCell we selected at first. It may be a one-move loss cell
     // get a new random cell different from the previous and call it cc
     MNKCell cc = pickRandomNonClosingCell(randomCell);
-    if (board.markCell(cc.i, cc.j) != MNKGameState.OPEN) { // randomCell puts us in a draw, ignore that
+    if (board.markCell(cc.i, cc.j)
+        != MNKGameState.OPEN) { // randomCell puts us in a draw, ignore that
       board.unmarkCell();
       return null;
     }
@@ -617,7 +614,7 @@ public class GalileoGalilei implements MNKPlayer {
     if (MC.length > 0) {
       board.markCell(
           MC[MC.length - 1].i, MC[MC.length - 1].j); // keep track of the opponent's marks
-      if(MC.length > 1)
+      if (MC.length > 1)
         cacheBoard.markCell(
             MC[MC.length - 2].i, MC[MC.length - 2].j); // keep track of my previous move
       cacheBoard.markCell(
@@ -673,12 +670,13 @@ public class GalileoGalilei implements MNKPlayer {
       }
 
       // TODO: remove in production
-      if(result.second == null) {
+      if (result.second == null) {
         System.out.println("FATAL: no chosen cell");
         result.second = FC[new Random().nextInt(FC.length)];
       }
 
-      cleanup(System.currentTimeMillis() + (long) ((timeout * 1000) * SAFETY_THRESHOLD), result.second);
+      cleanup(
+          System.currentTimeMillis() + (long) ((timeout * 1000) * SAFETY_THRESHOLD), result.second);
       board.markCell(result.second.i, result.second.j);
       return result.second;
     } catch (Exception e) {
