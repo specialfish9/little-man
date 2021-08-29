@@ -347,7 +347,7 @@ public class GalileoGalilei implements MNKPlayer {
 
   private boolean shouldHalt() {
     // TODO: tweak values
-    return (System.currentTimeMillis() - startTime) / 1000.0 >= timeout * SAFETY_THRESHOLD; // livin' on the edge
+    return (System.currentTimeMillis() - startTime) >= timeout * 1000 * SAFETY_THRESHOLD; // livin' on the edge
   }
 
   // finds the first cell needed to copmlete a K-1 streak in any possible direction
