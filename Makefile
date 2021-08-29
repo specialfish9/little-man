@@ -14,7 +14,7 @@ K:=4
 REPS:=5
 TIME:=2
 BEST:=GalileoGalilei
-OLD:=FrancoRasetti
+OLD:=SuperGalileoGalilei
 
 .SUFFIXES: .java .class
 .PHONY: build
