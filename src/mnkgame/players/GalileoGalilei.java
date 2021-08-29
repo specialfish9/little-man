@@ -248,7 +248,7 @@ public class GalileoGalilei implements MNKPlayer {
   // }}}
 
   private static final int INFTY = 1000000000; // 1B
-  private static final int HALT = -INFTY * 2;  // -2B
+  private static final int HALT = -INFTY * 2; // -2B
   private static final double SAFETY_THRESHOLD = 0.9;
 
   private MNKCellState ME, ENEMY;
@@ -589,7 +589,7 @@ public class GalileoGalilei implements MNKPlayer {
       // (as it takes into account the absolute depth of the board) we can compute
       // a much tighter maximum value for alpha/beta and use this to achieve higher
       // cutoffs
-      int max = INFTY/(board.depth()+maxDepth);
+      int max = INFTY / (board.depth() + maxDepth);
       Pair<Integer, MNKCell> latest = pvsRoot(maxDepth, -max, max);
       if (latest.first == HALT || latest.first == -HALT) break;
 
@@ -684,7 +684,7 @@ public class GalileoGalilei implements MNKPlayer {
         result.second = FC[new Random().nextInt(FC.length)];
       }
 
-      if(board.markCell(result.second.i, result.second.j) == MNKGameState.OPEN)
+      if (board.markCell(result.second.i, result.second.j) == MNKGameState.OPEN)
         cleanup(System.currentTimeMillis() + (long) (timeout * SAFETY_THRESHOLD), result.second);
       return result.second;
     } catch (Exception e) {
