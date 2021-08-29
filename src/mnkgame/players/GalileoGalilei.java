@@ -242,7 +242,7 @@ public class GalileoGalilei implements MNKPlayer {
   // }}}
 
   private static final int INFTY = 10000000;
-  private static final int HALT = -INFTY-1;
+  private static final int HALT = -INFTY - 1;
   private static final double SAFETY_THRESHOLD = 0.9;
   // TODO: implement
   private static double winCutoff =
@@ -670,8 +670,7 @@ public class GalileoGalilei implements MNKPlayer {
         result.second = FC[new Random().nextInt(FC.length)];
       }
 
-      cleanup(
-          System.currentTimeMillis() + (long) (timeout * SAFETY_THRESHOLD), result.second);
+      cleanup(System.currentTimeMillis() + (long) (timeout * SAFETY_THRESHOLD), result.second);
       board.markCell(result.second.i, result.second.j);
       return result.second;
     } catch (Exception e) {
