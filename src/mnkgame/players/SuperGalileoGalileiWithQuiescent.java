@@ -9,7 +9,7 @@ import java.util.Stack;
 import java.util.concurrent.atomic.AtomicBoolean;
 import mnkgame.*;
 
-public class SuperGalileoGalilei implements MNKPlayer {
+public class SuperGalileoGalileiWithQuiescent implements MNKPlayer {
   // {{{ tuple
   private static class Pair<A, B> {
     public A first;

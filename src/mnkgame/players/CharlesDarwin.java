@@ -34,7 +34,7 @@ public class CharlesDarwin implements MNKPlayer {
     }
   }
 
-  // Fisher–Yates shuffle
+  // Fisher-Yates shuffle
   private void shuffleArray(MNKCell[] vec) {
     for (int i = vec.length - 1; i > 0; i--) {
       int index = r.nextInt(i + 1);
