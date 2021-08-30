@@ -13,8 +13,8 @@ N:=8
 K:=4
 REPS:=5
 TIME:=2
-BEST:=GalileoGalilei
-OLD:=SuperGalileoGalilei
+BEST:=SuperGalileoGalilei
+OLD:=GalileoGalilei
 
 .SUFFIXES: .java .class
 .PHONY: build
