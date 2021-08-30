@@ -415,81 +415,89 @@ public class SuperGalileoGalilei implements MNKPlayer {
     HashSet<Integer> cells = new HashSet<>();
     // column upwards and downwards
     int ii = i;
-    for (; ii < M && board.cellState(ii, j) == player; ii++) ;
-    if(ii < M && board.cellState(ii-1, j) == MNKCellState.FREE)
-      cells.add((ii-1) * minMN + j);
+    for (; ii < M && board.cellState(ii, j) == player; ii++)
+      ;
+    if (ii < M && board.cellState(ii - 1, j) == MNKCellState.FREE) cells.add((ii - 1) * minMN + j);
     ii = i;
-    for (; ii >= 0 && board.cellState(ii, j) == player; ii--) ;
-    if(ii > 0 && board.cellState(ii+1, j) == MNKCellState.FREE)
-      cells.add((ii+1) * minMN + j);
+    for (; ii >= 0 && board.cellState(ii, j) == player; ii--)
+      ;
+    if (ii > 0 && board.cellState(ii + 1, j) == MNKCellState.FREE) cells.add((ii + 1) * minMN + j);
 
     // row upwards and downwards
     int jj = j;
-    for (; jj < N && board.cellState(i, jj) == player; jj++) ;
-    if(jj < N && board.cellState(i, jj - 1) == MNKCellState.FREE)
-      cells.add(i * minMN + jj - 1);
+    for (; jj < N && board.cellState(i, jj) == player; jj++)
+      ;
+    if (jj < N && board.cellState(i, jj - 1) == MNKCellState.FREE) cells.add(i * minMN + jj - 1);
     jj = j;
-    for (; jj >= 0 && board.cellState(i, jj) == player; jj--) ;
-    if(jj > 0 && board.cellState(i, jj + 1) == MNKCellState.FREE)
-      cells.add(i * minMN + jj + 1);
+    for (; jj >= 0 && board.cellState(i, jj) == player; jj--)
+      ;
+    if (jj > 0 && board.cellState(i, jj + 1) == MNKCellState.FREE) cells.add(i * minMN + jj + 1);
 
     // diagonal upwards and downwards
-    jj = j; ii = i;
-    for (; ii < M && jj < N && board.cellState(ii, jj) == player; ii++, jj++) ;
-    if(ii > 0 && jj > 0 && board.cellState(ii - 1, jj - 1) == MNKCellState.FREE)
+    jj = j;
+    ii = i;
+    for (; ii < M && jj < N && board.cellState(ii, jj) == player; ii++, jj++)
+      ;
+    if (ii > 0 && jj > 0 && board.cellState(ii - 1, jj - 1) == MNKCellState.FREE)
       cells.add((ii - 1) * minMN + jj - 1);
-    jj = j; ii = i;
-    for (; ii >= 0 && jj >= 0 && board.cellState(ii, jj) == player; ii--, jj--) ;
-    if(ii < M && jj < N && board.cellState(ii + 1, jj + 1) == MNKCellState.FREE)
+    jj = j;
+    ii = i;
+    for (; ii >= 0 && jj >= 0 && board.cellState(ii, jj) == player; ii--, jj--)
+      ;
+    if (ii < M && jj < N && board.cellState(ii + 1, jj + 1) == MNKCellState.FREE)
       cells.add((ii + 1) * minMN + jj + 1);
 
     // counter-diagonal upwards and downwards
-    jj = j; ii = i;
-    for (; ii >= 0 && jj < N && board.cellState(ii, jj) == player; ii--, jj++) ;
-    if(ii < M && jj > 0 && board.cellState(ii + 1, jj - 1) == MNKCellState.FREE)
-      cells.add((ii+1) * minMN + jj - 1);
-    jj = j; ii = i;
-    for (; ii < M && jj >= 0 && board.cellState(ii, jj) == player; ii++, jj--) ;
-    if(ii > 0 && jj < M && board.cellState(ii-1, jj+1) == MNKCellState.FREE)
-      cells.add((ii-1) * minMN + jj+1);
+    jj = j;
+    ii = i;
+    for (; ii >= 0 && jj < N && board.cellState(ii, jj) == player; ii--, jj++)
+      ;
+    if (ii < M && jj > 0 && board.cellState(ii + 1, jj - 1) == MNKCellState.FREE)
+      cells.add((ii + 1) * minMN + jj - 1);
+    jj = j;
+    ii = i;
+    for (; ii < M && jj >= 0 && board.cellState(ii, jj) == player; ii++, jj--)
+      ;
+    if (ii > 0 && jj < M && board.cellState(ii - 1, jj + 1) == MNKCellState.FREE)
+      cells.add((ii - 1) * minMN + jj + 1);
 
     return cells;
   }
 
   // negamax withot alpha-beta
   private int quiescenceSearch(int depth, int color) {
-    if(depth == 0 || board.gameState() != MNKGameState.OPEN)
+    if (depth == 0 || board.gameState() != MNKGameState.OPEN)
       return color * evaluate(true); // raw evaluation
 
     int value = -INFTY;
-    MNKCell lastMove = board.getMarkedCells()[board.marked()-1];
+    MNKCell lastMove = board.getMarkedCells()[board.marked() - 1];
     HashSet<Integer> moves = getQuiescentMoves(lastMove.i, lastMove.j, color > 0 ? ME : ENEMY);
-    if(moves.size() == 0)
-      return color * evaluate(true); // raw evaluation
+    if (moves.size() == 0) return color * evaluate(true); // raw evaluation
 
-    for(int c : moves) {
+    for (int c : moves) {
       int i = c / minMN, j = c % minMN;
       board.markCell(i, j);
-      value = Math.max(value, quiescenceSearch(depth-1, -color));
+      value = Math.max(value, quiescenceSearch(depth - 1, -color));
       board.unmarkCell();
     }
 
     return -value;
   }
 
-  private int evaluate() { return evaluate(false); }
+  private int evaluate() {
+    return evaluate(false);
+  }
 
   private int evaluate(boolean rawHeuristic) {
     MNKGameState state = board.gameState();
     int depth = board.marked();
-    if(state == MNKGameState.OPEN) {
+    if (state == MNKGameState.OPEN) {
       // return a heuristic evaluation
       evaluated++;
       int value = board.value();
-      if(!rawHeuristic && (value > QUIET || value < -QUIET))
+      if (!rawHeuristic && (value > QUIET || value < -QUIET))
         return quiescenceSearch(QUIESCENCE_DEPTH, board.currentPlayer() == playerId ? -1 : 1);
-      else
-        return value / depth;
+      else return value / depth;
     } else if (state == MNKGameState.DRAW) return 0;
     else return (state == MY_WIN ? 1 : -1) * INFTY / board.marked();
     // else if (state == MY_WIN) return (INFTY - 1) / board.marked();
