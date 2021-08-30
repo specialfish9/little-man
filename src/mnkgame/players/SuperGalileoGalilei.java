@@ -3,7 +3,6 @@ package mnkgame.players;
 import java.util.Deque;
 import java.util.HashMap;
 import java.util.LinkedList;
-import java.util.Queue;
 import java.util.Random;
 import java.util.Stack;
 import java.util.concurrent.atomic.AtomicBoolean;
@@ -164,21 +163,23 @@ public class SuperGalileoGalilei implements MNKPlayer {
       else if (state == MNKCellState.P2) queueP2++;
       queue.add(state);
       int sign = me == MNKCellState.P1 ? 1 : -1;
-      if (queueP1 + queueFree == K + 2 ){
+      if (queueP1 + queueFree == K + 2) {
         boolean freeBefore = queue.peekFirst() == MNKCellState.FREE;
         MNKCellState last = queue.peekLast();
         boolean freeAfter = last == MNKCellState.FREE;
-        int result = sign * (seriesValue(queueFree) + queueP1) * (freeBefore? 2 : 1) * (freeAfter? 2 : 1);
+        int result =
+            sign * (seriesValue(queueFree) + queueP1) * (freeBefore ? 2 : 1) * (freeAfter ? 2 : 1);
         queue.add(last);
         return result;
-      }else if (queueP2 + queueFree == K + 2){
+      } else if (queueP2 + queueFree == K + 2) {
         boolean freeBefore = queue.peekFirst() == MNKCellState.FREE;
-        MNKCellState last = queue.peekLast() ;
+        MNKCellState last = queue.peekLast();
         boolean freeAfter = last == MNKCellState.FREE;
-        int result = -sign * (seriesValue(queueFree) + queueP2)* (freeBefore? 2 : 1) * (freeAfter? 2 : 1);
+        int result =
+            -sign * (seriesValue(queueFree) + queueP2) * (freeBefore ? 2 : 1) * (freeAfter ? 2 : 1);
         queue.add(last);
         return result;
-      }else return 0;
+      } else return 0;
     }
 
     private int seriesValue(final int free) {
