@@ -246,7 +246,7 @@ public class SuperGalileoGalileiWithBetterCache implements MNKPlayer {
 
   private static final int INFTY = 1000000000; // 1B
   private static final int HALT = -INFTY * 2; // -2B
-  private static final double SAFETY_THRESHOLD = 0.9;
+  private static final double SAFETY_THRESHOLD = 0.95;
 
   private MNKCellState ME, ENEMY;
   private MNKGameState MY_WIN, ENEMY_WIN;

@@ -1,28 +1,54 @@
 \documentclass{article}
 \usepackage[utf8]{inputenc}
-% \usepackage{amsmath,amssymb,amsthm}
-% \usepackage{algorithm2e}
-% \usepackage{enumerate}
+\usepackage[italian]{babel}
+\usepackage[T1]{fontenc}
 
-\title{\textbf{Relazione di Algoritmi e Strutture Dati}}
+\title{Galileo Galilei \\
+\large Relazione del progetto per l'insegnamento di Algoritmi e Strutture di Dati}
 \author{
-  Tagliavini, Luca\\
-  \texttt{matricola}
-  \and
-  Girolimetto, Mattia\\
-  \texttt{matricola}
+  Mattia Girolimetto (fill),
+  Luca Tagliavini (0000971133)
+}
+\date{
+	Universit\`a di Bologna \\
+  \today
 }
 
 \begin{document}
 
 \maketitle
-\tableofcontents
+
+\section{Problema computazionale}
+
+Lo scopo del progetto \`e quello di implementare un algoritmo efficiente e ottimale
+volto alla ricerca delle mosse migliori in un gico $(m,n,k)$ dove si devono
+allineare $k$ simboli in una griglia $m \times n$.
+
+A questo fine viene sfruttata una variazione dell'algoritmo MiniMax con potatura
+AlphaBeta denominata \emph{Principal Variation Search}~\cite{negascout}. Esso
+sfrutta una ricerca limitata in profondit\`a e garantisce di analizzare solo e soltanto
+i nodi che sarebbero stati analizzati da AlphaBeta, spendendo meno tempo su
+quelli che sappiamo essere meno profiqui grazie ad una \emph{ricerca con finestra $\alpha$-$\beta$ nulla}.
+Per poter sfruttare questa ottimizzazione si necessita della possibilit\`a di ordinare i
+figli di un dato stato di gioco, che pu\`o essere ottenuta tramite la tecnica
+dell'\emph{Iterative Deepening}~\cite{id}. Oltretutto in questo modo si visita al
+massimo l'albero di gioco entro i limiti di tempo.
+
+Svariate combinazioni di mosse possono portare a stati gi\`a analizzati, i quali
+vengono mantenuti dentro una cache per evitare di valutarli pi\`u volte.
+La stima delle griglie non foglia viene gestita da una componente euristica che
+tiene in considerazione il numero di serie di ogni giocatore, la loro lunghezza
+e la vicinanza ad altre celle libere.
+
+\section{Scelte Progettuali}
+
+\subsection{Select Cell}
+\subsection{Cache}
+\subsection{PVS}
+\subsection{Valutazione Euristica}
+
 \pagebreak
-
-\section{Abstract}
-
-....
-
-\section{Analisi}
+\bibliographystyle{ieeetr}
+\bibliography{report}
 
 \end{document}
