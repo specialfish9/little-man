@@ -163,8 +163,9 @@ public class SuperGalileoGalileiWithBetterCache implements MNKPlayer {
       else if (state == MNKCellState.P2) queueP2++;
       queue.add(state);
       int sign = me == MNKCellState.P1 ? 1 : -1;
-      if (queueP1 + queueFree == K) return sign * (seriesValue(queueFree) + (queueP1*queueP1));
-      else if (queueP2 + queueFree == K) return -sign * (seriesValue(queueFree) + (queueP2*queueP2));
+      if (queueP1 + queueFree == K) return sign * (seriesValue(queueFree) + (queueP1 * queueP1));
+      else if (queueP2 + queueFree == K)
+        return -sign * (seriesValue(queueFree) + (queueP2 * queueP2));
       else return 0;
     }
 
@@ -458,7 +459,11 @@ public class SuperGalileoGalileiWithBetterCache implements MNKPlayer {
     int j = cells.length, i = 0; // limits for the [a,b] set containing all not-yet-looked-at cells
     // for (int i = 0; i < cells.length; i++) {
     while (i < j) {
-      int entry[] = cacheEntry(board.nextZobrist(cells[i].i, cells[i].j), board.marked() + 1, cells[i].i * minMN + cells[i].j);
+      int entry[] =
+          cacheEntry(
+              board.nextZobrist(cells[i].i, cells[i].j),
+              board.marked() + 1,
+              cells[i].i * minMN + cells[i].j);
       if (entry[2] != 2) {
         ratings[i] = entry[3];
         // TODO: remove in production
@@ -479,32 +484,30 @@ public class SuperGalileoGalileiWithBetterCache implements MNKPlayer {
   // {{{ Principal Variation Search for subtrees
   private int[] cacheEntry() {
     MNKCell[] c = board.getMarkedCells();
-    return cacheEntry(board.zobrist(), board.marked(), c[c.length-1].i * minMN + c[c.length-1].j);
+    return cacheEntry(
+        board.zobrist(), board.marked(), c[c.length - 1].i * minMN + c[c.length - 1].j);
   }
-  
+
   // returns a cache entry for the current board. If the current board is already
   // cached the entry contains the proper data, otherwhise the entry fields 2,3 are
   // dummy and a non-cached board can be identified by entry[2] == 2
   private int[] cacheEntry(long hash, int marked, int lastCell) {
-    if(cache.containsKey(hash)) {
+    if (cache.containsKey(hash)) {
       int[] cached = cache.get(hash);
-      if(cached[0] == marked && cached[1] == lastCell)
-        return cached;
+      if (cached[0] == marked && cached[1] == lastCell) return cached;
     }
 
-    return new int[]{marked, lastCell, 2, 0};
+    return new int[] {marked, lastCell, 2, 0};
   }
 
   private int pvs(int color, int searchDepth, int alpha, int beta) {
     int[] entry = cacheEntry();
     if (entry[2] != 2) {
       cacheHits++;
-      if(entry[2] == 0)
-        return entry[3]; // return the value
-      else if(entry[2] == 1)
-        beta = Math.min(alpha, entry[3]);
-      else if(entry[2] == -1) // useless check
-        alpha = Math.max(beta, entry[3]);
+      if (entry[2] == 0) return entry[3]; // return the value
+      else if (entry[2] == 1) beta = Math.min(alpha, entry[3]);
+      else if (entry[2] == -1) // useless check
+      alpha = Math.max(beta, entry[3]);
     } else cacheMisses++;
 
     int result, prevAlpha = alpha;
@@ -572,13 +575,10 @@ public class SuperGalileoGalileiWithBetterCache implements MNKPlayer {
       }
     }
     if (result == HALT) return HALT;
-    
-    if(result <= prevAlpha)
-      entry[2] = 1; // store the new lower bound
-    else if(result >= beta)
-      entry[2] = -1; // store the new upper bound
-    else
-      entry[2] = 0; // store the exact value on a PV node
+
+    if (result <= prevAlpha) entry[2] = 1; // store the new lower bound
+    else if (result >= beta) entry[2] = -1; // store the new upper bound
+    else entry[2] = 0; // store the exact value on a PV node
 
     entry[3] = result;
     cache.put(board.zobrist(), entry);
