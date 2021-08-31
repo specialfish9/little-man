@@ -165,8 +165,9 @@ public class SuperGalileoGalileiWithBetterCache implements MNKPlayer {
       else if (state == MNKCellState.P2) queueP2++;
       queue.add(state);
       int sign = me == MNKCellState.P1 ? 1 : -1;
-      if (queueP1 + queueFree == K) return sign * (seriesValue(queueFree) + (queueP1*queueP1));
-      else if (queueP2 + queueFree == K) return -sign * (seriesValue(queueFree) + (queueP2*queueP2));
+      if (queueP1 + queueFree == K) return sign * (seriesValue(queueFree) + (queueP1 * queueP1));
+      else if (queueP2 + queueFree == K)
+        return -sign * (seriesValue(queueFree) + (queueP2 * queueP2));
       else return 0;
     }
 
@@ -477,7 +478,7 @@ public class SuperGalileoGalileiWithBetterCache implements MNKPlayer {
     MNKCell[] c = board.getMarkedCells();
     return cacheEntry(board.zobrist(), board.marked(), c[c.length-1].i * minMN + c[c.length-1].j, searchDepth);
   }
-  
+
   // returns a cache entry for the current board. If the current board is already
   // cached the entry contains the proper data, otherwhise the entry fields 2,3 are
   // dummy and a non-cached board can be identified by entry[2] == 2
@@ -568,7 +569,6 @@ public class SuperGalileoGalileiWithBetterCache implements MNKPlayer {
       }
     }
     if (result == HALT) return HALT;
-    
     if(result <= prevAlpha)
       entry[3] = 1; // store the new lower bound
     else if(result >= beta)
