@@ -24,19 +24,19 @@ Lo scopo del progetto \`e quello di implementare un algoritmo efficiente e ottim
 volto alla ricerca delle mosse migliori in un gico $(m,n,k)$ dove si devono
 allineare $k$ simboli in una griglia $m \times n$.
 
-A questo fine viene sfruttata una variazione dell'algoritmo MiniMax con potatura
-AlphaBeta denominata \emph{Principal Variation Search}~\cite{negascout}. Esso
-sfrutta una ricerca limitata in profondit\`a e garantisce di analizzare solo e soltanto
-i nodi che sarebbero stati analizzati da AlphaBeta, spendendo meno tempo su
-quelli che sappiamo essere meno profiqui grazie ad una \emph{ricerca con finestra $\alpha$-$\beta$ nulla}.
-Per poter sfruttare questa ottimizzazione si necessita della possibilit\`a di ordinare i
-figli di un dato stato di gioco, che pu\`o essere ottenuta tramite la tecnica
-dell'\emph{Iterative Deepening}~\cite{id}. Oltretutto in questo modo si visita al
-massimo l'albero di gioco entro i limiti di tempo.
+Si fa uso di una variante dell'algoritmo MiniMax con potatura
+AlphaBeta denominata \emph{Principal Variation Search}~\cite{negascout}. Viene
+svolta una ricerca limitata in profondit\`a analoga a minimax, espandendo
+interamente i nodi denominati \emph{Principal Variation} e parzialmente quelli
+meno interessanti. Applicando un \emph{Iterative Deepening}~\cite{id} abbiamo
+a disposizione un ordinamento dei sottoalberi basato sui valori euristici delle
+ricerche precedenti e possiamo raggiungere la profondit\`a massima nei limiti
+imposti.
+
 
 Svariate combinazioni di mosse possono portare a stati gi\`a analizzati, i quali
 vengono mantenuti dentro una cache per evitare di valutarli pi\`u volte.
-La stima delle griglie non foglia viene gestita da una componente euristica che
+La stima dei stati di gioco non finali viene gestita da una componente euristica che
 tiene in considerazione il numero di serie di ogni giocatore, la loro lunghezza
 e la vicinanza ad altre celle libere.
 
