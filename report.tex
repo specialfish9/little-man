@@ -33,16 +33,25 @@ a disposizione un ordinamento dei sottoalberi basato sui valori euristici delle
 ricerche precedenti e possiamo raggiungere la profondit\`a massima nei limiti
 imposti.
 
-
 Svariate combinazioni di mosse possono portare a stati gi\`a analizzati, i quali
-vengono mantenuti dentro una cache per evitare di valutarli pi\`u volte.
+vengono mantenuti dentro una cache non valutarli pi\`u volte.
 La stima dei stati di gioco non finali viene gestita da una componente euristica che
 tiene in considerazione il numero di serie di ogni giocatore, la loro lunghezza
 e la vicinanza ad altre celle libere.
 
 \section{Scelte Progettuali}
 
-\subsection{Select Cell}
+\subsection{Select Cell e Iterative Deepening}
+
+Dopo aver aggiornato la copia locale del tavolo di gioco si va alla ricerca
+della migliore cella da giocare, tramite Iterative Deepening.
+In questo modo si eseguono ricerche MiniMax con profondit\`a sempre maggiore
+e si restituisce il risultato della ricerca pi\`u recente. Questa tecnica non
+peggiora il costo asintotico in quanto il solo peso di MiniMax alla
+massima profondit\`a assorbe quello di tutte le ricerche precedenti.
+Tuttavia aumenta sicuramente il numero di operazioni svolte dal calcolatore:
+per minimizzare questo danno si ricorre alla Principal Variation Search.
+
 \subsection{Cache}
 \subsection{PVS}
 \subsection{Valutazione Euristica}
