@@ -763,3 +763,5 @@ public class SuperGalileoGalileiWithBetterCache implements MNKPlayer {
     return "Super Galileo Galilei w/ Cache";
   }
 }
+
+// vim: ts=2 sw=2 fdm=marker
