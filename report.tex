@@ -25,17 +25,17 @@ volto alla ricerca delle mosse migliori in un gico $(m,n,k)$ dove si devono
 allineare $k$ simboli in una griglia $m \times n$.
 
 Si fa uso di una variante dell'algoritmo MiniMax con potatura
-AlphaBeta denominata \emph{Principal Variation Search}~\cite{negascout}. Viene
-svolta una ricerca limitata in profondit\`a analoga a minimax, espandendo
+AlphaBeta denominata \emph{Principal Variation Search}~\cite{negascout}. Questa prevede 
+una ricerca limitata in profondit\`a analoga a minimax, espandendo % Frase strana %
 interamente i nodi denominati \emph{Principal Variation} e parzialmente quelli
-meno interessanti. Applicando un \emph{Iterative Deepening}~\cite{id} abbiamo
+meno interessanti. Applicando un \emph{Iterative Deepening}~\cite{id} abbiamo %Possiamo ordinare i sottoalberi basandoci sui valori..%
 a disposizione un ordinamento dei sottoalberi basato sui valori euristici delle
 ricerche precedenti e possiamo raggiungere la profondit\`a massima nei limiti
 imposti.
 
-Svariate combinazioni di mosse possono portare a stati gi\`a analizzati, i quali
-vengono mantenuti dentro una cache non valutarli pi\`u volte.
-La stima dei stati di gioco non finali viene gestita da una componente euristica che
+Diverse combinazioni di mosse possono portare a stati gi\`a analizzati, i quali
+vengono mantenuti dentro una cache per evitare di valutarli pi\`u volte.
+La stima degli stati di gioco non finali viene gestita da una componente euristica che
 tiene in considerazione il numero di serie di ogni giocatore, la loro lunghezza
 e la vicinanza ad altre celle libere.
 
@@ -43,14 +43,15 @@ e la vicinanza ad altre celle libere.
 
 \subsection{Select Cell e Iterative Deepening}
 
-Dopo aver aggiornato la copia locale del tavolo di gioco si va alla ricerca
-della migliore cella da giocare, tramite Iterative Deepening.
+Dopo aver aggiornato la copia locale della tabella di gioco, tramite Iterative Deepening, si va alla ricerca
+della cella migliore da giocare.
 In questo modo si eseguono ricerche MiniMax con profondit\`a sempre maggiore
 e si restituisce il risultato della ricerca pi\`u recente. Questa tecnica non
 peggiora il costo asintotico in quanto il solo peso di MiniMax alla
-massima profondit\`a assorbe quello di tutte le ricerche precedenti.
-Tuttavia aumenta sicuramente il numero di operazioni svolte dal calcolatore:
-per minimizzare questo danno si ricorre alla Principal Variation Search.
+massima profondit\`a assorbe %non so se si puo dire%
+quello di tutte le ricerche precedenti.
+Tuttavia aumenta sicuramente il numero di operazioni svolte dal calcolatore.
+Per limitare questo danno si ricorre alla Principal Variation Search.
 
 \subsection{Cache}
 \subsection{PVS}
