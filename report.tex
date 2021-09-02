@@ -6,7 +6,7 @@
 \title{Galileo Galilei \\
 \large Relazione del progetto per l'insegnamento di Algoritmi e Strutture di Dati}
 \author{
-  Mattia Girolimetto (fill),
+  Mattia Girolimetto (0000977478),
   Luca Tagliavini (0000971133)
 }
 \date{
@@ -21,39 +21,57 @@
 \section{Problema computazionale}
 
 Lo scopo del progetto \`e quello di implementare un algoritmo efficiente e ottimale
-volto alla ricerca delle mosse migliori in un gico $(m,n,k)$ dove si devono
+volto alla ricerca delle mosse migliori in un gioco $(m,n,k)$, dove si devono
 allineare $k$ simboli in una griglia $m \times n$.
 
 Si fa uso di una variante dell'algoritmo MiniMax con potatura
-AlphaBeta denominata \emph{Principal Variation Search}~\cite{negascout}. Questa prevede 
-una ricerca limitata in profondit\`a analoga a minimax, espandendo % Frase strana %
-interamente i nodi denominati \emph{Principal Variation} e parzialmente quelli
-meno interessanti. Applicando un \emph{Iterative Deepening}~\cite{id} abbiamo %Possiamo ordinare i sottoalberi basandoci sui valori..%
-a disposizione un ordinamento dei sottoalberi basato sui valori euristici delle
-ricerche precedenti e possiamo raggiungere la profondit\`a massima nei limiti
-imposti.
+AlphaBeta denominata \emph{Principal Variation Search}~\cite{negascout}. Questa
+prevede  una ricerca limitata in profondit\`a analoga a minimax, espandendo 
+interamente i nodi pi\`u promettenti (denominati \emph{Principal Variation}) e
+parzialmente quelli restanti. Applicando un \emph{Iterative Deepening}~\cite{id}
+si possono ordinare i sottoalberi basandosi sui valori euristici delle ricerche
+precedenti e si pu\`o raggiungere la profondit\`a massima nei limiti imposti.
 
-Diverse combinazioni di mosse possono portare a stati gi\`a analizzati, i quali
-vengono mantenuti dentro una cache per evitare di valutarli pi\`u volte.
-La stima degli stati di gioco non finali viene gestita da una componente euristica che
-tiene in considerazione il numero di serie di ogni giocatore, la loro lunghezza
-e la vicinanza ad altre celle libere.
+Diverse combinazioni di mosse possono portare a stati gi\`a analizzati
+precedentemente, i quali vengono mantenuti dentro una cache per evitare di
+valutarli pi\`u volte. Il valore degli stati di gioco non finali viene stimato
+da una componente euristica che tiene in considerazione il numero di serie di
+ogni giocatore assieme alla relativa lunghezza e alla vicinanza ad altre celle
+libere.
 
 \section{Scelte Progettuali}
 
 \subsection{Select Cell e Iterative Deepening}
-
-Dopo aver aggiornato la copia locale della tabella di gioco, tramite Iterative Deepening, si va alla ricerca
-della cella migliore da giocare.
+Dopo aver aggiornato la copia locale della griglia di gioco si cerca la cella
+migliore da giocare sfruttando Iterative Deepening. 
 In questo modo si eseguono ricerche MiniMax con profondit\`a sempre maggiore
-e si restituisce il risultato della ricerca pi\`u recente. Questa tecnica non
-peggiora il costo asintotico in quanto il solo peso di MiniMax alla
-massima profondit\`a assorbe %non so se si puo dire%
-quello di tutte le ricerche precedenti.
+e si restituisce il risultato pi\`u recente. Questo non
+peggiora la complessit\`a in quanto il solo costo asintotico di MiniMax alla
+massima profondit\`a assorbe quello di tutte le ricerche precedenti.
 Tuttavia aumenta sicuramente il numero di operazioni svolte dal calcolatore.
 Per limitare questo danno si ricorre alla Principal Variation Search.
 
 \subsection{Cache}
+La cache fa uso della struttura dati HashMap fornita da Java generando le chiavi 
+in modo incrementale tramite la tecnica di \emph{Zobrist}~\cite{zobrist}. A ogni
+chiave sono associate le seguenti informazioni:
+\begin{enumerate}
+  \item Numero di mosse e ultimo simbolo giocato
+  \item Profondit\`a della ricerca
+  \item Valore della griglia
+\end{enumerate}
+Poich\`e una board $(m,n)$ pu\`o al pi\`u assumere $3^{mn}$ stati differenti e
+un \verb!long! pu\`o contenere al pi\`u $2^{64} \approx 1.8 \cdot 10^{19}$,
+esistono configurazioni che creano collisioni: ad esempio un gioco $(70, 70, 10)$
+ha un totale di $3^{4900} \approx 7.8 \cdot 10^{2338}$ stati. Per limitare i
+falsi positivi si confrontano il numero di mosse e l'ultimo simbolo giocato.
+
+% 1. onngo nodo non root viene mantenuto in cache 
+% 2. chiave con hash personalizzato
+% 3. thread 
+% 4. perogni chiave viene tenuta due valori 
+% 5. 
+
 \subsection{PVS}
 \subsection{Valutazione Euristica}
 
