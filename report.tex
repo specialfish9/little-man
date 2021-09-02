@@ -27,10 +27,10 @@ allineare $k$ simboli in una griglia $m \times n$.
 Si fa uso di una variante dell'algoritmo MiniMax con potatura
 AlphaBeta denominata \emph{Principal Variation Search}~\cite{negascout}. Questa
 prevede  una ricerca limitata in profondit\`a analoga a minimax, espandendo 
-interamente i nodi pi\`u promettenti (denominati \emph{Principal Variation}) e
-parzialmente quelli restanti. Applicando un \emph{Iterative Deepening}~\cite{id}
-si possono ordinare i sottoalberi basandosi sui valori euristici delle ricerche
-precedenti e si pu\`o raggiungere la profondit\`a massima nei limiti imposti.
+interamente i nodi pi\`u promettenti e parzialmente quelli restanti. Applicando
+un \emph{Iterative Deepening}~\cite{id} si possono ordinare i sottoalberi
+basandosi sui valori euristici delle ricerche precedenti e si pu\`o raggiungere
+la profondit\`a massima nei limiti imposti.
 
 Diverse combinazioni di mosse possono portare a stati gi\`a analizzati
 precedentemente, i quali vengono mantenuti dentro una cache per evitare di
