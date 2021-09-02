@@ -11,7 +11,7 @@ import java.util.concurrent.atomic.AtomicBoolean;
 import mnkgame.*;
 
 public class SuperGalileoGalileiPlus implements MNKPlayer {
-    // {{{ tuple
+  // {{{ tuple
   private static class Pair<A, B> {
     public A first;
     public B second;
@@ -156,34 +156,33 @@ public class SuperGalileoGalileiPlus implements MNKPlayer {
       else if (state == MNKCellState.P2) queueP2--;
     }
 
-
     private int pushCell(final MNKCellState state) {
-        if (queue.size() >= K + 2) // useless >
-        popCell();
-  
-        if (state == MNKCellState.FREE) queueFree++;
-        else if (state == MNKCellState.P1) queueP1++;
-        else if (state == MNKCellState.P2) queueP2++;
-        queue.add(state);
-        int sign = me == MNKCellState.P1 ? 1 : -1;
-        if (queueP1 + queueFree == K + 2) {
-          boolean freeBefore = queue.peekFirst() == MNKCellState.FREE;
-          MNKCellState last = queue.peekLast();
-          boolean freeAfter = last == MNKCellState.FREE;
-          int result =
-              sign * (seriesValue(queueFree) + queueP1) * (freeBefore ? 2 : 1) * (freeAfter ? 2 : 1);
-          queue.add(last);
-          return result;
-        } else if (queueP2 + queueFree == K + 2) {
-          boolean freeBefore = queue.peekFirst() == MNKCellState.FREE;
-          MNKCellState last = queue.peekLast();
-          boolean freeAfter = last == MNKCellState.FREE;
-          int result =
-              -sign * (seriesValue(queueFree) + queueP2) * (freeBefore ? 2 : 1) * (freeAfter ? 2 : 1);
-          queue.add(last);
-          return result;
-        } else return 0;
-      }
+      if (queue.size() >= K + 2) // useless >
+      popCell();
+
+      if (state == MNKCellState.FREE) queueFree++;
+      else if (state == MNKCellState.P1) queueP1++;
+      else if (state == MNKCellState.P2) queueP2++;
+      queue.add(state);
+      int sign = me == MNKCellState.P1 ? 1 : -1;
+      if (queueP1 + queueFree == K + 2) {
+        boolean freeBefore = queue.peekFirst() == MNKCellState.FREE;
+        MNKCellState last = queue.peekLast();
+        boolean freeAfter = last == MNKCellState.FREE;
+        int result =
+            sign * (seriesValue(queueFree) + queueP1) * (freeBefore ? 2 : 1) * (freeAfter ? 2 : 1);
+        queue.add(last);
+        return result;
+      } else if (queueP2 + queueFree == K + 2) {
+        boolean freeBefore = queue.peekFirst() == MNKCellState.FREE;
+        MNKCellState last = queue.peekLast();
+        boolean freeAfter = last == MNKCellState.FREE;
+        int result =
+            -sign * (seriesValue(queueFree) + queueP2) * (freeBefore ? 2 : 1) * (freeAfter ? 2 : 1);
+        queue.add(last);
+        return result;
+      } else return 0;
+    }
 
     private int seriesValue(final int free) {
       if (K > 4 && free == 3) return 1000; // 1k
