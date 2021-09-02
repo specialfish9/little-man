@@ -155,7 +155,7 @@ public class SuperGalileoGalileiWithBetterHeuristic implements MNKPlayer {
     }
 
     private int pushCell(final MNKCellState state) {
-      if (queue.size() >= K) // useless >
+      if (queue.size() >= K + 2) // useless >
       popCell();
 
       if (state == MNKCellState.FREE) queueFree++;

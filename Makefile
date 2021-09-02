@@ -13,7 +13,7 @@ N:=8
 K:=4
 REPS:=5
 TIME:=2
-BEST:=SuperGalileoGalileiWithBetterCache
+BEST:=SuperGalileoGalileiPlus
 OLD:=LittleBoy
 
 .SUFFIXES: .java .class
