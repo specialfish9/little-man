@@ -1,5 +1,6 @@
 package mnkgame.players;
 
+import java.util.Deque;
 import java.util.HashMap;
 import java.util.Iterator;
 import java.util.LinkedList;
@@ -30,17 +31,19 @@ public class LittleBoy implements MNKPlayer {
 
   // {{{ board
   private static class Board extends MNKBoard {
-    private int minMN;
+    private int minMN, k;
     private final MNKCellState me;
     private long key = 0;
     private int queueP1 = 0, queueP2 = 0, queueFree = 0;
-    private Queue<MNKCellState> queue = new LinkedList<>();
+    private Deque<MNKCellState> queue = new LinkedList<>();
     private Stack<Integer> previousValues = new Stack<>();
     private int value = 0;
 
     public Board(int M, int N, int K, int minMN, MNKCellState me) {
       super(M, N, K);
       this.minMN = minMN;
+      // the length of a k series with spaces around
+      this.k = Math.min(Math.min(K+2, M), N);
       this.me = me;
     }
 
@@ -50,24 +53,34 @@ public class LittleBoy implements MNKPlayer {
       return MC.size();
     }
 
-    @Override
-    public MNKGameState markCell(int i, int j) {
+    public MNKGameState markCell(int i, int j, boolean updateValue) {
       // mind the order of the calls
       key = nextZobrist(i, j);
-      previousValues.push(value);
-      value -= eval(i, j);
+      if (updateValue) {
+        previousValues.push(value);
+        value -= eval(i, j);
+      }
       MNKGameState result = super.markCell(i, j);
-      value += eval(i, j);
+      if (updateValue) value += eval(i, j);
       return result;
     }
 
     @Override
-    public void unmarkCell() {
+    public MNKGameState markCell(int i, int j) {
+      return markCell(i, j, true);
+    }
+
+    public void unmarkCell(boolean revertValue) {
       // mind the order of the calls
       MNKCell last = MC.getLast();
       super.unmarkCell();
       key = nextZobrist(last.i, last.j);
-      value = previousValues.pop();
+      if (revertValue) value = previousValues.pop();
+    }
+
+    @Override
+    public void unmarkCell() {
+      unmarkCell(true);
     }
 
     // computes the hash for a new mark (xor works both ways, but pay attention to
@@ -122,26 +135,34 @@ public class LittleBoy implements MNKPlayer {
       queue.clear();
     }
 
-    private void popCell() {
-      MNKCellState state = queue.poll();
-      if (state == MNKCellState.FREE) queueFree--;
-      else if (state == MNKCellState.P1) queueP1--;
-      else if (state == MNKCellState.P2) queueP2--;
-    }
-
     private int pushCell(final MNKCellState state) {
-      if (queue.size() >= K) // useless >
-      popCell();
+      if (queue.size() >= k) { // useless >
+        MNKCellState s = queue.poll();
+        if (s == MNKCellState.FREE) queueFree--;
+        else if (s == MNKCellState.P1) queueP1--;
+        else if (s == MNKCellState.P2) queueP2--;
+      }
 
       if (state == MNKCellState.FREE) queueFree++;
       else if (state == MNKCellState.P1) queueP1++;
       else if (state == MNKCellState.P2) queueP2++;
       queue.add(state);
       int sign = me == MNKCellState.P1 ? 1 : -1;
-      if (queueP1 + queueFree == K) return sign * (seriesValue(queueFree) + (queueP1 * queueP1));
-      else if (queueP2 + queueFree == K)
-        return -sign * (seriesValue(queueFree) + (queueP2 * queueP2));
-      else return 0;
+      int freeBeforeAfter = 1;
+      if(queue.peekFirst() == MNKCellState.FREE)
+        freeBeforeAfter *= 2;
+      if(queue.peekLast() == MNKCellState.FREE)
+        freeBeforeAfter *= 2;
+
+      if (queueP1 + queueFree == k) {
+        int result =
+            sign * (seriesValue(queueFree - freeBeforeAfter/2) + queueP1*queueP1) * freeBeforeAfter;
+        return result;
+      } else if (queueP2 + queueFree == k) {
+        int result =
+            -sign * (seriesValue(queueFree - freeBeforeAfter/2) + queueP2*queueP2) * freeBeforeAfter;
+        return result;
+      } else return 0;
     }
 
     private int seriesValue(final int free) {
@@ -219,7 +240,7 @@ public class LittleBoy implements MNKPlayer {
   private static final int INFTY = 1000000000; // 1B
   private static final int HALT = -INFTY * 2; // -2B
   // NOTE: tweak as needed to prevent exceeding time limits.
-  private static final double SAFETY_THRESHOLD = 0.95; // livin' on the edge
+  private static final double SAFETY_THRESHOLD = 0.93; // livin' on the edge
   private static final int EXACT_VALUE = 0, UPPER_BOUND = 1, LOWER_BOUND = -1;
 
   private MNKCellState ME, ENEMY;
