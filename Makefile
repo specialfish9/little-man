@@ -13,14 +13,17 @@ N:=8
 K:=4
 REPS:=5
 TIME:=2
-BEST:=LittleBoy
-OLD:=QuasiRandomPlayer
+BEST:=SuperGalileoGalileiWithBetterCache
+OLD:=LittleBoy
 
 .SUFFIXES: .java .class
 .PHONY: build
 
 best: build
 	$(JVM) $(JVMFLAGS) $(MAIN) $(M) $(N) $(K) $(PLAYERS).$(BEST)
+
+human: build
+	$(JVM) $(JVMFLAGS) $(MAIN) $(M) $(N) $(K)
 
 vs: build
 	$(JVM) $(JVMFLAGS) $(MAIN) $(M) $(N) $(K) $(PLAYERS).$(BEST) $(PLAYERS).$(OLD)
