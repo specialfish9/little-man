@@ -5,7 +5,6 @@ import java.util.HashMap;
 import java.util.Iterator;
 import java.util.LinkedList;
 import java.util.Map;
-import java.util.Queue;
 import java.util.Random;
 import java.util.Stack;
 import java.util.concurrent.atomic.AtomicBoolean;
@@ -43,7 +42,7 @@ public class LittleBoy implements MNKPlayer {
       super(M, N, K);
       this.minMN = minMN;
       // the length of a k series with spaces around
-      this.k = Math.min(Math.min(K+2, M), N);
+      this.k = Math.min(Math.min(K + 2, M), N);
       this.me = me;
     }
 
@@ -149,18 +148,20 @@ public class LittleBoy implements MNKPlayer {
       queue.add(state);
       int sign = me == MNKCellState.P1 ? 1 : -1;
       int freeBeforeAfter = 1;
-      if(queue.peekFirst() == MNKCellState.FREE)
-        freeBeforeAfter *= 2;
-      if(queue.peekLast() == MNKCellState.FREE)
-        freeBeforeAfter *= 2;
+      if (queue.peekFirst() == MNKCellState.FREE) freeBeforeAfter *= 2;
+      if (queue.peekLast() == MNKCellState.FREE) freeBeforeAfter *= 2;
 
       if (queueP1 + queueFree == k) {
         int result =
-            sign * (seriesValue(queueFree - freeBeforeAfter/2) + queueP1*queueP1) * freeBeforeAfter;
+            sign
+                * (seriesValue(queueFree - freeBeforeAfter / 2) + queueP1 * queueP1)
+                * freeBeforeAfter;
         return result;
       } else if (queueP2 + queueFree == k) {
         int result =
-            -sign * (seriesValue(queueFree - freeBeforeAfter/2) + queueP2*queueP2) * freeBeforeAfter;
+            -sign
+                * (seriesValue(queueFree - freeBeforeAfter / 2) + queueP2 * queueP2)
+                * freeBeforeAfter;
         return result;
       } else return 0;
     }
