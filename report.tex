@@ -52,6 +52,26 @@ Tuttavia aumenta sicuramente il numero di operazioni svolte dal calcolatore.
 Per limitare questo danno si ricorre alla Principal Variation Search.
 
 \subsection{Cache}
+La cache fa uso della struttura dati HashMap fornita da Java generando le chiavi 
+in modo incrementale tramite la tecnica di \emph{Zobrist}~\cite{zobrist}. A ogni
+chiave sono associate le seguenti informazioni:
+\begin{enumerate}
+  \item Numero di mosse e ultimo simbolo giocato
+  \item Profondit\`a della ricerca
+  \item Valore della griglia
+\end{enumerate}
+Poich\`e una board $(m,n)$ pu\`o al pi\`u assumere $3^{mn}$ stati differenti e
+un \verb!long! pu\`o contenere al pi\`u $2^{64} \approx 1.8 \cdot 10^{19}$,
+esistono configurazioni che creano collisioni: ad esempio un gioco $(70, 70, 10)$
+ha un totale di $3^{4900} \approx 7.8 \cdot 10^{2338}$ stati. Per limitare i
+falsi positivi si confrontano il numero di mosse e l'ultimo simbolo giocato.
+
+% 1. onngo nodo non root viene mantenuto in cache 
+% 2. chiave con hash personalizzato
+% 3. thread 
+% 4. perogni chiave viene tenuta due valori 
+% 5. 
+
 \subsection{PVS}
 \subsection{Valutazione Euristica}
 
