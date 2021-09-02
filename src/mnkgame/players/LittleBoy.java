@@ -1,17 +1,17 @@
 package mnkgame.players;
 
-import java.util.Deque;
 import java.util.HashMap;
 import java.util.Iterator;
 import java.util.LinkedList;
 import java.util.Map;
+import java.util.Queue;
 import java.util.Random;
 import java.util.Stack;
 import java.util.concurrent.atomic.AtomicBoolean;
 import mnkgame.*;
 
-public class SuperGalileoGalileiPlus implements MNKPlayer {
-  // {{{ tuple
+public class LittleBoy implements MNKPlayer {
+  // {{{ Pair
   private static class Pair<A, B> {
     public A first;
     public B second;
@@ -26,40 +26,21 @@ public class SuperGalileoGalileiPlus implements MNKPlayer {
       return "(" + first + "," + second + ")";
     }
   }
-
-  private static class Tuple<A, B, C> {
-    public A first;
-    public B second;
-    public C third;
-
-    public Tuple(A first, B second, C third) {
-      this.first = first;
-      this.second = second;
-      this.third = third;
-    }
-
-    @Override
-    public String toString() {
-      return "(" + first + "," + second + "," + third + ")";
-    }
-  }
   // }}}
 
   // {{{ board
   private static class Board extends MNKBoard {
-    private int minMN, k;
+    private int minMN;
     private final MNKCellState me;
     private long key = 0;
     private int queueP1 = 0, queueP2 = 0, queueFree = 0;
-    private Deque<MNKCellState> queue = new LinkedList<>();
+    private Queue<MNKCellState> queue = new LinkedList<>();
     private Stack<Integer> previousValues = new Stack<>();
     private int value = 0;
 
     public Board(int M, int N, int K, int minMN, MNKCellState me) {
       super(M, N, K);
       this.minMN = minMN;
-      // the length of a k series with spaces around
-      this.k = Math.min(Math.min(K + 2, M), N);
       this.me = me;
     }
 
@@ -69,34 +50,24 @@ public class SuperGalileoGalileiPlus implements MNKPlayer {
       return MC.size();
     }
 
-    public MNKGameState markCell(int i, int j, boolean updateValue) {
+    @Override
+    public MNKGameState markCell(int i, int j) {
       // mind the order of the calls
       key = nextZobrist(i, j);
-      if (updateValue) {
-        previousValues.push(value);
-        value -= eval(i, j);
-      }
+      previousValues.push(value);
+      value -= eval(i, j);
       MNKGameState result = super.markCell(i, j);
-      if (updateValue) value += eval(i, j);
+      value += eval(i, j);
       return result;
     }
 
     @Override
-    public MNKGameState markCell(int i, int j) {
-      return markCell(i, j, true);
-    }
-
-    public void unmarkCell(boolean revertValue) {
+    public void unmarkCell() {
       // mind the order of the calls
       MNKCell last = MC.getLast();
       super.unmarkCell();
       key = nextZobrist(last.i, last.j);
-      if (revertValue) value = previousValues.pop();
-    }
-
-    @Override
-    public void unmarkCell() {
-      unmarkCell(true);
+      value = previousValues.pop();
     }
 
     // computes the hash for a new mark (xor works both ways, but pay attention to
@@ -151,36 +122,26 @@ public class SuperGalileoGalileiPlus implements MNKPlayer {
       queue.clear();
     }
 
+    private void popCell() {
+      MNKCellState state = queue.poll();
+      if (state == MNKCellState.FREE) queueFree--;
+      else if (state == MNKCellState.P1) queueP1--;
+      else if (state == MNKCellState.P2) queueP2--;
+    }
+
     private int pushCell(final MNKCellState state) {
-      if (queue.size() >= k) { // useless >
-        MNKCellState s = queue.poll();
-        if (s == MNKCellState.FREE) queueFree--;
-        else if (s == MNKCellState.P1) queueP1--;
-        else if (s == MNKCellState.P2) queueP2--;
-      }
+      if (queue.size() >= K) // useless >
+      popCell();
 
       if (state == MNKCellState.FREE) queueFree++;
       else if (state == MNKCellState.P1) queueP1++;
       else if (state == MNKCellState.P2) queueP2++;
       queue.add(state);
       int sign = me == MNKCellState.P1 ? 1 : -1;
-      int freeBeforeAfter = 1;
-      if (queue.peekFirst() == MNKCellState.FREE) freeBeforeAfter *= 2;
-      if (queue.peekLast() == MNKCellState.FREE) freeBeforeAfter *= 2;
-
-      if (queueP1 + queueFree == k) {
-        int result =
-            sign
-                * (seriesValue(queueFree - freeBeforeAfter / 2) + queueP1 * queueP1)
-                * freeBeforeAfter;
-        return result;
-      } else if (queueP2 + queueFree == k) {
-        int result =
-            -sign
-                * (seriesValue(queueFree - freeBeforeAfter / 2) + queueP2 * queueP2)
-                * freeBeforeAfter;
-        return result;
-      } else return 0;
+      if (queueP1 + queueFree == K) return sign * (seriesValue(queueFree) + (queueP1 * queueP1));
+      else if (queueP2 + queueFree == K)
+        return -sign * (seriesValue(queueFree) + (queueP2 * queueP2));
+      else return 0;
     }
 
     private int seriesValue(final int free) {
@@ -234,7 +195,6 @@ public class SuperGalileoGalileiPlus implements MNKPlayer {
           iter.remove();
         }
       }
-      System.out.println(playerName() + "\t: cleanup ended, removed " + removed + " items");
     }
   }
 
@@ -258,8 +218,9 @@ public class SuperGalileoGalileiPlus implements MNKPlayer {
 
   private static final int INFTY = 1000000000; // 1B
   private static final int HALT = -INFTY * 2; // -2B
-  private static final double SAFETY_THRESHOLD = 0.95;
-
+  // NOTE: tweak as needed to prevent exceeding time limits.
+  private static final double SAFETY_THRESHOLD = 0.95; // livin' on the edge
+  private static final int EXACT_VALUE = 0, UPPER_BOUND = 1, LOWER_BOUND = -1;
   private MNKCellState ME, ENEMY;
   private MNKGameState MY_WIN, ENEMY_WIN;
   private int M, N, K, minMN;
@@ -271,26 +232,12 @@ public class SuperGalileoGalileiPlus implements MNKPlayer {
   // cache entry structure: [marked, lastCell, searchDepth, type, value]
   // marked and lastCell are used to avoid false positives as some
   // hashes are surely going to collide. type can be one of:
-  // 0 => value is the exact result of the minimax call
-  // 1 => value is the upper bound
-  // -1 => value is the lower bound
+  // EXACT_VALUE => value is the exact evaluation of the board
+  // UPPER_BOUND => value is the upper bound
+  // LOWER_BOUND => value is the lower bound
   private HashMap<Long, int[]> cache = new HashMap<>();
   private AtomicBoolean zobristReady = new AtomicBoolean(false);
   private static long[][] zobrist;
-
-  // NOTE: profiling
-  private static int minimaxed,
-      failed,
-      failedDepth,
-      cutoff,
-      seriesFound,
-      evaluated,
-      cacheHits,
-      cacheMisses;
-  private static boolean clear = false,
-      verbose = true,
-      superVerbose = false,
-      winCutoffEnabled = true;
 
   // {{{ init
   public void initPlayer(int M, int N, int K, boolean first, int timeoutInSecs) {
@@ -308,6 +255,7 @@ public class SuperGalileoGalileiPlus implements MNKPlayer {
     r = new Random(startTime);
     board = new Board(M, N, K, minMN, ME);
     cacheBoard = new Board(M, N, K, minMN, ME);
+    stopCleanup();
     cache.clear();
 
     // continue filling the table for the zobrist hashing function in another
@@ -335,12 +283,6 @@ public class SuperGalileoGalileiPlus implements MNKPlayer {
                   zobrist[k][1] = r.nextLong();
                 }
                 zobristReady.set(true);
-                // TODO: remove
-                System.out.println(
-                    playerName()
-                        + "\t: cache ready, in another thread after "
-                        + (System.currentTimeMillis() - startTime)
-                        + "ms");
               })
           .start();
     } else {
@@ -348,20 +290,11 @@ public class SuperGalileoGalileiPlus implements MNKPlayer {
       // TODO: remove
       System.out.println(playerName() + "\t: cache ready, no thread needed");
     }
-
-    // TODO: remove in production
-    // clear screen
-    if (clear) {
-      System.out.print("\033[H\033[2J");
-      System.out.flush();
-    }
   }
   // }}}
 
   private boolean shouldHalt() {
-    // TODO: tweak values
-    return (System.currentTimeMillis() - startTime)
-        >= timeout * SAFETY_THRESHOLD; // livin' on the edge
+    return (System.currentTimeMillis() - startTime) >= timeout * SAFETY_THRESHOLD;
   }
 
   // {{{ one-cell threats
@@ -424,13 +357,10 @@ public class SuperGalileoGalileiPlus implements MNKPlayer {
     if (state == MNKGameState.DRAW) return 0;
     else if (state == MY_WIN) return (INFTY - 1) / board.marked();
     else if (state == ENEMY_WIN) return (-INFTY + 1) / board.marked();
-    else {
-      evaluated++;
-      return board.value() / board.marked();
-    }
+    else return board.value() / board.marked();
   }
 
-  // swaps vec[a] with vec[b]
+  // Swaps vec[a] with vec[b]. Cost: \Tehta(1)
   private <T> void swap(T[] vec, int a, int b) {
     if (a == b) return;
 
@@ -439,10 +369,10 @@ public class SuperGalileoGalileiPlus implements MNKPlayer {
     vec[b] = tmp;
   }
 
-  // selection sort for an array of MNKCells and relative evaluation data which
-  // places just one minimum/maximum at the beginning of the array.
-  // Has therefore a cost of O(n) and is simpler than the quick select
-  // algorithm with the median of medians partition function.
+  // Single-step Selection Sort for an array of MNKCells and relative evaluation
+  // data. It only applies one step of the Selection Sort algorithm, positioning
+  // the minimum/maximum of the vector in the start position (based on the color).
+  // Cost: O(n)
   public void selectionSort(MNKCell[] vec, Integer[] values, int start, int end, int color) {
     int m = start;
     // find the max/min in [start,end]
@@ -454,15 +384,16 @@ public class SuperGalileoGalileiPlus implements MNKPlayer {
     swap(values, start, m);
   }
 
+  // Selects a random item in the vector and swaps it with the item found
+  // in vec[start]. Cost: \Theta(1)
   public void randomSelection(MNKCell[] vec, int start, int end) {
     int i = start + r.nextInt(end - start);
 
     // put the randomly selected item in place of the start item
-    swap(vec, start, i);
+    if (i != start) swap(vec, start, i);
   }
 
-  private Tuple<MNKCell[], Integer[], Integer> getMoves(int searchDepth) {
-    MNKCell[] cells = board.getFreeCells();
+  private Pair<Integer[], Integer> getMoves(MNKCell[] cells, int searchDepth) {
     Integer[] ratings = new Integer[cells.length];
     int j = cells.length, i = 0; // limits for the [a,b] set containing all not-yet-looked-at cells
     // for (int i = 0; i < cells.length; i++) {
@@ -475,18 +406,14 @@ public class SuperGalileoGalileiPlus implements MNKPlayer {
               searchDepth - 1);
       if (entry[3] != 2) {
         ratings[i] = entry[4];
-        // TODO: remove in production
-        cacheHits++;
         i++;
       } else {
         swap(cells, i, j - 1);
         ratings[j - 1] = 0;
-        // TODO: remove in production
-        cacheMisses++;
         j--;
       }
     }
-    return new Tuple<>(cells, ratings, j);
+    return new Pair<>(ratings, j);
   }
   // }}}
 
@@ -502,10 +429,12 @@ public class SuperGalileoGalileiPlus implements MNKPlayer {
 
   // returns a cache entry for the current board. If the current board is already
   // cached the entry contains the proper data, otherwhise the entry fields 2,3 are
-  // dummy and a non-cached board can be identified by entry[2] == 2
+  // dummy. A non-cached board can be identified by entry[2] == 2
   private int[] cacheEntry(long hash, int marked, int lastCell, int searchDepth) {
     if (cache.containsKey(hash)) {
       int[] cached = cache.get(hash);
+      // Make sure the board has the same number of marked symbols and the last
+      // cell marked matches. This is done to avoid false positives in the cache
       if (cached[0] == marked && cached[1] == lastCell && cached[2] >= searchDepth) return cached;
     }
 
@@ -514,82 +443,69 @@ public class SuperGalileoGalileiPlus implements MNKPlayer {
 
   private int pvs(int color, int searchDepth, int alpha, int beta) {
     int[] entry = cacheEntry(searchDepth);
+    // If we have a cache entry we can tighten the bounds or straigh up return
+    // based on the cache type.
     if (entry[3] != 2) {
-      cacheHits++;
-      if (entry[3] == 0) return entry[4]; // return the value
-      else if (entry[3] == 1) beta = Math.min(beta, entry[4]);
-      else if (entry[3] == -1) // useless check
-      alpha = Math.max(alpha, entry[4]);
-    } else cacheMisses++;
+      if (entry[3] == EXACT_VALUE) return entry[4];
+      else if (entry[3] == UPPER_BOUND) beta = Math.min(beta, entry[4]);
+      else if (entry[3] == LOWER_BOUND) alpha = Math.max(alpha, entry[4]);
+    }
 
-    int result, prevAlpha = alpha;
+    int result;
     MNKCell omc = null;
     if (searchDepth <= 0 || board.gameState() != MNKGameState.OPEN) result = color * evaluate();
     else if (shouldHalt()) result = HALT;
+    // Check for a one-move-(win|loss) play only when enough moves have been played
     else if (entry[0] >= 2 * K - 1
-        && // only check for one-win-moves
-        // if there have been placed
-        // enough cells to make one happen
-        ((omc = findOneMoveWin(color > 0 ? MY_WIN : ENEMY_WIN)) != null
+        && ((omc = findOneMoveWin(color > 0 ? MY_WIN : ENEMY_WIN)) != null
             || (omc = findOneMoveLoss(color > 0 ? ENEMY_WIN : MY_WIN)) != null)) {
       board.markCell(omc.i, omc.j);
       result = -pvs(-color, searchDepth - 1, -beta, -alpha);
       board.unmarkCell();
     } else {
-      if (superVerbose) {
-        for (int i = 0; i < entry[0]; i++) System.out.print("--");
-        System.out.println("opened " + color + " ( " + alpha + " , " + beta + " )");
-      }
-      Tuple<MNKCell[], Integer[], Integer> moves = getMoves(searchDepth);
-      int i = 0, len = moves.first.length;
-      if (i < moves.third) selectionSort(moves.first, moves.second, i, len, color);
-      else randomSelection(moves.first, i, len);
-      board.markCell(moves.first[i].i, moves.first[i].j);
-      result = -pvs(-color, searchDepth - 1, -beta, -alpha);
-      if (superVerbose) {
-        for (int k = 0; k < entry[0]; k++) System.out.print("--");
-        System.out.println("best: " + result);
-      }
-      board.unmarkCell();
-      if (result == HALT) return HALT;
-      if (result > alpha) {
-        if (result >= beta) return result;
-        alpha = result;
-      }
+      MNKCell[] cells = board.getFreeCells();
+      Pair<Integer[], Integer> moves = getMoves(cells, searchDepth);
+      int i = 0, len = cells.length, sortUpTo = moves.second, prevAlpha = alpha;
 
-      i = 1;
+      // Similarly to negamax the alpha value is used as max/best
       while (i < len) {
-        if (i < moves.third) selectionSort(moves.first, moves.second, i, moves.third, color);
-        else randomSelection(moves.first, i, len);
+        if (i < sortUpTo) selectionSort(cells, moves.first, i, sortUpTo, color);
+        else randomSelection(cells, i, len);
 
-        board.markCell(moves.first[i].i, moves.first[i].j);
-        int score = -pvs(-color, searchDepth - 1, -alpha - 1, -alpha); // null window search
-        if (score > alpha && score < beta && score != HALT) {
-          // research with window [alfa;beta]
-          score = -pvs(-color, searchDepth - 1, -beta, -alpha);
-          if (score > alpha) alpha = score;
+        board.markCell(cells[i].i, cells[i].j);
+        int score;
+        if (i == 0) score = -pvs(-color, searchDepth - 1, -beta, -alpha);
+        else {
+          // Try first a null window search on non-PV nodes with bounds [-alpha-1, -alpha]
+          score = -pvs(-color, searchDepth - 1, -alpha - 1, -alpha);
+
+          // If the search failed inside the [alpha, beta] bounds the result may
+          // be meaningful so we need to do a proper search
+          if (score > alpha && score < beta && score != HALT)
+            score = -pvs(-color, searchDepth - 1, -beta, -alpha);
         }
         board.unmarkCell();
-        if (score == HALT) break;
-        if (score > result) {
-          result = score;
-          if (superVerbose) {
-            for (int j = 0; j < entry[0]; j++) System.out.print("--");
-            System.out.println("score: " + score);
-          }
-          if (score >= beta) break;
-        }
+
+        // Usual alpha = max(alpha, score) and cutoff check.
+        // We also let the HALT value fall trough to alpha and break the loop
+        if (score > alpha || score == HALT) alpha = score;
+        if (alpha >= beta || alpha == HALT) break;
         i++;
       }
-      if (superVerbose) {
-        for (int j = 0; j < entry[0]; j++) System.out.print("--");
-        System.out.println("closed " + result + " ( " + alpha + " , " + beta + " )");
-      }
+      result = alpha;
+      alpha = prevAlpha;
     }
     if (result == HALT) return HALT;
-    if (result <= prevAlpha) entry[3] = 1; // store the new lower bound
-    else if (result >= beta) entry[3] = -1; // store the new upper bound
-    else entry[3] = 0; // store the exact value on a PV node
+    if (board.gameState() == MNKGameState.OPEN) {
+      if (result <= alpha) entry[3] = UPPER_BOUND; // store the new lower bound
+      else if (result >= beta) entry[3] = LOWER_BOUND; // store the new upper bound
+      else entry[3] = EXACT_VALUE; // store the exact value on a PV node
+    } else {
+      // if we found an ending state we can keep it with a +INFTY searchDepth as this
+      // will be the definitive value for the board regardless of a greater searchDepth
+      entry[2] = INFTY;
+      entry[3] = EXACT_VALUE; // this is an exact evaluation of the state
+    }
 
     entry[4] = result;
     cache.put(board.zobrist(), entry);
@@ -599,65 +515,68 @@ public class SuperGalileoGalileiPlus implements MNKPlayer {
 
   // {{{ Principal Variation Search on root
   private Pair<Integer, MNKCell> pvsRoot(int searchDepth, int alpha, int beta) {
-    int bestValue = -INFTY;
-    MNKCell bestCell = null;
+    int value = -INFTY;
+    MNKCell cell = null;
     if (board.marked() >= 2 * K - 1
         && // only check for one-win-moves
         // if there have been placed
         // enough cells to make one happen
-        ((bestCell = findOneMoveWin(MY_WIN)) != null
-            || (bestCell = findOneMoveLoss(ENEMY_WIN)) != null)) {
-      board.markCell(bestCell.i, bestCell.j);
-      bestValue = -pvs(-1, searchDepth - 1, -beta, -alpha);
+        ((cell = findOneMoveWin(MY_WIN)) != null || (cell = findOneMoveLoss(ENEMY_WIN)) != null)) {
+      board.markCell(cell.i, cell.j);
+      // Even though we already know this is the best move and therefore the
+      // value is not of any use, we explore the tree either way to aid future
+      // searches with cached values and better move ordering.
+      value = -pvs(-1, searchDepth - 1, -beta, -alpha);
       board.unmarkCell();
     } else {
-      Tuple<MNKCell[], Integer[], Integer> moves = getMoves(searchDepth);
-      int bestMove = 0, len = moves.first.length;
-      // moves.first = MNKCell[], moves.second = Integer[], moves.third = index
-      // (1) moves.first[0, index-1] abbiamo un valore
-      // (2) moves.first[index, length-1] non abbiamo un valore
-      if (bestMove < moves.third) selectionSort(moves.first, moves.second, 0, len, -1);
-      else randomSelection(moves.first, bestMove, len);
-      board.markCell(moves.first[bestMove].i, moves.first[bestMove].j);
-      bestValue = -pvs(-1, searchDepth - 1, -beta, -alpha);
-      board.unmarkCell();
-      if (bestValue == HALT) return new Pair<>(HALT, null);
-      if (bestValue > alpha) {
-        if (bestValue >= beta) return new Pair<>(bestValue, moves.first[bestMove]);
-        alpha = bestValue;
-      }
+      MNKCell[] cells = board.getFreeCells();
+      Pair<Integer[], Integer> moves = getMoves(cells, searchDepth);
+      int i = 0, len = cells.length, sortUpTo = moves.second;
 
-      int i = 1;
+      // Similarly to negamax the alpha value is used as max/best
       while (i < len) {
-        if (i < moves.third) selectionSort(moves.first, moves.second, i, moves.third, -1);
-        else randomSelection(moves.first, i, len);
+        if (i < sortUpTo) selectionSort(cells, moves.first, i, sortUpTo, -1);
+        else randomSelection(cells, i, len);
 
-        board.markCell(moves.first[i].i, moves.first[i].j);
-        int score = -pvs(-1, searchDepth - 1, -alpha - 1, -alpha); // alphaBeta or zwSearch
-        if (score > alpha && score < beta && score != HALT) {
-          // research with window [alfa;beta]
-          score = -pvs(-1, searchDepth - 1, -beta, -alpha);
-          if (score > alpha) alpha = score;
+        board.markCell(cells[i].i, cells[i].j);
+        int score;
+        if (i == 0) score = -pvs(-1, searchDepth - 1, -beta, -alpha);
+        else {
+          // Try first a null window search on non-PV nodes with bounds [-alpha-1, -alpha]
+          score = -pvs(-1, searchDepth - 1, -alpha - 1, -alpha);
+
+          // If the search failed inside the [alpha, beta] bounds the result may
+          // be meaningful so we need to do a proper search
+          if (score > alpha && score < beta && score != HALT)
+            score = -pvs(-1, searchDepth - 1, -beta, -alpha);
         }
         board.unmarkCell();
+
+        // Usual alpha = max(alpha, score) and cutoff check.
+        // We also let the HALT value fall trough to alpha and break the loop
         if (score == HALT) return new Pair<>(HALT, null);
-        if (score > bestValue) {
-          bestValue = score;
-          bestMove = i;
-          if (score >= beta) break;
+        if (score > alpha) {
+          alpha = score;
+          cell = cells[i];
         }
+        if (alpha >= beta) break;
         i++;
       }
-      bestCell = moves.first[bestMove];
+      value = alpha;
     }
-    return new Pair<>(bestValue, bestCell);
+    return new Pair<>(value, cell);
   }
   // }}}
 
   // {{{ iterative deepening
-  public Pair<Integer, MNKCell> iterativeDeepening() {
+
+  // Iterative Deppening calls the pvsRoot depth-first search algorithm with an
+  // ever-increasing maximum depth, to search the tree as deep as we can and
+  // provide insights about move ordering for future searches.
+  // We stop the search if we either timeout or we find a certain win.
+  public MNKCell iterativeDeepening() {
     int len = board.getFreeCells().length;
-    Pair<Integer, MNKCell> value = null;
+    MNKCell value = null;
 
     int maxDepth = 1;
     while (!shouldHalt() && maxDepth <= len) {
@@ -670,20 +589,11 @@ public class SuperGalileoGalileiPlus implements MNKPlayer {
       Pair<Integer, MNKCell> latest = pvsRoot(maxDepth, -max, max);
       if (latest.first == HALT || latest.first == -HALT) break;
 
-      value = latest;
-      // stop the search if we found a certain win
-      if (winCutoffEnabled && value.first >= max) break;
+      value = latest.second;
+      // stop the search if we found a guaranteed win
+      if (latest.first >= max) break;
 
-      // TODO: remove in production
-      if (verbose)
-        System.out.println("minimax went to depth " + maxDepth + " with value: " + value);
       maxDepth++;
-    }
-
-    // TODO: remove in production
-    if (maxDepth - 1 > board.getFreeCells().length) {
-      throw new Error(
-          "FATAL: iterativeDeepening exceeded allowable depth with a depth of: " + maxDepth);
     }
 
     return value;
@@ -693,8 +603,6 @@ public class SuperGalileoGalileiPlus implements MNKPlayer {
   // {{{ selectCell
   public MNKCell selectCell(MNKCell[] FC, MNKCell[] MC) {
     startTime = System.currentTimeMillis();
-    minimaxed =
-        failed = failedDepth = cutoff = seriesFound = evaluated = cacheHits = cacheMisses = 0;
     stopCleanup();
 
     if (MC.length > 0) {
@@ -707,74 +615,19 @@ public class SuperGalileoGalileiPlus implements MNKPlayer {
           MC[MC.length - 1].i, MC[MC.length - 1].j); // keep track of the opponent's marks
     }
 
-    try {
-      Pair<Integer, MNKCell> result = iterativeDeepening();
-      System.out.println(
-          playerName()
-              + "\t: visited "
-              + minimaxed
-              + " nodes, ended with result: ("
-              + result.first
-              + ", "
-              + result.second
-              + ")");
-      System.out.println(
-          playerName()
-              + "\t: cut off "
-              + cutoff
-              + " branches ("
-              + (cutoff / Math.max(minimaxed, 1) * 100)
-              + "%). failed pvs "
-              + failed
-              + " times with an average depth of "
-              + (failedDepth * 1d) / failed);
-      System.out.println(
-          playerName()
-              + "\t: found a total of "
-              + seriesFound
-              + " free cells in series (up to k-1)");
-      System.out.println(playerName() + "\t: heuristically evaluated " + evaluated + " boards");
-      int perc = (int) ((1d * cacheHits / (cacheMisses + cacheHits)) * 100);
-      System.out.println(
-          playerName()
-              + "\t: cached "
-              + cache.size()
-              + " elements, hit: "
-              + cacheHits
-              + ", misses: "
-              + cacheMisses
-              + ". rate: "
-              + perc
-              + "%");
-      System.out.println(
-          playerName() + "\t: took " + (System.currentTimeMillis() - startTime) + "ms");
+    MNKCell result = iterativeDeepening();
+    // to avoid catastrophic failures in case anything breaks
+    if (result == null) result = FC[new Random().nextInt(FC.length)];
 
-      // TODO: remove in prod
-      if (FC.length != board.getFreeCells().length) {
-        System.out.println("FATAL: minimax didn't clean the board");
-        return FC[0];
-      }
-
-      // TODO: remove in production
-      if (result.second == null) {
-        System.out.println("FATAL: no chosen cell");
-        result.second = FC[new Random().nextInt(FC.length)];
-      }
-
-      if (board.markCell(result.second.i, result.second.j) == MNKGameState.OPEN)
-        cleanup(System.currentTimeMillis() + (long) (timeout * SAFETY_THRESHOLD), board.marked());
-      return result.second;
-    } catch (Exception e) {
-      e.printStackTrace();
-      MNKCell c = FC[new Random().nextInt(FC.length)];
+    if (board.markCell(result.i, result.j) == MNKGameState.OPEN && board.marked() < M * N - 3)
       cleanup(System.currentTimeMillis() + (long) (timeout * SAFETY_THRESHOLD), board.marked());
-      board.markCell(c.i, c.j);
-      return c;
-    }
+    return result;
   }
   // }}}
 
   public String playerName() {
-    return "Super Galileo Galilei++";
+    return "Little Boy";
   }
 }
+
+// vim: ts=2 sw=2 fdm=marker
