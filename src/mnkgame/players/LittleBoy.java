@@ -46,7 +46,7 @@ public class LittleBoy implements MNKPlayer {
 
   // An extension of the provided MNKBoard to account for incremental hash
   // generation and board evaluation. All methods have been implemented in such
-  // a way to maintain the same asymptotic cost of the original implementation. 
+  // a way to maintain the same asymptotic cost of the original implementation.
   private class Board extends MNKBoard {
     // Zobrist hash value
     private long key = 0;
@@ -300,8 +300,7 @@ public class LittleBoy implements MNKPlayer {
                 zobristReady.set(true);
               })
           .start();
-    } else
-      zobristReady.set(true);
+    } else zobristReady.set(true);
   }
   // }}}
 
@@ -482,7 +481,10 @@ public class LittleBoy implements MNKPlayer {
     } else {
       MNKCell[] cells = board.getFreeCells();
       int[] ratings = new int[cells.length];
-      int sortUpTo = getMoves(cells, ratings, searchDepth), i = 0, len = cells.length, prevAlpha = alpha;
+      int sortUpTo = getMoves(cells, ratings, searchDepth),
+          i = 0,
+          len = cells.length,
+          prevAlpha = alpha;
 
       // Similarly to negamax the alpha value is used as max/best
       while (i < len) {
