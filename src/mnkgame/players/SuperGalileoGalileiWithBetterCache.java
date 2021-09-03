@@ -149,16 +149,13 @@ public class SuperGalileoGalileiWithBetterCache implements MNKPlayer {
       queue.clear();
     }
 
-    private void popCell() {
-      MNKCellState state = queue.poll();
-      if (state == MNKCellState.FREE) queueFree--;
-      else if (state == MNKCellState.P1) queueP1--;
-      else if (state == MNKCellState.P2) queueP2--;
-    }
-
     private int pushCell(final MNKCellState state) {
-      if (queue.size() >= K) // useless >
-      popCell();
+      if (queue.size() >= K) { // useless >
+        MNKCellState s = queue.poll();
+        if (s == MNKCellState.FREE) queueFree--;
+        else if (s == MNKCellState.P1) queueP1--;
+        else if (s == MNKCellState.P2) queueP2--;
+      }
 
       if (state == MNKCellState.FREE) queueFree++;
       else if (state == MNKCellState.P1) queueP1++;
