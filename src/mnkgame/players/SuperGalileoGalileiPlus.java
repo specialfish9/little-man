@@ -1,16 +1,16 @@
 package mnkgame.players;
 
+import java.util.Deque;
 import java.util.HashMap;
 import java.util.Iterator;
 import java.util.LinkedList;
 import java.util.Map;
-import java.util.Queue;
 import java.util.Random;
 import java.util.Stack;
 import java.util.concurrent.atomic.AtomicBoolean;
 import mnkgame.*;
 
-public class SuperGalileoGalileiWithBetterCache implements MNKPlayer {
+public class SuperGalileoGalileiPlus implements MNKPlayer {
   // {{{ tuple
   private static class Pair<A, B> {
     public A first;
@@ -47,17 +47,19 @@ public class SuperGalileoGalileiWithBetterCache implements MNKPlayer {
 
   // {{{ board
   private static class Board extends MNKBoard {
-    private int minMN;
+    private int minMN, k;
     private final MNKCellState me;
     private long key = 0;
     private int queueP1 = 0, queueP2 = 0, queueFree = 0;
-    private Queue<MNKCellState> queue = new LinkedList<>();
+    private Deque<MNKCellState> queue = new LinkedList<>();
     private Stack<Integer> previousValues = new Stack<>();
     private int value = 0;
 
     public Board(int M, int N, int K, int minMN, MNKCellState me) {
       super(M, N, K);
       this.minMN = minMN;
+      // the length of a k series with spaces around
+      this.k = Math.min(Math.min(K + 2, M), N);
       this.me = me;
     }
 
@@ -150,7 +152,7 @@ public class SuperGalileoGalileiWithBetterCache implements MNKPlayer {
     }
 
     private int pushCell(final MNKCellState state) {
-      if (queue.size() >= K) { // useless >
+      if (queue.size() >= k) { // useless >
         MNKCellState s = queue.poll();
         if (s == MNKCellState.FREE) queueFree--;
         else if (s == MNKCellState.P1) queueP1--;
@@ -162,10 +164,23 @@ public class SuperGalileoGalileiWithBetterCache implements MNKPlayer {
       else if (state == MNKCellState.P2) queueP2++;
       queue.add(state);
       int sign = me == MNKCellState.P1 ? 1 : -1;
-      if (queueP1 + queueFree == K) return sign * (seriesValue(queueFree) + (queueP1 * queueP1));
-      else if (queueP2 + queueFree == K)
-        return -sign * (seriesValue(queueFree) + (queueP2 * queueP2));
-      else return 0;
+      int freeBeforeAfter = 1;
+      if (queue.peekFirst() == MNKCellState.FREE) freeBeforeAfter *= 2;
+      if (queue.peekLast() == MNKCellState.FREE) freeBeforeAfter *= 2;
+
+      if (queueP1 + queueFree == k) {
+        int result =
+            sign
+                * (seriesValue(queueFree - freeBeforeAfter / 2) + queueP1 * queueP1)
+                * freeBeforeAfter;
+        return result;
+      } else if (queueP2 + queueFree == k) {
+        int result =
+            -sign
+                * (seriesValue(queueFree - freeBeforeAfter / 2) + queueP2 * queueP2)
+                * freeBeforeAfter;
+        return result;
+      } else return 0;
     }
 
     private int seriesValue(final int free) {
@@ -527,7 +542,7 @@ public class SuperGalileoGalileiWithBetterCache implements MNKPlayer {
       }
       Tuple<MNKCell[], Integer[], Integer> moves = getMoves(searchDepth);
       int i = 0, len = moves.first.length;
-      if (i > moves.third) selectionSort(moves.first, moves.second, i, len, color);
+      if (i < moves.third) selectionSort(moves.first, moves.second, i, len, color);
       else randomSelection(moves.first, i, len);
       board.markCell(moves.first[i].i, moves.first[i].j);
       result = -pvs(-color, searchDepth - 1, -beta, -alpha);
@@ -598,7 +613,10 @@ public class SuperGalileoGalileiWithBetterCache implements MNKPlayer {
     } else {
       Tuple<MNKCell[], Integer[], Integer> moves = getMoves(searchDepth);
       int bestMove = 0, len = moves.first.length;
-      if (bestMove > moves.third) selectionSort(moves.first, moves.second, 0, len, -1);
+      // moves.first = MNKCell[], moves.second = Integer[], moves.third = index
+      // (1) moves.first[0, index-1] abbiamo un valore
+      // (2) moves.first[index, length-1] non abbiamo un valore
+      if (bestMove < moves.third) selectionSort(moves.first, moves.second, 0, len, -1);
       else randomSelection(moves.first, bestMove, len);
       board.markCell(moves.first[bestMove].i, moves.first[bestMove].j);
       bestValue = -pvs(-1, searchDepth - 1, -beta, -alpha);
@@ -757,8 +775,6 @@ public class SuperGalileoGalileiWithBetterCache implements MNKPlayer {
   // }}}
 
   public String playerName() {
-    return "Super Galileo Galilei w/ Cache";
+    return "Super Galileo Galilei++";
   }
 }
-
-// vim: ts=2 sw=2 fdm=marker

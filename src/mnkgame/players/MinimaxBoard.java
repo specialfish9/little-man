@@ -7,7 +7,7 @@ public class MinimaxBoard extends MNKBoard implements Cloneable {
     super(M, N, K);
   }
 
-	public MNKGameState markCell(MNKCell c) throws IndexOutOfBoundsException, IllegalStateException {
+  public MNKGameState markCell(MNKCell c) throws IndexOutOfBoundsException, IllegalStateException {
     return markCell(c.i, c.j);
   }
 

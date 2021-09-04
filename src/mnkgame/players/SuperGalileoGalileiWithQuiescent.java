@@ -1,16 +1,15 @@
 package mnkgame.players;
 
 import java.util.HashMap;
-import java.util.Iterator;
+import java.util.HashSet;
 import java.util.LinkedList;
-import java.util.Map;
 import java.util.Queue;
 import java.util.Random;
 import java.util.Stack;
 import java.util.concurrent.atomic.AtomicBoolean;
 import mnkgame.*;
 
-public class SuperGalileoGalileiWithBetterCache implements MNKPlayer {
+public class SuperGalileoGalileiWithQuiescent implements MNKPlayer {
   // {{{ tuple
   private static class Pair<A, B> {
     public A first;
@@ -139,6 +138,7 @@ public class SuperGalileoGalileiWithBetterCache implements MNKPlayer {
       jj = j + ku;
       iim = i + kl;
       jjm = j - kl;
+      queueClear();
       for (; ii <= iim && jj <= jjm; ii++, jj--) value += pushCell(B[ii][jj]);
 
       return value;
@@ -149,29 +149,31 @@ public class SuperGalileoGalileiWithBetterCache implements MNKPlayer {
       queue.clear();
     }
 
+    private void popCell() {
+      MNKCellState state = queue.poll();
+      if (state == MNKCellState.FREE) queueFree--;
+      else if (state == MNKCellState.P1) queueP1--;
+      else if (state == MNKCellState.P2) queueP2--;
+    }
+
     private int pushCell(final MNKCellState state) {
-      if (queue.size() >= K) { // useless >
-        MNKCellState s = queue.poll();
-        if (s == MNKCellState.FREE) queueFree--;
-        else if (s == MNKCellState.P1) queueP1--;
-        else if (s == MNKCellState.P2) queueP2--;
-      }
+      if (queue.size() >= K) // useless >
+      popCell();
 
       if (state == MNKCellState.FREE) queueFree++;
       else if (state == MNKCellState.P1) queueP1++;
       else if (state == MNKCellState.P2) queueP2++;
       queue.add(state);
       int sign = me == MNKCellState.P1 ? 1 : -1;
-      if (queueP1 + queueFree == K) return sign * (seriesValue(queueFree) + (queueP1 * queueP1));
-      else if (queueP2 + queueFree == K)
-        return -sign * (seriesValue(queueFree) + (queueP2 * queueP2));
+      if (queueP1 + queueFree == K) return sign * (seriesValue(queueFree) + queueP1);
+      else if (queueP2 + queueFree == K) return -sign * (seriesValue(queueFree) + queueP2);
       else return 0;
     }
 
     private int seriesValue(final int free) {
-      if (K > 4 && free == 3) return 1000; // 1k
-      if (K > 3 && free == 2) return 100000; // 100k
-      if (K > 2 && free == 1) return 10000000; // 10M
+      if (K > 4 && free == 3) return 5000; // 5k for k-3
+      if (K > 3 && free == 2) return 100000; // 100k for k-2
+      if (K > 2 && free == 1) return 10000000; // 10M for k-1
 
       return 0;
     }
@@ -191,41 +193,47 @@ public class SuperGalileoGalileiWithBetterCache implements MNKPlayer {
   // }}}
 
   // {{{ transposition cleanup
-  // removes all cached boards which have less or equal marked cells than
-  // the nest board (marked+1) and are therefore unreachable
   private class CleanupRunnable implements Runnable {
     private final long endTime;
-    private final int marked;
+    private final MNKCell move;
 
-    public CleanupRunnable(long e, int m) {
+    public CleanupRunnable(long e, MNKCell m) {
       endTime = e;
-      marked = m;
+      move = m;
     }
 
     private boolean shouldHalt() {
       return System.currentTimeMillis() >= endTime;
     }
 
+    private void remove(MNKCell root) {
+      // prevent from removing any boards that have the chosen move
+      // marked as these boards could come in handy later
+      if (root == move || shouldHalt()) return;
+
+      cacheBoard.markCell(root.i, root.j, false);
+      if (cache.containsKey(board.zobrist())) {
+        cache.remove(board.zobrist());
+        if (cacheBoard.gameState() == MNKGameState.OPEN)
+          for (MNKCell node : cacheBoard.getFreeCells()) remove(node);
+      }
+      cacheBoard.unmarkCell(false);
+    }
+
     public void run() {
-      int removed = 0;
-      Iterator<Map.Entry<Long, int[]>> iter = cache.entrySet().iterator();
-      while (iter.hasNext()) {
+      for (MNKCell c : cacheBoard.getFreeCells()) {
         if (Thread.currentThread().isInterrupted() || shouldHalt()) break;
 
-        Map.Entry<Long, int[]> e = iter.next();
-        if (e.getValue()[0] <= marked + 1) {
-          // TODO: remove in production
-          removed++;
-          iter.remove();
-        }
+        // TODO: recursive
+        remove(c);
       }
-      System.out.println(playerName() + "\t: cleanup ended, removed " + removed + " items");
+      System.out.println(playerName() + "\t: cleanup ended");
     }
   }
 
   private Thread cleanupThread = null;
 
-  private void cleanup(long e, int m) {
+  private void cleanup(long e, MNKCell m) {
     stopCleanup();
     cleanupThread = new Thread(new CleanupRunnable(e, m));
     cleanupThread.start();
@@ -242,9 +250,12 @@ public class SuperGalileoGalileiWithBetterCache implements MNKPlayer {
   // }}}
 
   private static final int INFTY = 1000000000; // 1B
+  private static final int QUIET = 100000; // 100k
+  private static final int QUIESCENCE_DEPTH = 1;
   private static final int HALT = -INFTY * 2; // -2B
-  private static final double SAFETY_THRESHOLD = 0.95;
+  private static final double SAFETY_THRESHOLD = 0.9;
 
+  private int playerId;
   private MNKCellState ME, ENEMY;
   private MNKGameState MY_WIN, ENEMY_WIN;
   private int M, N, K, minMN;
@@ -253,12 +264,6 @@ public class SuperGalileoGalileiWithBetterCache implements MNKPlayer {
   private Board board, cacheBoard;
 
   // transposition table hashed using zobrist method
-  // cache entry structure: [marked, lastCell, searchDepth, type, value]
-  // marked and lastCell are used to avoid false positives as some
-  // hashes are surely going to collide. type can be one of:
-  // 0 => value is the exact result of the minimax call
-  // 1 => value is the upper bound
-  // -1 => value is the lower bound
   private HashMap<Long, int[]> cache = new HashMap<>();
   private AtomicBoolean zobristReady = new AtomicBoolean(false);
   private static long[][] zobrist;
@@ -285,6 +290,7 @@ public class SuperGalileoGalileiWithBetterCache implements MNKPlayer {
     this.minMN = Math.min(M, N);
     timeout = timeoutInSecs * 1000;
     startTime = System.currentTimeMillis();
+    playerId = first ? 0 : 1;
     MY_WIN = first ? MNKGameState.WINP1 : MNKGameState.WINP2;
     ENEMY_WIN = first ? MNKGameState.WINP2 : MNKGameState.WINP1;
     ME = first ? MNKCellState.P1 : MNKCellState.P2;
@@ -399,21 +405,107 @@ public class SuperGalileoGalileiWithBetterCache implements MNKPlayer {
   }
   // }}}
 
-  // {{{ moves ordering
+  // {{{ board evaluation and quiescence search
 
-  // evaluate a state (either heuristically or in a deterministic way) regardless
-  // of its depth. The depth is also taken into account
-  private int evaluate() {
-    // check for draws first, most lickely
-    MNKGameState state = board.gameState();
-    if (state == MNKGameState.DRAW) return 0;
-    else if (state == MY_WIN) return (INFTY - 1) / board.marked();
-    else if (state == ENEMY_WIN) return (-INFTY + 1) / board.marked();
-    else {
-      evaluated++;
-      return board.value() / board.marked();
-    }
+  // get a series of moves which can highly alter the value of the board
+  // based on the last marked cell which is taken as input. These cells
+  // will be the ones in the same row/column/diagonal/counter-diagonal next
+  // to the series generated by the (i, j) cell
+  private HashSet<Integer> getQuiescentMoves(int i, int j, MNKCellState player) {
+    HashSet<Integer> cells = new HashSet<>();
+    // column upwards and downwards
+    int ii = i;
+    for (; ii < M && board.cellState(ii, j) == player; ii++)
+      ;
+    if (ii < M && board.cellState(ii - 1, j) == MNKCellState.FREE) cells.add((ii - 1) * minMN + j);
+    ii = i;
+    for (; ii >= 0 && board.cellState(ii, j) == player; ii--)
+      ;
+    if (ii > 0 && board.cellState(ii + 1, j) == MNKCellState.FREE) cells.add((ii + 1) * minMN + j);
+
+    // row upwards and downwards
+    int jj = j;
+    for (; jj < N && board.cellState(i, jj) == player; jj++)
+      ;
+    if (jj < N && board.cellState(i, jj - 1) == MNKCellState.FREE) cells.add(i * minMN + jj - 1);
+    jj = j;
+    for (; jj >= 0 && board.cellState(i, jj) == player; jj--)
+      ;
+    if (jj > 0 && board.cellState(i, jj + 1) == MNKCellState.FREE) cells.add(i * minMN + jj + 1);
+
+    // diagonal upwards and downwards
+    jj = j;
+    ii = i;
+    for (; ii < M && jj < N && board.cellState(ii, jj) == player; ii++, jj++)
+      ;
+    if (ii > 0 && jj > 0 && board.cellState(ii - 1, jj - 1) == MNKCellState.FREE)
+      cells.add((ii - 1) * minMN + jj - 1);
+    jj = j;
+    ii = i;
+    for (; ii >= 0 && jj >= 0 && board.cellState(ii, jj) == player; ii--, jj--)
+      ;
+    if (ii < M && jj < N && board.cellState(ii + 1, jj + 1) == MNKCellState.FREE)
+      cells.add((ii + 1) * minMN + jj + 1);
+
+    // counter-diagonal upwards and downwards
+    jj = j;
+    ii = i;
+    for (; ii >= 0 && jj < N && board.cellState(ii, jj) == player; ii--, jj++)
+      ;
+    if (ii < M && jj > 0 && board.cellState(ii + 1, jj - 1) == MNKCellState.FREE)
+      cells.add((ii + 1) * minMN + jj - 1);
+    jj = j;
+    ii = i;
+    for (; ii < M && jj >= 0 && board.cellState(ii, jj) == player; ii++, jj--)
+      ;
+    if (ii > 0 && jj < M && board.cellState(ii - 1, jj + 1) == MNKCellState.FREE)
+      cells.add((ii - 1) * minMN + jj + 1);
+
+    return cells;
   }
+
+  // negamax withot alpha-beta
+  private int quiescenceSearch(int depth, int color) {
+    if (depth == 0 || board.gameState() != MNKGameState.OPEN)
+      return color * evaluate(true); // raw evaluation
+
+    int value = -INFTY;
+    MNKCell lastMove = board.getMarkedCells()[board.marked() - 1];
+    HashSet<Integer> moves = getQuiescentMoves(lastMove.i, lastMove.j, color > 0 ? ME : ENEMY);
+    if (moves.size() == 0) return color * evaluate(true); // raw evaluation
+
+    for (int c : moves) {
+      int i = c / minMN, j = c % minMN;
+      board.markCell(i, j);
+      value = Math.max(value, quiescenceSearch(depth - 1, -color));
+      board.unmarkCell();
+    }
+
+    return -value;
+  }
+
+  private int evaluate() {
+    return evaluate(false);
+  }
+
+  private int evaluate(boolean rawHeuristic) {
+    MNKGameState state = board.gameState();
+    int depth = board.marked();
+    if (state == MNKGameState.OPEN) {
+      // return a heuristic evaluation
+      evaluated++;
+      int value = board.value();
+      if (!rawHeuristic && (value > QUIET || value < -QUIET))
+        return quiescenceSearch(QUIESCENCE_DEPTH, board.currentPlayer() == playerId ? -1 : 1);
+      else return value / depth;
+    } else if (state == MNKGameState.DRAW) return 0;
+    else return (state == MY_WIN ? 1 : -1) * INFTY / board.marked();
+    // else if (state == MY_WIN) return (INFTY - 1) / board.marked();
+    // else if (state == ENEMY_WIN) return (-INFTY + 1) / board.marked();
+  }
+  // }}}
+
+  // {{{ move ordering
 
   // swaps vec[a] with vec[b]
   private <T> void swap(T[] vec, int a, int b) {
@@ -452,14 +544,10 @@ public class SuperGalileoGalileiWithBetterCache implements MNKPlayer {
     int j = cells.length, i = 0; // limits for the [a,b] set containing all not-yet-looked-at cells
     // for (int i = 0; i < cells.length; i++) {
     while (i < j) {
-      int entry[] =
-          cacheEntry(
-              board.nextZobrist(cells[i].i, cells[i].j),
-              board.marked() + 1,
-              cells[i].i * minMN + cells[i].j,
-              searchDepth - 1);
-      if (entry[3] != 2) {
-        ratings[i] = entry[4];
+      long hash = board.nextZobrist(cells[i].i, cells[i].j);
+      int values[];
+      if (cache.containsKey(hash) && (values = cache.get(hash))[1] >= searchDepth - 1) {
+        ratings[i] = values[0];
         // TODO: remove in production
         cacheHits++;
         i++;
@@ -476,42 +564,19 @@ public class SuperGalileoGalileiWithBetterCache implements MNKPlayer {
   // }}}
 
   // {{{ Principal Variation Search for subtrees
-  private int[] cacheEntry(int searchDepth) {
-    MNKCell[] c = board.getMarkedCells();
-    return cacheEntry(
-        board.zobrist(),
-        board.marked(),
-        c[c.length - 1].i * minMN + c[c.length - 1].j,
-        searchDepth);
-  }
-
-  // returns a cache entry for the current board. If the current board is already
-  // cached the entry contains the proper data, otherwhise the entry fields 2,3 are
-  // dummy and a non-cached board can be identified by entry[2] == 2
-  private int[] cacheEntry(long hash, int marked, int lastCell, int searchDepth) {
-    if (cache.containsKey(hash)) {
-      int[] cached = cache.get(hash);
-      if (cached[0] == marked && cached[1] == lastCell && cached[2] >= searchDepth) return cached;
-    }
-
-    return new int[] {marked, lastCell, searchDepth, 2, 0};
-  }
-
   private int pvs(int color, int searchDepth, int alpha, int beta) {
-    int[] entry = cacheEntry(searchDepth);
-    if (entry[3] != 2) {
+    int[] entry = {-color * INFTY, searchDepth};
+    if (cache.containsKey(board.zobrist())
+        && (entry = cache.get(board.zobrist()))[1] >= searchDepth) {
       cacheHits++;
-      if (entry[3] == 0) return entry[4]; // return the value
-      else if (entry[3] == 1) beta = Math.min(beta, entry[4]);
-      else if (entry[3] == -1) // useless check
-      alpha = Math.max(alpha, entry[4]);
+      return entry[0];
     } else cacheMisses++;
 
-    int result, prevAlpha = alpha;
+    int result;
     MNKCell omc = null;
     if (searchDepth <= 0 || board.gameState() != MNKGameState.OPEN) result = color * evaluate();
     else if (shouldHalt()) result = HALT;
-    else if (entry[0] >= 2 * K - 1
+    else if (board.marked() >= 2 * K - 1
         && // only check for one-win-moves
         // if there have been placed
         // enough cells to make one happen
@@ -522,18 +587,18 @@ public class SuperGalileoGalileiWithBetterCache implements MNKPlayer {
       board.unmarkCell();
     } else {
       if (superVerbose) {
-        for (int i = 0; i < entry[0]; i++) System.out.print("--");
+        for (int i = 0; i < board.marked(); i++) System.out.print("--");
         System.out.println("opened " + color + " ( " + alpha + " , " + beta + " )");
       }
       Tuple<MNKCell[], Integer[], Integer> moves = getMoves(searchDepth);
-      int i = 0, len = moves.first.length;
-      if (i > moves.third) selectionSort(moves.first, moves.second, i, len, color);
-      else randomSelection(moves.first, i, len);
-      board.markCell(moves.first[i].i, moves.first[i].j);
+      int bestMove = 0, len = moves.first.length;
+      if (bestMove > moves.third) selectionSort(moves.first, moves.second, 0, len, color);
+      else randomSelection(moves.first, bestMove, len);
+      board.markCell(moves.first[bestMove].i, moves.first[bestMove].j);
       result = -pvs(-color, searchDepth - 1, -beta, -alpha);
       if (superVerbose) {
-        for (int k = 0; k < entry[0]; k++) System.out.print("--");
-        System.out.println("best: " + result);
+        for (int i = 0; i < board.marked(); i++) System.out.print("--");
+        System.out.println(" best: " + result);
       }
       board.unmarkCell();
       if (result == HALT) return HALT;
@@ -542,7 +607,7 @@ public class SuperGalileoGalileiWithBetterCache implements MNKPlayer {
         alpha = result;
       }
 
-      i = 1;
+      int i = 1;
       while (i < len) {
         if (i < moves.third) selectionSort(moves.first, moves.second, i, moves.third, color);
         else randomSelection(moves.first, i, len);
@@ -554,29 +619,27 @@ public class SuperGalileoGalileiWithBetterCache implements MNKPlayer {
           score = -pvs(-color, searchDepth - 1, -beta, -alpha);
           if (score > alpha) alpha = score;
         }
+        if (superVerbose) {
+          for (int j = 0; j < board.marked(); j++) System.out.print("--");
+          System.out.println(" score: " + score);
+        }
         board.unmarkCell();
         if (score == HALT) break;
         if (score > result) {
           result = score;
-          if (superVerbose) {
-            for (int j = 0; j < entry[0]; j++) System.out.print("--");
-            System.out.println("score: " + score);
-          }
+          bestMove = i;
           if (score >= beta) break;
         }
         i++;
       }
       if (superVerbose) {
-        for (int j = 0; j < entry[0]; j++) System.out.print("--");
+        for (int j = 0; j < board.marked(); j++) System.out.print("--");
         System.out.println("closed " + result + " ( " + alpha + " , " + beta + " )");
       }
     }
     if (result == HALT) return HALT;
-    if (result <= prevAlpha) entry[3] = 1; // store the new lower bound
-    else if (result >= beta) entry[3] = -1; // store the new upper bound
-    else entry[3] = 0; // store the exact value on a PV node
 
-    entry[4] = result;
+    entry[0] = result;
     cache.put(board.zobrist(), entry);
     return result;
   }
@@ -744,12 +807,12 @@ public class SuperGalileoGalileiWithBetterCache implements MNKPlayer {
       }
 
       if (board.markCell(result.second.i, result.second.j) == MNKGameState.OPEN)
-        cleanup(System.currentTimeMillis() + (long) (timeout * SAFETY_THRESHOLD), board.marked());
+        cleanup(System.currentTimeMillis() + (long) (timeout * SAFETY_THRESHOLD), result.second);
       return result.second;
     } catch (Exception e) {
       e.printStackTrace();
       MNKCell c = FC[new Random().nextInt(FC.length)];
-      cleanup(System.currentTimeMillis() + (long) (timeout * SAFETY_THRESHOLD), board.marked());
+      cleanup(System.currentTimeMillis() + (long) (timeout * SAFETY_THRESHOLD), c);
       board.markCell(c.i, c.j);
       return c;
     }
@@ -757,8 +820,6 @@ public class SuperGalileoGalileiWithBetterCache implements MNKPlayer {
   // }}}
 
   public String playerName() {
-    return "Super Galileo Galilei w/ Cache";
+    return "Super Galileo Galilei";
   }
 }
-
-// vim: ts=2 sw=2 fdm=marker
