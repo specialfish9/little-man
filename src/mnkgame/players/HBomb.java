@@ -10,7 +10,7 @@ import java.util.Stack;
 import java.util.concurrent.atomic.AtomicBoolean;
 import mnkgame.*;
 
-public class SuperGalileoGalileiWithBetterCache implements MNKPlayer {
+public class HBomb implements MNKPlayer {
   // {{{ tuple
   private static class Pair<A, B> {
     public A first;
@@ -219,7 +219,7 @@ public class SuperGalileoGalileiWithBetterCache implements MNKPlayer {
           iter.remove();
         }
       }
-      // System.out.println(playerName() + "\t: cleanup ended, removed " + removed + " items");
+      System.out.println(playerName() + "\t: cleanup ended, removed " + removed + " items");
     }
   }
 
@@ -321,19 +321,17 @@ public class SuperGalileoGalileiWithBetterCache implements MNKPlayer {
                 }
                 zobristReady.set(true);
                 // TODO: remove
-                /*
                 System.out.println(
                     playerName()
                         + "\t: cache ready, in another thread after "
                         + (System.currentTimeMillis() - startTime)
                         + "ms");
-              */
               })
           .start();
     } else {
       zobristReady.set(true);
       // TODO: remove
-      // System.out.println(playerName() + "\t: cache ready, no thread needed");
+      System.out.println(playerName() + "\t: cache ready, no thread needed");
     }
 
     // TODO: remove in production
@@ -426,11 +424,21 @@ public class SuperGalileoGalileiWithBetterCache implements MNKPlayer {
     vec[b] = tmp;
   }
 
+  // Swaps vec[a] with vec[b]. Cost: \Tehta(1)
+  // Copy of the above with native type
+  private void swap(int[] vec, int a, int b) {
+    if (a == b) return;
+
+    int tmp = vec[a];
+    vec[a] = vec[b];
+    vec[b] = tmp;
+  }
+
   // selection sort for an array of MNKCells and relative evaluation data which
   // places just one minimum/maximum at the beginning of the array.
   // Has therefore a cost of O(n) and is simpler than the quick select
   // algorithm with the median of medians partition function.
-  public void selectionSort(MNKCell[] vec, Integer[] values, int start, int end, int color) {
+  public void selectionSort(MNKCell[] vec, int[] values, int start, int end, int color) {
     int m = start;
     // find the max/min in [start,end]
     for (int i = start + 1; i < end; i++)
@@ -441,16 +449,16 @@ public class SuperGalileoGalileiWithBetterCache implements MNKPlayer {
     swap(values, start, m);
   }
 
+  // Selects a random item in the vector and swaps it with the item found
+  // in vec[start]. Cost: \Theta(1)
   public void randomSelection(MNKCell[] vec, int start, int end) {
     int i = start + r.nextInt(end - start);
 
     // put the randomly selected item in place of the start item
-    swap(vec, start, i);
+    if (i != start) swap(vec, start, i);
   }
 
-  private Tuple<MNKCell[], Integer[], Integer> getMoves(int searchDepth) {
-    MNKCell[] cells = board.getFreeCells();
-    Integer[] ratings = new Integer[cells.length];
+  private int rateMoves(MNKCell[] cells, int[] ratings, int searchDepth) {
     int j = cells.length, i = 0; // limits for the [a,b] set containing all not-yet-looked-at cells
     // for (int i = 0; i < cells.length; i++) {
     while (i < j) {
@@ -462,18 +470,14 @@ public class SuperGalileoGalileiWithBetterCache implements MNKPlayer {
               searchDepth - 1);
       if (entry[3] != 2) {
         ratings[i] = entry[4];
-        // TODO: remove in production
-        cacheHits++;
         i++;
       } else {
         swap(cells, i, j - 1);
         ratings[j - 1] = 0;
-        // TODO: remove in production
-        cacheMisses++;
         j--;
       }
     }
-    return new Tuple<>(cells, ratings, j);
+    return j;
   }
   // }}}
 
@@ -525,17 +529,19 @@ public class SuperGalileoGalileiWithBetterCache implements MNKPlayer {
     } else {
       if (superVerbose) {
         for (int i = 0; i < entry[0]; i++) System.out.print("--");
-        // System.out.println("opened " + color + " ( " + alpha + " , " + beta + " )");
+        System.out.println("opened " + color + " ( " + alpha + " , " + beta + " )");
       }
-      Tuple<MNKCell[], Integer[], Integer> moves = getMoves(searchDepth);
-      int i = 0, len = moves.first.length;
-      if (i > moves.third) selectionSort(moves.first, moves.second, i, len, color);
-      else randomSelection(moves.first, i, len);
-      board.markCell(moves.first[i].i, moves.first[i].j);
+      MNKCell[] cells = board.getFreeCells();
+      int[] ratings = new int[cells.length];
+      int sortUpTo = rateMoves(cells, ratings, searchDepth);
+      int i = 0, len = cells.length;
+      if (i > sortUpTo) selectionSort(cells, ratings, i, len, color);
+      else randomSelection(cells, i, len);
+      board.markCell(cells[i].i, cells[i].j);
       result = -pvs(-color, searchDepth - 1, -beta, -alpha);
       if (superVerbose) {
         for (int k = 0; k < entry[0]; k++) System.out.print("--");
-        // System.out.println("best: " + result);
+        System.out.println("best: " + result);
       }
       board.unmarkCell();
       if (result == HALT) return HALT;
@@ -546,10 +552,10 @@ public class SuperGalileoGalileiWithBetterCache implements MNKPlayer {
 
       i = 1;
       while (i < len) {
-        if (i < moves.third) selectionSort(moves.first, moves.second, i, moves.third, color);
-        else randomSelection(moves.first, i, len);
+        if (i < sortUpTo) selectionSort(cells, ratings, i, sortUpTo, color);
+        else randomSelection(cells, i, len);
 
-        board.markCell(moves.first[i].i, moves.first[i].j);
+        board.markCell(cells[i].i, cells[i].j);
         int score = -pvs(-color, searchDepth - 1, -alpha - 1, -alpha); // null window search
         if (score > alpha && score < beta && score != HALT) {
           // research with window [alfa;beta]
@@ -562,7 +568,7 @@ public class SuperGalileoGalileiWithBetterCache implements MNKPlayer {
           result = score;
           if (superVerbose) {
             for (int j = 0; j < entry[0]; j++) System.out.print("--");
-            // System.out.println("score: " + score);
+            System.out.println("score: " + score);
           }
           if (score >= beta) break;
         }
@@ -570,7 +576,7 @@ public class SuperGalileoGalileiWithBetterCache implements MNKPlayer {
       }
       if (superVerbose) {
         for (int j = 0; j < entry[0]; j++) System.out.print("--");
-        // System.out.println("closed " + result + " ( " + alpha + " , " + beta + " )");
+        System.out.println("closed " + result + " ( " + alpha + " , " + beta + " )");
       }
     }
     if (result == HALT) return HALT;
@@ -598,25 +604,27 @@ public class SuperGalileoGalileiWithBetterCache implements MNKPlayer {
       bestValue = -pvs(-1, searchDepth - 1, -beta, -alpha);
       board.unmarkCell();
     } else {
-      Tuple<MNKCell[], Integer[], Integer> moves = getMoves(searchDepth);
-      int bestMove = 0, len = moves.first.length;
-      if (bestMove > moves.third) selectionSort(moves.first, moves.second, 0, len, -1);
-      else randomSelection(moves.first, bestMove, len);
-      board.markCell(moves.first[bestMove].i, moves.first[bestMove].j);
+      MNKCell[] cells = board.getFreeCells();
+      int[] ratings = new int[cells.length];
+      int sortUpTo = rateMoves(cells, ratings, searchDepth);
+      int bestMove = 0, len = cells.length;
+      if (bestMove > sortUpTo) selectionSort(cells, ratings, 0, len, -1);
+      else randomSelection(cells, bestMove, len);
+      board.markCell(cells[bestMove].i, cells[bestMove].j);
       bestValue = -pvs(-1, searchDepth - 1, -beta, -alpha);
       board.unmarkCell();
       if (bestValue == HALT) return new Pair<>(HALT, null);
       if (bestValue > alpha) {
-        if (bestValue >= beta) return new Pair<>(bestValue, moves.first[bestMove]);
+        if (bestValue >= beta) return new Pair<>(bestValue, cells[bestMove]);
         alpha = bestValue;
       }
 
       int i = 1;
       while (i < len) {
-        if (i < moves.third) selectionSort(moves.first, moves.second, i, moves.third, -1);
-        else randomSelection(moves.first, i, len);
+        if (i < sortUpTo) selectionSort(cells, ratings, i, sortUpTo, -1);
+        else randomSelection(cells, i, len);
 
-        board.markCell(moves.first[i].i, moves.first[i].j);
+        board.markCell(cells[i].i, cells[i].j);
         int score = -pvs(-1, searchDepth - 1, -alpha - 1, -alpha); // alphaBeta or zwSearch
         if (score > alpha && score < beta && score != HALT) {
           // research with window [alfa;beta]
@@ -632,7 +640,7 @@ public class SuperGalileoGalileiWithBetterCache implements MNKPlayer {
         }
         i++;
       }
-      bestCell = moves.first[bestMove];
+      bestCell = cells[bestMove];
     }
     return new Pair<>(bestValue, bestCell);
   }
@@ -660,7 +668,7 @@ public class SuperGalileoGalileiWithBetterCache implements MNKPlayer {
 
       // TODO: remove in production
       if (verbose)
-        // System.out.println("minimax went to depth " + maxDepth + " with value: " + value);
+        System.out.println("minimax went to depth " + maxDepth + " with value: " + value);
       maxDepth++;
     }
 
@@ -693,7 +701,7 @@ public class SuperGalileoGalileiWithBetterCache implements MNKPlayer {
 
     try {
       Pair<Integer, MNKCell> result = iterativeDeepening();
-      /*System.out.println(
+      System.out.println(
           playerName()
               + "\t: visited "
               + minimaxed
@@ -732,7 +740,6 @@ public class SuperGalileoGalileiWithBetterCache implements MNKPlayer {
               + "%");
       System.out.println(
           playerName() + "\t: took " + (System.currentTimeMillis() - startTime) + "ms");
-          */
 
       // TODO: remove in prod
       if (FC.length != board.getFreeCells().length) {
@@ -760,7 +767,7 @@ public class SuperGalileoGalileiWithBetterCache implements MNKPlayer {
   // }}}
 
   public String playerName() {
-    return "Super Galileo Galilei w/ Cache";
+    return "HBomb";
   }
 }
 
