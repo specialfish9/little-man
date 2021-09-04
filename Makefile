@@ -11,8 +11,9 @@ PLAYERS=$(PKG).players
 SIZE:=4
 K:=3
 REPS:=5
-BEST:=AlbertEinstein
-OLD:=VinDiesel
+TIME:=2
+BEST:=H
+OLD:=SuperGalileoGalileiWithBetterCache
 
 .SUFFIXES: .java .class
 .PHONY: build

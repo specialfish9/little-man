@@ -1,0 +1,8 @@
+!SESSION 2021-09-02 20:37:49.964 -----------------------------------------------
+eclipse.buildId=unknown
+java.version=16.0.2
+java.vendor=N/A
+BootLoader constants: OS=linux, ARCH=x86_64, WS=gtk, NL=en_US
+
+!ENTRY org.eclipse.jdt.ls.core 1 0 2021-09-02 20:37:52.058
+!MESSAGE class org.eclipse.jdt.ls.core.internal.JavaLanguageServerPlugin is started
