@@ -746,7 +746,7 @@ public class SuperGalileoGalileiWithBetterCache implements MNKPlayer {
         result.second = FC[new Random().nextInt(FC.length)];
       }
 
-      if (board.markCell(result.second.i, result.second.j) == MNKGameState.OPEN)
+      if (board.markCell(result.second.i, result.second.j) == MNKGameState.OPEN && board.marked() < M * N - 3)
         cleanup(System.currentTimeMillis() + (long) (timeout * SAFETY_THRESHOLD), board.marked());
       return result.second;
     } catch (Exception e) {

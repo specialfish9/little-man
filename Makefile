@@ -11,10 +11,10 @@ PLAYERS=$(PKG).players
 M:=3
 N:=3
 K:=3
-REPS:=5
+REPS:=500
 TIME:=2
-BEST:=SuperGalileoGalileiWithBetterCache
-OLD:=LittleBoy
+BEST:=LittleBoy
+OLD:=SuperGalileoGalileiWithBetterCache
 
 .SUFFIXES: .java .class
 .PHONY: build
