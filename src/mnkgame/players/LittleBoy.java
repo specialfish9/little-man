@@ -46,7 +46,7 @@ public class LittleBoy implements MNKPlayer {
 
   // An extension of the provided MNKBoard to account for incremental hash
   // generation and board evaluation. All methods have been implemented in such
-  // a way to maintain the same asymptotic cost of the original implementation. 
+  // a way to maintain the same asymptotic cost of the original implementation.
   private class Board extends MNKBoard {
     // Zobrist hash value
     private long key = 0;
@@ -325,8 +325,7 @@ public class LittleBoy implements MNKPlayer {
                 zobristReady.set(true);
               })
           .start();
-    } else
-      zobristReady.set(true);
+    } else zobristReady.set(true);
   }
   // }}}
 
