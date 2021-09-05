@@ -212,18 +212,7 @@ public class LittleBoy implements MNKPlayer {
       else return 0;
     }
 
-    if(queueP1+queueFree==kPlusTwo)
-    {
-      int result = sign * (seriesValue(queueFree - freeBeforeAfter / 2) + queueP1 * queueP1) * freeBeforeAfter;
-      return result;
-    }else if(queueP2+queueFree==kPlusTwo)
-    {
-      int result = -sign * (seriesValue(queueFree - freeBeforeAfter / 2) + queueP2 * queueP2) * freeBeforeAfter;
-      return result;
-    }else return 0;
-  }
-
-  private int seriesValue(final int free) {
+    private int seriesValue(final int free) {
       if (K > 4 && free == 3) return 1000; // 1k
       if (K > 3 && free == 2) return 100000; // 100k
       if (K > 2 && free == 1) return 10000000; // 10M
@@ -231,7 +220,7 @@ public class LittleBoy implements MNKPlayer {
       return 0;
     }
 
-  @Override
+    @Override
     public String toString() {
       String str = "";
       for (int i = 0; i < M; i++) {
@@ -242,24 +231,24 @@ public class LittleBoy implements MNKPlayer {
       }
       return str;
     }
-}
-// }}}
-
-// {{{ transposition cleanup
-// removes all cached boards which have less or equal marked cells than
-// the nest board (marked+1) and are therefore unreachable
-private class CleanupRunnable implements Runnable {
-  private final long endTime;
-  private final int marked;
-
-  public CleanupRunnable(long e, int m) {
-    endTime = e;
-    marked = m;
   }
+  // }}}
 
-  private boolean shouldHalt() {
-    return System.currentTimeMillis() >= endTime;
-  }
+  // {{{ transposition cleanup
+  // removes all cached boards which have less or equal marked cells than
+  // the nest board (marked+1) and are therefore unreachable
+  private class CleanupRunnable implements Runnable {
+    private final long endTime;
+    private final int marked;
+
+    public CleanupRunnable(long e, int m) {
+      endTime = e;
+      marked = m;
+    }
+
+    private boolean shouldHalt() {
+      return System.currentTimeMillis() >= endTime;
+    }
 
     public void run() {
       Iterator<Map.Entry<Long, int[]>> iter = cache.entrySet().iterator();
@@ -271,7 +260,8 @@ private class CleanupRunnable implements Runnable {
           iter.remove();
         }
       }
-    }}
+    }
+  }
 
   private Thread cleanupThread = null;
 
@@ -335,17 +325,13 @@ private class CleanupRunnable implements Runnable {
                 zobristReady.set(true);
               })
           .start();
-    }else zobristReady.set(true);
-
+    } else zobristReady.set(true);
   }
   // }}}
 
   // {{{ one-cell threats
 
-
-  // finds the first cell needed to copmlete a K-1 streak in any possible
-  // direction
-
+  // finds the first cell needed to copmlete a K-1 streak in any possible direction
   private MNKCell findOneMoveWin(final MNKGameState winState) {
     for (MNKCell c : board.getFreeCells()) {
       MNKGameState result = board.markCell(c.i, c.j, false);
@@ -366,10 +352,7 @@ private class CleanupRunnable implements Runnable {
     return null;
   }
 
-
-  // finds the first cell the enemy needs to copmlete a K-1 streak in any possible
-  // direction
-
+  // finds the first cell the enemy needs to copmlete a K-1 streak in any possible direction
   private MNKCell findOneMoveLoss(final MNKGameState lossState) {
     MNKCell randomCell = null;
     if (board.getFreeCells().length <= 2 || (randomCell = pickRandomNonClosingCell(null)) == null)
@@ -424,8 +407,7 @@ private class CleanupRunnable implements Runnable {
   // Swaps vec[a] with vec[b]. Cost: \Tehta(1)
   // Copy of the above with native type
   private void swap(int[] vec, int a, int b) {
-    if (a == b)
-      return;
+    if (a == b) return;
 
     int tmp = vec[a];
     vec[a] = vec[b];
@@ -440,8 +422,7 @@ private class CleanupRunnable implements Runnable {
     int m = start;
     // find the max/min in [start,end]
     for (int i = start + 1; i < end; i++)
-      if (color > 0 ? values[i] > values[m] : values[i] < values[m])
-        m = i;
+      if (color > 0 ? values[i] > values[m] : values[i] < values[m]) m = i;
 
     // swap vec[m] with vec[start] if we found a new max/min
     swap(vec, start, m);
@@ -454,15 +435,18 @@ private class CleanupRunnable implements Runnable {
     int i = start + r.nextInt(end - start);
 
     // put the randomly selected item in place of the start item
-    if (i != start)
-      swap(vec, start, i);
+    if (i != start) swap(vec, start, i);
   }
 
   private int rateMoves(MNKCell[] cells, int[] ratings, int searchDepth) {
     int j = cells.length, i = 0; // limits for the [a,b] set containing all not-yet-looked-at cells
     while (i < j) {
-      int entry[] = cacheEntry(board.nextZobrist(cells[i].i, cells[i].j), board.marked() + 1,
-          cells[i].i * minMN + cells[i].j, searchDepth - 1);
+      int entry[] =
+          cacheEntry(
+              board.nextZobrist(cells[i].i, cells[i].j),
+              board.marked() + 1,
+              cells[i].i * minMN + cells[i].j,
+              searchDepth - 1);
       if (entry[3] != 2) {
         ratings[i] = entry[4];
         i++;
@@ -479,9 +463,7 @@ private class CleanupRunnable implements Runnable {
   // {{{ Principal Variation Search for subtrees
   private int[] cacheEntry(int searchDepth) {
     MNKCell[] c = board.getMarkedCells();
-  return
-
-  cacheEntry(
+    return cacheEntry(
         board.zobrist(),
         board.marked(),
         c[c.length - 1].i * minMN + c[c.length - 1].j,
@@ -517,7 +499,7 @@ private class CleanupRunnable implements Runnable {
     }
 
     MNKCell c;
-    if (shouldHalt()) return color * HALT;
+    if (shouldHalt()) return HALT;
     else if (depth <= 0 || board.gameState() != MNKGameState.OPEN) return color * evaluate();
     else if (board.marked() >= 2 * K - 1
         && ((c = findOneMoveWin(color > 0 ? MY_WIN : ENEMY_WIN)) != null
@@ -533,8 +515,8 @@ private class CleanupRunnable implements Runnable {
         if (i < sortUpTo) selectionSort(moves, ratings, i, sortUpTo, color);
         else randomSelection(moves, i, moves.length);
 
-        // NOTE: alpha is only updated when we make a proper full window search to
-        // avoid wrong bounds.
+        // NOTE: alpha is only updated when we make a proper full window search
+        // to avoid wrong bounds.
         board.markCell(moves[i].i, moves[i].j);
         int score;
         if (i == 0) {
@@ -551,12 +533,14 @@ private class CleanupRunnable implements Runnable {
             alpha = Math.max(alpha, score);
           }
         }
-        value = Math.max(value, score);
         board.unmarkCell();
 
-        if (value >= beta) break;
+        if (score > value || score == HALT || score == -HALT) value = score;
+        if (value >= beta || value == HALT || value == -HALT) break;
       }
     }
+    if (value == HALT) return HALT;
+
     entry[2] = depth;
     entry[4] = value;
     if (value <= prevAlpha) entry[3] = UPPER_BOUND;
@@ -572,20 +556,55 @@ private class CleanupRunnable implements Runnable {
 
   private int rootValue = -INFTY;
 
-  private MNKCell pvsRoot(int searchDepth, int alpha, int beta) {
+  private MNKCell pvsRoot(int depth, int alpha, int beta) {
     MNKCell cell = null;
-    for (MNKCell c : board.getFreeCells()) {
-      board.markCell(c.i, c.j);
-      int value = -pvs(-1, searchDepth - 1, -beta, -alpha);
-      board.unmarkCell();
-      if (value > alpha) {
-        alpha = value;
-        cell = c;
-      }
+    int value = -INFTY;
 
-      if (alpha >= beta) break;
+    if (shouldHalt()) return null;
+    else if (board.marked() >= 2 * K - 1
+        && ((cell = findOneMoveWin(MY_WIN)) != null
+            || (cell = findOneMoveLoss(ENEMY_WIN)) != null)) {
+      board.markCell(cell.i, cell.j);
+      value = -pvs(-1, depth - 1, -beta, -alpha);
+      board.unmarkCell();
+    } else {
+      MNKCell[] moves = board.getFreeCells();
+      int[] ratings = new int[moves.length];
+      int sortUpTo = rateMoves(moves, ratings, depth);
+      for (int i = 0; i < moves.length; i++) {
+        if (i < sortUpTo) selectionSort(moves, ratings, i, sortUpTo, 1);
+        else randomSelection(moves, i, moves.length);
+
+        // NOTE: alpha is only updated when we make a proper full window search
+        // to avoid wrong bounds.
+        board.markCell(moves[i].i, moves[i].j);
+        int score;
+        if (i == 0) {
+          score = -pvs(-1, depth - 1, -beta, -alpha);
+          alpha = Math.max(alpha, score);
+        } else {
+          // Try first a null window search on non-PV nodes with bounds [-alpha-1, -alpha]
+          score = -pvs(-1, depth - 1, -alpha - 1, -alpha);
+
+          // If the search failed inside the [alpha, beta] bounds the result may
+          // be meaningful so we need to do a proper search
+          if (score > alpha && score < beta && value != HALT) {
+            score = -pvs(-1, depth - 1, -beta, -alpha);
+            alpha = Math.max(alpha, score);
+          }
+        }
+        board.unmarkCell();
+        if (score == HALT || score == -HALT) return null;
+
+        if (score > value) {
+          value = score;
+          cell = moves[i];
+        }
+        if (value >= beta) break;
+      }
     }
-    rootValue = alpha;
+
+    rootValue = value;
     return cell;
   }
   // }}}
@@ -610,21 +629,20 @@ private class CleanupRunnable implements Runnable {
       int max = INFTY / (board.marked() + maxDepth);
       MNKCell latest = pvsRoot(maxDepth, -max, max);
 
-      System.out.println(
-          playerName()
-              + "\t: at depth "
-              + maxDepth
-              + " got cell: "
-              + latest
-              + " with value: "
-              + rootValue);
-
       if (latest == null) break;
 
       value = latest;
 
       maxDepth++;
     }
+    System.out.println(
+        playerName()
+            + "\t: at depth "
+            + maxDepth
+            + " got cell: "
+            + value
+            + " with value: "
+            + rootValue);
 
     return value;
   }
