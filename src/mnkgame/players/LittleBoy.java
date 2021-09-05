@@ -496,18 +496,38 @@ public class LittleBoy implements MNKPlayer {
 
     if(depth <= 0 || board.gameState() != MNKGameState.OPEN)
       return color * evaluate();
+    if(shouldHalt()) return color * HALT;
 
     MNKCell[] moves = board.getFreeCells();
     int[] ratings = new int[moves.length];
-    int value = -INFTY, sortUpTo = rateMoves(moves, ratings, depth);
+    int sortUpTo = rateMoves(moves, ratings, depth), value = -INFTY;
     for(int i = 0; i < moves.length; i++) {
       if(i < sortUpTo) selectionSort(moves, ratings, i, sortUpTo, color);
       else randomSelection(moves, i, moves.length);
+
+      // NOTE: alpha is only updated when we make a proper full window search to
+      // avoid wrong bounds.
       board.markCell(moves[i].i, moves[i].j);
-      value = Math.max(value, -pvs(-color, depth-1, -beta, -alpha));
-      alpha = Math.max(alpha, value);
+      int score;
+      if (i == 0) {
+        score = -pvs(-color, depth - 1, -beta, -alpha);
+        alpha = Math.max(alpha, score);
+      } else {
+        // Try first a null window search on non-PV nodes with bounds [-alpha-1, -alpha]
+        score = -pvs(-color, depth - 1, -alpha - 1, -alpha);
+
+        // If the search failed inside the [alpha, beta] bounds the result may
+        // be meaningful so we need to do a proper search
+        if (score > alpha && score < beta && value != HALT) {
+          score = -pvs(-color, depth - 1, -beta, -alpha);
+          alpha = Math.max(alpha, score);
+        }
+
+      }
+      value = Math.max(value, score);
       board.unmarkCell();
-      if(alpha >= beta)
+
+      if(value >= beta)
         break;
     }
     entry[2] = depth;
@@ -564,7 +584,7 @@ public class LittleBoy implements MNKPlayer {
       // (as it takes into account the absolute depth of the board) we can compute
       // a much tighter maximum value for alpha/beta and use this to achieve higher
       // cutoffs
-      int max = INFTY / board.marked();
+      int max = INFTY / (board.marked() + maxDepth);
       MNKCell latest = pvsRoot(maxDepth, -max, max);
 
       System.out.println(playerName() + "\t: at depth " + maxDepth + " got cell: " + latest + " with value: " + rootValue);

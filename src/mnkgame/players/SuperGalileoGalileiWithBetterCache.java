@@ -293,6 +293,7 @@ public class SuperGalileoGalileiWithBetterCache implements MNKPlayer {
     r = new Random(startTime);
     board = new Board(M, N, K, minMN, ME);
     cacheBoard = new Board(M, N, K, minMN, ME);
+    stopCleanup();
     cache.clear();
 
     // continue filling the table for the zobrist hashing function in another
