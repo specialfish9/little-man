@@ -14,7 +14,7 @@ K:=4
 REPS:=10
 TIME:=2
 BEST:=LittleBoy
-OLD:=SuperGalileoGalileiWithBetterCache
+OLD:=H
 
 .SUFFIXES: .java .class
 .PHONY: build
