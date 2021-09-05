@@ -323,12 +323,12 @@ public class SuperGalileoGalileiWithBetterCache implements MNKPlayer {
                 zobristReady.set(true);
                 // TODO: remove
                 /*
-                System.out.println(
-                    playerName()
-                        + "\t: cache ready, in another thread after "
-                        + (System.currentTimeMillis() - startTime)
-                        + "ms");
-              */
+                  System.out.println(
+                      playerName()
+                          + "\t: cache ready, in another thread after "
+                          + (System.currentTimeMillis() - startTime)
+                          + "ms");
+                */
               })
           .start();
     } else {
@@ -662,7 +662,7 @@ public class SuperGalileoGalileiWithBetterCache implements MNKPlayer {
       // TODO: remove in production
       if (verbose)
         // System.out.println("minimax went to depth " + maxDepth + " with value: " + value);
-      maxDepth++;
+        maxDepth++;
     }
 
     // TODO: remove in production
@@ -747,7 +747,8 @@ public class SuperGalileoGalileiWithBetterCache implements MNKPlayer {
         result.second = FC[new Random().nextInt(FC.length)];
       }
 
-      if (board.markCell(result.second.i, result.second.j) == MNKGameState.OPEN && board.marked() < M * N - 3)
+      if (board.markCell(result.second.i, result.second.j) == MNKGameState.OPEN
+          && board.marked() < M * N - 3)
         cleanup(System.currentTimeMillis() + (long) (timeout * SAFETY_THRESHOLD), board.marked());
       return result.second;
     } catch (Exception e) {
