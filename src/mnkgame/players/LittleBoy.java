@@ -483,7 +483,7 @@ public class LittleBoy implements MNKPlayer {
   }
 
   private int pvs(int color, int depth, int alpha, int beta) {
-    int prevAlpha = alpha;
+    int prevAlpha = alpha, value = -INFTY;
     int[] entry = cacheEntry(depth);
     if(entry[3] != 2) {
       if(entry[3] == EXACT_VALUE) return entry[4];
@@ -494,41 +494,48 @@ public class LittleBoy implements MNKPlayer {
         return entry[4];
     }
 
-    if(depth <= 0 || board.gameState() != MNKGameState.OPEN)
-      return color * evaluate();
+    MNKCell c;
     if(shouldHalt()) return color * HALT;
+    else if(depth <= 0 || board.gameState() != MNKGameState.OPEN)
+      return color * evaluate();
+    else if(board.marked() >= 2 * K - 1 &&
+        ((c = findOneMoveWin(color > 0 ? MY_WIN : ENEMY_WIN)) != null ||
+         (c = findOneMoveLoss(color > 0 ? ENEMY_WIN : MY_WIN)) != null)) {
+      board.markCell(c.i, c.j);
+      value = -pvs(-color, depth-1, -beta, -alpha);
+      board.unmarkCell();
+    } else {
+      MNKCell[] moves = board.getFreeCells();
+      int[] ratings = new int[moves.length];
+      int sortUpTo = rateMoves(moves, ratings, depth);
+      for(int i = 0; i < moves.length; i++) {
+        if(i < sortUpTo) selectionSort(moves, ratings, i, sortUpTo, color);
+        else randomSelection(moves, i, moves.length);
 
-    MNKCell[] moves = board.getFreeCells();
-    int[] ratings = new int[moves.length];
-    int sortUpTo = rateMoves(moves, ratings, depth), value = -INFTY;
-    for(int i = 0; i < moves.length; i++) {
-      if(i < sortUpTo) selectionSort(moves, ratings, i, sortUpTo, color);
-      else randomSelection(moves, i, moves.length);
-
-      // NOTE: alpha is only updated when we make a proper full window search to
-      // avoid wrong bounds.
-      board.markCell(moves[i].i, moves[i].j);
-      int score;
-      if (i == 0) {
-        score = -pvs(-color, depth - 1, -beta, -alpha);
-        alpha = Math.max(alpha, score);
-      } else {
-        // Try first a null window search on non-PV nodes with bounds [-alpha-1, -alpha]
-        score = -pvs(-color, depth - 1, -alpha - 1, -alpha);
-
-        // If the search failed inside the [alpha, beta] bounds the result may
-        // be meaningful so we need to do a proper search
-        if (score > alpha && score < beta && value != HALT) {
+        // NOTE: alpha is only updated when we make a proper full window search to
+        // avoid wrong bounds.
+        board.markCell(moves[i].i, moves[i].j);
+        int score;
+        if (i == 0) {
           score = -pvs(-color, depth - 1, -beta, -alpha);
           alpha = Math.max(alpha, score);
+        } else {
+          // Try first a null window search on non-PV nodes with bounds [-alpha-1, -alpha]
+          score = -pvs(-color, depth - 1, -alpha - 1, -alpha);
+
+          // If the search failed inside the [alpha, beta] bounds the result may
+          // be meaningful so we need to do a proper search
+          if (score > alpha && score < beta && value != HALT) {
+            score = -pvs(-color, depth - 1, -beta, -alpha);
+            alpha = Math.max(alpha, score);
+          }
         }
+        value = Math.max(value, score);
+        board.unmarkCell();
 
+        if(value >= beta)
+          break;
       }
-      value = Math.max(value, score);
-      board.unmarkCell();
-
-      if(value >= beta)
-        break;
     }
     entry[2] = depth;
     entry[4] = value;
