@@ -499,7 +499,7 @@ public class LittleBoy implements MNKPlayer {
     }
 
     MNKCell c;
-    if (shouldHalt()) return color * HALT;
+    if (shouldHalt()) return HALT;
     else if (depth <= 0 || board.gameState() != MNKGameState.OPEN) return color * evaluate();
     else if (board.marked() >= 2 * K - 1
         && ((c = findOneMoveWin(color > 0 ? MY_WIN : ENEMY_WIN)) != null
@@ -533,12 +533,14 @@ public class LittleBoy implements MNKPlayer {
             alpha = Math.max(alpha, score);
           }
         }
-        value = Math.max(value, score);
         board.unmarkCell();
 
-        if (value >= beta) break;
+        if(score > value || score == HALT || score == -HALT) value = score;
+        if (value >= beta || value == HALT || value == -HALT) break;
       }
     }
+    if(value == HALT) return HALT;
+
     entry[2] = depth;
     entry[4] = value;
     if (value <= prevAlpha) entry[3] = UPPER_BOUND;
@@ -554,20 +556,55 @@ public class LittleBoy implements MNKPlayer {
 
   private int rootValue = -INFTY;
 
-  private MNKCell pvsRoot(int searchDepth, int alpha, int beta) {
+  private MNKCell pvsRoot(int depth, int alpha, int beta) {
     MNKCell cell = null;
-    for (MNKCell c : board.getFreeCells()) {
-      board.markCell(c.i, c.j);
-      int value = -pvs(-1, searchDepth - 1, -beta, -alpha);
-      board.unmarkCell();
-      if (value > alpha) {
-        alpha = value;
-        cell = c;
-      }
+    int value = -INFTY;
 
-      if (alpha >= beta) break;
+    if (shouldHalt()) return null;
+    else if (board.marked() >= 2 * K - 1
+        && ((cell = findOneMoveWin(MY_WIN)) != null
+            || (cell = findOneMoveLoss(ENEMY_WIN)) != null)) {
+      board.markCell(cell.i, cell.j);
+      value = -pvs(-1, depth - 1, -beta, -alpha);
+      board.unmarkCell();
+    } else {
+      MNKCell[] moves = board.getFreeCells();
+      int[] ratings = new int[moves.length];
+      int sortUpTo = rateMoves(moves, ratings, depth);
+      for (int i = 0; i < moves.length; i++) {
+        if (i < sortUpTo) selectionSort(moves, ratings, i, sortUpTo, 1);
+        else randomSelection(moves, i, moves.length);
+
+        // NOTE: alpha is only updated when we make a proper full window search to
+        // avoid wrong bounds.
+        board.markCell(moves[i].i, moves[i].j);
+        int score;
+        if (i == 0) {
+          score = -pvs(-1, depth - 1, -beta, -alpha);
+          alpha = Math.max(alpha, score);
+        } else {
+          // Try first a null window search on non-PV nodes with bounds [-alpha-1, -alpha]
+          score = -pvs(-1, depth - 1, -alpha - 1, -alpha);
+
+          // If the search failed inside the [alpha, beta] bounds the result may
+          // be meaningful so we need to do a proper search
+          if (score > alpha && score < beta && value != HALT) {
+            score = -pvs(-1, depth - 1, -beta, -alpha);
+            alpha = Math.max(alpha, score);
+          }
+        }
+        board.unmarkCell();
+        if(score == HALT || score == -HALT) return null;
+
+        if(score > value) {
+          value = score;
+          cell = moves[i];
+        }
+        if (value >= beta) break;
+      }
     }
-    rootValue = alpha;
+
+    rootValue = value;
     return cell;
   }
   // }}}
@@ -592,14 +629,6 @@ public class LittleBoy implements MNKPlayer {
       int max = INFTY / (board.marked() + maxDepth);
       MNKCell latest = pvsRoot(maxDepth, -max, max);
 
-      System.out.println(
-          playerName()
-              + "\t: at depth "
-              + maxDepth
-              + " got cell: "
-              + latest
-              + " with value: "
-              + rootValue);
 
       if (latest == null) break;
 
@@ -607,6 +636,14 @@ public class LittleBoy implements MNKPlayer {
 
       maxDepth++;
     }
+    System.out.println(
+        playerName()
+            + "\t: at depth "
+            + maxDepth
+            + " got cell: "
+            + value
+            + " with value: "
+            + rootValue);
 
     return value;
   }
