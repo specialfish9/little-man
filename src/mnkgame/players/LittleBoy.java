@@ -515,8 +515,8 @@ public class LittleBoy implements MNKPlayer {
         if (i < sortUpTo) selectionSort(moves, ratings, i, sortUpTo, color);
         else randomSelection(moves, i, moves.length);
 
-        // NOTE: alpha is only updated when we make a proper full window search to
-        // avoid wrong bounds.
+        // NOTE: alpha is only updated when we make a proper full window search
+        // to avoid wrong bounds.
         board.markCell(moves[i].i, moves[i].j);
         int score;
         if (i == 0) {
@@ -575,8 +575,8 @@ public class LittleBoy implements MNKPlayer {
         if (i < sortUpTo) selectionSort(moves, ratings, i, sortUpTo, 1);
         else randomSelection(moves, i, moves.length);
 
-        // NOTE: alpha is only updated when we make a proper full window search to
-        // avoid wrong bounds.
+        // NOTE: alpha is only updated when we make a proper full window search
+        // to avoid wrong bounds.
         board.markCell(moves[i].i, moves[i].j);
         int score;
         if (i == 0) {
