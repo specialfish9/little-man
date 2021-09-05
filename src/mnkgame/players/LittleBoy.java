@@ -499,21 +499,20 @@ public class LittleBoy implements MNKPlayer {
     }
 
     MNKCell c;
-    if(shouldHalt()) return color * HALT;
-    else if(depth <= 0 || board.gameState() != MNKGameState.OPEN)
-      return color * evaluate();
-    else if(board.marked() >= 2 * K - 1 &&
-        ((c = findOneMoveWin(color > 0 ? MY_WIN : ENEMY_WIN)) != null ||
-         (c = findOneMoveLoss(color > 0 ? ENEMY_WIN : MY_WIN)) != null)) {
+    if (shouldHalt()) return color * HALT;
+    else if (depth <= 0 || board.gameState() != MNKGameState.OPEN) return color * evaluate();
+    else if (board.marked() >= 2 * K - 1
+        && ((c = findOneMoveWin(color > 0 ? MY_WIN : ENEMY_WIN)) != null
+            || (c = findOneMoveLoss(color > 0 ? ENEMY_WIN : MY_WIN)) != null)) {
       board.markCell(c.i, c.j);
-      value = -pvs(-color, depth-1, -beta, -alpha);
+      value = -pvs(-color, depth - 1, -beta, -alpha);
       board.unmarkCell();
     } else {
       MNKCell[] moves = board.getFreeCells();
       int[] ratings = new int[moves.length];
       int sortUpTo = rateMoves(moves, ratings, depth);
-      for(int i = 0; i < moves.length; i++) {
-        if(i < sortUpTo) selectionSort(moves, ratings, i, sortUpTo, color);
+      for (int i = 0; i < moves.length; i++) {
+        if (i < sortUpTo) selectionSort(moves, ratings, i, sortUpTo, color);
         else randomSelection(moves, i, moves.length);
 
         // NOTE: alpha is only updated when we make a proper full window search to
@@ -537,8 +536,7 @@ public class LittleBoy implements MNKPlayer {
         value = Math.max(value, score);
         board.unmarkCell();
 
-        if(value >= beta)
-          break;
+        if (value >= beta) break;
       }
     }
     entry[2] = depth;
