@@ -76,27 +76,39 @@ public class LittleBoy implements MNKPlayer {
       return MC.size();
     }
 
-    // Marks the given cell at (i, j) via callin the super methods, but also
-    // computes the new Zobrist key and the new statc value of the match.
     @Override
     public MNKGameState markCell(int i, int j) {
+      return markCell(i, j, true);
+    }
+
+    // Marks the given cell at (i, j) via callin the super methods, but also
+    // computes the new Zobrist key and the new statc value of the match.
+    public MNKGameState markCell(int i, int j, boolean updateInternals) {
       // mind the order of the calls
-      key = nextZobrist(i, j);
-      previousValues.push(value);
-      value -= eval(i, j);
+      if (updateInternals) {
+        key = nextZobrist(i, j);
+        previousValues.push(value);
+        value -= eval(i, j);
+      }
       MNKGameState result = super.markCell(i, j);
-      value += eval(i, j);
+      if (updateInternals) value += eval(i, j);
       return result;
     }
 
-    // Ummarks the last move and restores the previous hash and evaluation values.
     @Override
     public void unmarkCell() {
+      unmarkCell(true);
+    }
+
+    // Ummarks the last move and restores the previous hash and evaluation values.
+    public void unmarkCell(boolean updateInternals) {
       // mind the order of the calls
       MNKCell last = MC.getLast();
       super.unmarkCell();
-      key = nextZobrist(last.i, last.j);
-      value = previousValues.pop();
+      if (updateInternals) {
+        key = nextZobrist(last.i, last.j);
+        value = previousValues.pop();
+      }
     }
 
     // Computes the hash for a new mark. We can use this same method to both do
@@ -153,6 +165,7 @@ public class LittleBoy implements MNKPlayer {
     }
 
     private int pushCell(final MNKCellState state) {
+      /*
       if (currentSeries.size() >= kPlusTwo) { // useless >
         MNKCellState s = currentSeries.poll();
         if (s == MNKCellState.FREE) queueFree--;
@@ -166,22 +179,37 @@ public class LittleBoy implements MNKPlayer {
       currentSeries.add(state);
       int sign = me == MNKCellState.P1 ? 1 : -1;
       int freeBeforeAfter = 1;
-      if (currentSeries.peekFirst() == MNKCellState.FREE) freeBeforeAfter *= 2;
-      if (currentSeries.peekLast() == MNKCellState.FREE) freeBeforeAfter *= 2;
+      if (kPlusTwo >= K+2 && currentSeries.peekFirst() == MNKCellState.FREE) freeBeforeAfter *= 2;
+      if (kPlusTwo >= K+2 && currentSeries.peekLast() == MNKCellState.FREE) freeBeforeAfter *= 2;
 
       if (queueP1 + queueFree == kPlusTwo) {
         int result =
-            sign
-                * (seriesValue(queueFree - freeBeforeAfter / 2) + queueP1 * queueP1)
-                * freeBeforeAfter;
+            sign * freeBeforeAfter
+                * (seriesValue(queueFree - (freeBeforeAfter / 2)) + queueP1 * queueP1);
         return result;
       } else if (queueP2 + queueFree == kPlusTwo) {
         int result =
-            -sign
-                * (seriesValue(queueFree - freeBeforeAfter / 2) + queueP2 * queueP2)
-                * freeBeforeAfter;
+            -sign * freeBeforeAfter
+                * (seriesValue(queueFree - (freeBeforeAfter / 2)) + queueP2 * queueP2);
         return result;
       } else return 0;
+      */
+      if (currentSeries.size() >= K) { // useless >
+        MNKCellState s = currentSeries.poll();
+        if (s == MNKCellState.FREE) queueFree--;
+        else if (s == MNKCellState.P1) queueP1--;
+        else if (s == MNKCellState.P2) queueP2--;
+      }
+
+      if (state == MNKCellState.FREE) queueFree++;
+      else if (state == MNKCellState.P1) queueP1++;
+      else if (state == MNKCellState.P2) queueP2++;
+      currentSeries.add(state);
+      int sign = me == MNKCellState.P1 ? 1 : -1;
+      if (queueP1 + queueFree == K) return sign * (seriesValue(queueFree) + (queueP1 * queueP1));
+      else if (queueP2 + queueFree == K)
+        return -sign * (seriesValue(queueFree) + (queueP2 * queueP2));
+      else return 0;
     }
 
     private int seriesValue(final int free) {
@@ -223,15 +251,12 @@ public class LittleBoy implements MNKPlayer {
     }
 
     public void run() {
-      int removed = 0;
       Iterator<Map.Entry<Long, int[]>> iter = cache.entrySet().iterator();
       while (iter.hasNext()) {
         if (Thread.currentThread().isInterrupted() || shouldHalt()) break;
 
         Map.Entry<Long, int[]> e = iter.next();
         if (e.getValue()[0] <= marked + 1) {
-          // TODO: remove in production
-          removed++;
           iter.remove();
         }
       }
@@ -309,8 +334,8 @@ public class LittleBoy implements MNKPlayer {
   // finds the first cell needed to copmlete a K-1 streak in any possible direction
   private MNKCell findOneMoveWin(final MNKGameState winState) {
     for (MNKCell c : board.getFreeCells()) {
-      MNKGameState result = board.markCell(c.i, c.j);
-      board.unmarkCell();
+      MNKGameState result = board.markCell(c.i, c.j, false);
+      board.unmarkCell(false);
       if (result == winState) return c;
     }
     return null;
@@ -319,8 +344,8 @@ public class LittleBoy implements MNKPlayer {
   private MNKCell pickRandomNonClosingCell(MNKCell previous) {
     for (MNKCell c : board.getFreeCells()) {
       // avoiding the shouldHalt check here, kinda superflous
-      MNKGameState result = board.markCell(c.i, c.j);
-      board.unmarkCell();
+      MNKGameState result = board.markCell(c.i, c.j, false);
+      board.unmarkCell(false);
       if (result == MNKGameState.OPEN
           && (previous == null || previous.i != c.i || previous.j != c.j)) return c;
     }
@@ -330,26 +355,27 @@ public class LittleBoy implements MNKPlayer {
   // finds the first cell the enemy needs to copmlete a K-1 streak in any possible direction
   private MNKCell findOneMoveLoss(final MNKGameState lossState) {
     MNKCell randomCell = null;
-    if (board.getFreeCells().length == 1 || (randomCell = pickRandomNonClosingCell(null)) == null)
+    if (board.getFreeCells().length <= 2 || (randomCell = pickRandomNonClosingCell(null)) == null)
       return null; // cannot check for enemy's next move when it doesn't exist
 
-    board.markCell(randomCell.i, randomCell.j);
+    board.markCell(randomCell.i, randomCell.j, false);
     MNKCell c = findOneMoveWin(lossState);
-    board.unmarkCell(); // remove the marked randomCell
+    board.unmarkCell(false); // remove the marked randomCell
     if (c != null) return c;
 
     // test the randomCell we selected at first. It may be a one-move loss cell
     // get a new random cell different from the previous and call it cc
     MNKCell cc = pickRandomNonClosingCell(randomCell);
-    if (board.markCell(cc.i, cc.j)
-        != MNKGameState.OPEN) { // randomCell puts us in a draw, ignore that
-      board.unmarkCell();
+    if (cc == null) return null;
+    if (board.markCell(cc.i, cc.j, false) != MNKGameState.OPEN) {
+      // randomCell puts us in a draw, ignore that
+      board.unmarkCell(false);
       return null;
     }
     MNKGameState result =
-        board.markCell(randomCell.i, randomCell.j); // let the enemy take the random ane
-    board.unmarkCell();
-    board.unmarkCell();
+        board.markCell(randomCell.i, randomCell.j, false); // let the enemy take the random ane
+    board.unmarkCell(false);
+    board.unmarkCell(false);
     return result == lossState ? randomCell : null;
   }
   // }}}
@@ -362,9 +388,11 @@ public class LittleBoy implements MNKPlayer {
     // check for draws first, most lickely
     MNKGameState state = board.gameState();
     if (state == MNKGameState.DRAW) return 0;
-    else if (state == MY_WIN) return (INFTY - 1) / board.marked();
-    else if (state == ENEMY_WIN) return (-INFTY + 1) / board.marked();
-    else return board.value() / board.marked();
+    else if (state == MY_WIN) return INFTY / board.marked();
+    else if (state == ENEMY_WIN) return -INFTY / board.marked();
+    else
+      return Math.min(Math.max(board.value(), -(INFTY - 1000)), INFTY - 1000)
+          / (2 * board.marked());
   }
 
   // Swaps vec[a] with vec[b]. Cost: \Tehta(1)
@@ -410,9 +438,8 @@ public class LittleBoy implements MNKPlayer {
     if (i != start) swap(vec, start, i);
   }
 
-  private int getMoves(MNKCell[] cells, int[] ratings, int searchDepth) {
+  private int rateMoves(MNKCell[] cells, int[] ratings, int searchDepth) {
     int j = cells.length, i = 0; // limits for the [a,b] set containing all not-yet-looked-at cells
-    // for (int i = 0; i < cells.length; i++) {
     while (i < j) {
       int entry[] =
           cacheEntry(
@@ -445,142 +472,102 @@ public class LittleBoy implements MNKPlayer {
 
   // returns a cache entry for the current board. If the current board is already
   // cached the entry contains the proper data, otherwhise the entry fields 2,3 are
-  // dummy. A non-cached board can be identified by entry[2] == 2
+  // dummy. A non-cached board can be identified by entry[3] == 2
   private int[] cacheEntry(long hash, int marked, int lastCell, int searchDepth) {
-    if (cache.containsKey(hash)) {
+    if (zobristReady.get() && cache.containsKey(hash)) {
       int[] cached = cache.get(hash);
       // Make sure the board has the same number of marked symbols and the last
       // cell marked matches. This is done to avoid false positives in the cache
-      if (cached[0] == marked && cached[1] == lastCell && cached[2] >= searchDepth) return cached;
+      if (cached[0] == marked
+          && cached[1] == lastCell
+          && cached[2] >= searchDepth
+          && cached[3] != 2) return cached;
     }
 
-    return new int[] {marked, lastCell, searchDepth, 2, 0};
+    return new int[] {marked, lastCell, searchDepth, 2, -INFTY};
   }
 
-  private int pvs(int color, int searchDepth, int alpha, int beta) {
-    int[] entry = cacheEntry(searchDepth);
-    // If we have a cache entry we can tighten the bounds or straigh up return
-    // based on the cache type.
+  private int pvs(int color, int depth, int alpha, int beta) {
+    int prevAlpha = alpha, value = -INFTY;
+    int[] entry = cacheEntry(depth);
     if (entry[3] != 2) {
       if (entry[3] == EXACT_VALUE) return entry[4];
-      else if (entry[3] == UPPER_BOUND) beta = Math.min(beta, entry[4]);
       else if (entry[3] == LOWER_BOUND) alpha = Math.max(alpha, entry[4]);
+      else beta = Math.max(beta, entry[4]);
+
+      if (alpha >= beta) return entry[4];
     }
 
-    int result;
-    MNKCell omc = null;
-    if (searchDepth <= 0 || board.gameState() != MNKGameState.OPEN) result = color * evaluate();
-    else if (shouldHalt()) result = HALT;
-    // Check for a one-move-(win|loss) play only when enough moves have been played
-    else if (entry[0] >= 2 * K - 1
-        && ((omc = findOneMoveWin(color > 0 ? MY_WIN : ENEMY_WIN)) != null
-            || (omc = findOneMoveLoss(color > 0 ? ENEMY_WIN : MY_WIN)) != null)) {
-      board.markCell(omc.i, omc.j);
-      result = -pvs(-color, searchDepth - 1, -beta, -alpha);
+    MNKCell c;
+    if (shouldHalt()) return color * HALT;
+    else if (depth <= 0 || board.gameState() != MNKGameState.OPEN) return color * evaluate();
+    else if (board.marked() >= 2 * K - 1
+        && ((c = findOneMoveWin(color > 0 ? MY_WIN : ENEMY_WIN)) != null
+            || (c = findOneMoveLoss(color > 0 ? ENEMY_WIN : MY_WIN)) != null)) {
+      board.markCell(c.i, c.j);
+      value = -pvs(-color, depth - 1, -beta, -alpha);
       board.unmarkCell();
     } else {
-      MNKCell[] cells = board.getFreeCells();
-      int[] ratings = new int[cells.length];
-      int sortUpTo = getMoves(cells, ratings, searchDepth),
-          i = 0,
-          len = cells.length,
-          prevAlpha = alpha;
+      MNKCell[] moves = board.getFreeCells();
+      int[] ratings = new int[moves.length];
+      int sortUpTo = rateMoves(moves, ratings, depth);
+      for (int i = 0; i < moves.length; i++) {
+        if (i < sortUpTo) selectionSort(moves, ratings, i, sortUpTo, color);
+        else randomSelection(moves, i, moves.length);
 
-      // Similarly to negamax the alpha value is used as max/best
-      while (i < len) {
-        if (i < sortUpTo) selectionSort(cells, ratings, i, sortUpTo, color);
-        else randomSelection(cells, i, len);
-
-        board.markCell(cells[i].i, cells[i].j);
+        // NOTE: alpha is only updated when we make a proper full window search to
+        // avoid wrong bounds.
+        board.markCell(moves[i].i, moves[i].j);
         int score;
-        if (i == 0) score = -pvs(-color, searchDepth - 1, -beta, -alpha);
-        else {
+        if (i == 0) {
+          score = -pvs(-color, depth - 1, -beta, -alpha);
+          alpha = Math.max(alpha, score);
+        } else {
           // Try first a null window search on non-PV nodes with bounds [-alpha-1, -alpha]
-          score = -pvs(-color, searchDepth - 1, -alpha - 1, -alpha);
+          score = -pvs(-color, depth - 1, -alpha - 1, -alpha);
 
           // If the search failed inside the [alpha, beta] bounds the result may
           // be meaningful so we need to do a proper search
-          if (score > alpha && score < beta && score != HALT)
-            score = -pvs(-color, searchDepth - 1, -beta, -alpha);
+          if (score > alpha && score < beta && value != HALT) {
+            score = -pvs(-color, depth - 1, -beta, -alpha);
+            alpha = Math.max(alpha, score);
+          }
         }
+        value = Math.max(value, score);
         board.unmarkCell();
 
-        // Usual alpha = max(alpha, score) and cutoff check.
-        // We also let the HALT value fall trough to alpha and break the loop
-        if (score > alpha || score == HALT) alpha = score;
-        if (alpha >= beta || alpha == HALT) break;
-        i++;
+        if (value >= beta) break;
       }
-      result = alpha;
-      alpha = prevAlpha;
     }
-    if (result == HALT) return HALT;
-    if (board.gameState() == MNKGameState.OPEN) {
-      if (result <= alpha) entry[3] = UPPER_BOUND; // store the new lower bound
-      else if (result >= beta) entry[3] = LOWER_BOUND; // store the new upper bound
-      else entry[3] = EXACT_VALUE; // store the exact value on a PV node
-    } else {
-      // if we found an ending state we can keep it with a +INFTY searchDepth as this
-      // will be the definitive value for the board regardless of a greater searchDepth
-      entry[2] = INFTY;
-      entry[3] = EXACT_VALUE; // this is an exact evaluation of the state
-    }
+    entry[2] = depth;
+    entry[4] = value;
+    if (value <= prevAlpha) entry[3] = UPPER_BOUND;
+    else if (value >= beta) entry[3] = LOWER_BOUND;
+    else entry[3] = EXACT_VALUE;
 
-    entry[4] = result;
     cache.put(board.zobrist(), entry);
-    return result;
+    return value;
   }
   // }}}
 
   // {{{ Principal Variation Search on root
+
+  private int rootValue = -INFTY;
+
   private MNKCell pvsRoot(int searchDepth, int alpha, int beta) {
     MNKCell cell = null;
-    if (board.marked() >= 2 * K - 1
-        && // only check for one-win-moves
-        // if there have been placed
-        // enough cells to make one happen
-        ((cell = findOneMoveWin(MY_WIN)) != null || (cell = findOneMoveLoss(ENEMY_WIN)) != null)) {
-      board.markCell(cell.i, cell.j);
-      // Even though we already know this is the best move and therefore the
-      // value is not of any use, we explore the tree either way to aid future
-      // searches with cached values and better move ordering.
-      pvs(-1, searchDepth - 1, -beta, -alpha);
+    for (MNKCell c : board.getFreeCells()) {
+      board.markCell(c.i, c.j);
+      int value = -pvs(-1, searchDepth - 1, -beta, -alpha);
       board.unmarkCell();
-    } else {
-      MNKCell[] cells = board.getFreeCells();
-      int[] ratings = new int[cells.length];
-      int sortUpTo = getMoves(cells, ratings, searchDepth), i = 0, len = cells.length;
-
-      // Similarly to negamax the alpha value is used as max/best
-      while (i < len) {
-        if (i < sortUpTo) selectionSort(cells, ratings, i, sortUpTo, -1);
-        else randomSelection(cells, i, len);
-
-        board.markCell(cells[i].i, cells[i].j);
-        int score;
-        if (i == 0) score = -pvs(-1, searchDepth - 1, -beta, -alpha);
-        else {
-          // Try first a null window search on non-PV nodes with bounds [-alpha-1, -alpha]
-          score = -pvs(-1, searchDepth - 1, -alpha - 1, -alpha);
-
-          // If the search failed inside the [alpha, beta] bounds the result may
-          // be meaningful so we need to do a proper search
-          if (score > alpha && score < beta && score != HALT)
-            score = -pvs(-1, searchDepth - 1, -beta, -alpha);
-        }
-        board.unmarkCell();
-
-        // Usual alpha = max(alpha, score) and cutoff check.
-        // We also let the HALT value fall trough to alpha and break the loop
-        if (score == HALT) return null;
-        if (score > alpha) {
-          alpha = score;
-          cell = cells[i];
-        }
-        if (alpha >= beta) break;
-        i++;
+      if (value > alpha) {
+        alpha = value;
+        cell = c;
       }
+
+      if (alpha >= beta) break;
     }
+    rootValue = alpha;
     return cell;
   }
   // }}}
@@ -604,6 +591,16 @@ public class LittleBoy implements MNKPlayer {
       // cutoffs
       int max = INFTY / (board.marked() + maxDepth);
       MNKCell latest = pvsRoot(maxDepth, -max, max);
+
+      System.out.println(
+          playerName()
+              + "\t: at depth "
+              + maxDepth
+              + " got cell: "
+              + latest
+              + " with value: "
+              + rootValue);
+
       if (latest == null) break;
 
       value = latest;
@@ -630,13 +627,18 @@ public class LittleBoy implements MNKPlayer {
           MC[MC.length - 1].i, MC[MC.length - 1].j); // keep track of the opponent's marks
     }
 
-    MNKCell result = iterativeDeepening();
-    // to avoid catastrophic failures in case anything breaks
-    if (result == null) result = FC[new Random().nextInt(FC.length)];
+    try {
+      MNKCell result = iterativeDeepening();
+      // to avoid catastrophic failures in case anything breaks
+      if (result == null) result = FC[new Random().nextInt(FC.length)];
 
-    if (board.markCell(result.i, result.j) == MNKGameState.OPEN && board.marked() < M * N - 3)
-      cleanup(System.currentTimeMillis() + (long) (timeout * SAFETY_THRESHOLD), board.marked());
-    return result;
+      if (board.markCell(result.i, result.j) == MNKGameState.OPEN && board.marked() < M * N - 3)
+        cleanup(System.currentTimeMillis() + (long) (timeout * SAFETY_THRESHOLD), board.marked());
+      return result;
+    } catch (Exception e) {
+      e.printStackTrace();
+      return null;
+    }
   }
   // }}}
 
