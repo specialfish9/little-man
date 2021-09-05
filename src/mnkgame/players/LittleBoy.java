@@ -535,11 +535,11 @@ public class LittleBoy implements MNKPlayer {
         }
         board.unmarkCell();
 
-        if(score > value || score == HALT || score == -HALT) value = score;
+        if (score > value || score == HALT || score == -HALT) value = score;
         if (value >= beta || value == HALT || value == -HALT) break;
       }
     }
-    if(value == HALT) return HALT;
+    if (value == HALT) return HALT;
 
     entry[2] = depth;
     entry[4] = value;
@@ -594,9 +594,9 @@ public class LittleBoy implements MNKPlayer {
           }
         }
         board.unmarkCell();
-        if(score == HALT || score == -HALT) return null;
+        if (score == HALT || score == -HALT) return null;
 
-        if(score > value) {
+        if (score > value) {
           value = score;
           cell = moves[i];
         }
@@ -628,7 +628,6 @@ public class LittleBoy implements MNKPlayer {
       // cutoffs
       int max = INFTY / (board.marked() + maxDepth);
       MNKCell latest = pvsRoot(maxDepth, -max, max);
-
 
       if (latest == null) break;
 
