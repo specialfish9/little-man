@@ -390,9 +390,7 @@ public class LittleBoy implements MNKPlayer {
     if (state == MNKGameState.DRAW) return 0;
     else if (state == MY_WIN) return INFTY / board.marked();
     else if (state == ENEMY_WIN) return -INFTY / board.marked();
-    else
-      return Math.min(Math.max(board.value(), -(INFTY / 10)), INFTY / 10)
-          / board.marked();
+    else return Math.min(Math.max(board.value(), -(INFTY / 10)), INFTY / 10) / board.marked();
   }
 
   // Swaps vec[a] with vec[b]. Cost: \Tehta(1)
@@ -630,7 +628,7 @@ public class LittleBoy implements MNKPlayer {
       // (as it takes into account the absolute depth of the board) we can compute
       // a much tighter maximum value for alpha/beta and use this to achieve higher
       // cutoffs
-      int max = INFTY / Math.min(board.marked() + maxDepth, 2*K-1);
+      int max = INFTY / Math.min(board.marked() + maxDepth, 2 * K - 1);
       MNKCell latest = pvsRoot(maxDepth, -max, max);
 
       if (latest == null) break;
