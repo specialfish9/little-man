@@ -121,15 +121,15 @@ public class LittleMan implements MNKPlayer {
       return key;
     }
 
-    private int queueP1 = 0, queueP2 = 0, queueFree = 0;
+    private int n1 = 0, n2 = 0, nFree = 0;
 
     // Assigns aribrary high values to k-3, k-2, and k-1 series to make them
     // stand out from others and help the search move towards creating longer
     // streaks
-    private int seriesValue(final int free) {
-      if (K > 4 && free == 3) return 1000; // 1k
-      if (K > 3 && free == 2) return 100000; // 100k
-      if (K > 2 && free == 1) return 10000000; // 10M
+    private int seriesValue() {
+      if (K > 4 && nFree == 3) return 1000; // 1k
+      if (K > 3 && nFree == 2) return 100000; // 100k
+      if (K > 2 && nFree == 1) return 10000000; // 10M
 
       return 0;
     }
@@ -142,25 +142,24 @@ public class LittleMan implements MNKPlayer {
     }
     */
 
-    private int pushCell(final int i, final int j, final int dI, final int dJ) {
-      if (queueFree + queueP1 + queueP2 >= K) {
+    private int cellValue(final int i, final int j, final int dI, final int dJ) {
+      if (nFree + n1 + n2 >= K) {
         MNKCellState s = B[i - dI * K][j - dJ * K];
-        if (s == MNKCellState.FREE) queueFree--;
-        else if (s == MNKCellState.P1) queueP1--;
-        else if (s == MNKCellState.P2) queueP2--;
+        if (s == MNKCellState.FREE) nFree--;
+        else if (s == MNKCellState.P1) n1--;
+        else n2--;
       }
 
-      if (B[i][j] == MNKCellState.FREE) queueFree++;
-      else if (B[i][j] == MNKCellState.P1) queueP1++;
-      else if (B[i][j] == MNKCellState.P2) queueP2++;
+      if (B[i][j] == MNKCellState.FREE) nFree++;
+      else if (B[i][j] == MNKCellState.P1) n1++;
+      else n2++;
 
       // Alternative evaluation which also takes free cells around the series into account
       /* 
       if (queueP1 + queueFree == K || queueP2 + queueFree == K) {
         // Check if the cell after the series is free
-        if (isInBounds(i + dI, j + dJ) && B[i + dI][j + dJ] == MNKCellState.FREE) freeFactor += 100;
+        if (isInBounds(i + dI, j + dJ) && B[i + dI][j + dJ] == MNKCellState.FREE) freeFactor = 100;
         // Check if the cell before the series is free
-        // NOTE: isInBounds is pedantic here
         if (isInBounds(i - dI * (K+1), j - dJ * (K+1)) && B[i - dI * (K+1)][j - dJ * (K+1)] == MNKCellState.FREE)
           freeFactor += 100;
 
@@ -171,9 +170,9 @@ public class LittleMan implements MNKPlayer {
       } else return 0;
       */
       int sign = first ? 1 : -1;
-      if (queueP1 + queueFree == K) return sign * (seriesValue(queueFree) + (queueP1 * queueP1));
-      else if (queueP2 + queueFree == K)
-        return -sign * (seriesValue(queueFree) + (queueP2 * queueP2));
+      if (n1 + nFree == K) return sign * (seriesValue() + (n1 * n1));
+      else if (n2 + nFree == K)
+        return -sign * (seriesValue() + (n2 * n2));
       else return 0;
     }
 
@@ -181,12 +180,12 @@ public class LittleMan implements MNKPlayer {
       int value = 0;
 
       // column
-      queueP1 = queueP2 = queueFree = 0;
-      for (int ii = 0; ii < M; ii++) value += pushCell(ii, j, 1, 0);
+      n1 = n2 = nFree = 0;
+      for (int ii = 0; ii < M; ii++) value += cellValue(ii, j, 1, 0);
 
       // row
-      queueP1 = queueP2 = queueFree = 0;
-      for (int jj = 0; jj < N; jj++) value += pushCell(i, jj, 0, 1);
+      n1 = n2 = nFree = 0;
+      for (int jj = 0; jj < N; jj++) value += cellValue(i, jj, 0, 1);
 
       // diagonal
       int ku = Math.min(i, j),
@@ -195,16 +194,16 @@ public class LittleMan implements MNKPlayer {
           jj = j - ku,
           iim = i + kl,
           jjm = j + kl;
-      queueP1 = queueP2 = queueFree = 0;
-      for (; ii < iim && jj < jjm; ii++, jj++) value += pushCell(ii, jj, 1, 1);
+      n1 = n2 = nFree = 0;
+      for (; ii < iim && jj < jjm; ii++, jj++) value += cellValue(ii, jj, 1, 1);
 
       // counter diagonal
       ii = i - ku;
       jj = j + ku;
       iim = i + kl;
       jjm = j - kl;
-      queueP1 = queueP2 = queueFree = 0;
-      for (; ii < iim && jj < jjm; ii++, jj--) value += pushCell(ii, jj, 1, -1);
+      n1 = n2 = nFree = 0;
+      for (; ii < iim && jj < jjm; ii++, jj--) value += cellValue(ii, jj, 1, -1);
 
       return value;
     }
