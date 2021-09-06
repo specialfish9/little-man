@@ -14,7 +14,7 @@ K:=4
 REPS:=10
 TIME:=2
 BEST:=LittleBoy
-OLD:=H
+OLD:=LM
 
 .SUFFIXES: .java .class
 .PHONY: build
@@ -33,6 +33,9 @@ vs1: build
 
 test: build
 	$(JVM) $(JVMFLAGS) mnkgame.MNKPlayerTester $(M) $(N) $(K) $(PLAYERS).$(BEST) $(PLAYERS).$(OLD) -v -r $(REPS)
+
+ttest: build
+	$(JVM) $(JVMFLAGS) mnkgame.MNKPlayerTester $(M) $(N) $(K) $(PLAYERS).$(BEST) $(PLAYERS).$(BEST) -v -r $(REPS)
 
 test1: build
 	$(JVM) $(JVMFLAGS) mnkgame.MNKPlayerTester $(M) $(N) $(K) $(PLAYERS).$(OLD) $(PLAYERS).$(BEST) -v -r $(REPS)

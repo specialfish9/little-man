@@ -3,7 +3,7 @@
 \usepackage[italian]{babel}
 \usepackage[T1]{fontenc}
 
-\title{Galileo Galilei \\
+\title{Las Mierdas \\
 \large Relazione del progetto per l'insegnamento di Algoritmi e Strutture di Dati}
 \author{
   Mattia Girolimetto (0000977478),
@@ -18,7 +18,7 @@
 
 \maketitle
 
-\section{Problema computazionale}
+\section*{Problema computazionale}
 
 Lo scopo del progetto \`e quello di implementare un algoritmo efficiente e ottimale
 volto alla ricerca delle mosse migliori in un gioco $(m,n,k)$, dove si devono
@@ -26,7 +26,7 @@ allineare $k$ simboli in una griglia $m \times n$.
 
 Si fa uso di una variante dell'algoritmo MiniMax con potatura
 AlphaBeta denominata \emph{Principal Variation Search}~\cite{negascout}. Questa
-prevede  una ricerca limitata in profondit\`a analoga a minimax, espandendo 
+prevede  una ricerca limitata in profondit\`a analoga a MiniMax, espandendo 
 interamente i nodi pi\`u promettenti e parzialmente quelli restanti. Applicando
 un \emph{Iterative Deepening}~\cite{id} si possono ordinare i sottoalberi
 basandosi sui valori euristici delle ricerche precedenti e si pu\`o raggiungere
@@ -36,58 +36,62 @@ Diverse combinazioni di mosse possono portare a stati gi\`a analizzati
 precedentemente, i quali vengono mantenuti dentro una cache per evitare di
 valutarli pi\`u volte. Il valore degli stati di gioco non finali viene stimato
 da una componente euristica che tiene in considerazione il numero di serie di
-ogni giocatore assieme alla relativa lunghezza e alla vicinanza ad altre celle
-libere.
+ogni giocatore e la relativa lunghezza.
 
-\section{Scelte Progettuali}
+\subsection*{Select Cell e Iterative Deepening}
 
-\subsection{Select Cell e Iterative Deepening}
 Dopo aver aggiornato la copia locale della griglia di gioco si cerca la cella
-migliore da giocare sfruttando Iterative Deepening. 
-In questo modo si eseguono ricerche MiniMax con profondit\`a sempre maggiore
-e si restituisce il risultato pi\`u recente. Questo non
-peggiora la complessit\`a in quanto il solo costo asintotico di MiniMax alla
-massima profondit\`a assorbe quello di tutte le ricerche precedenti.
-Tuttavia aumenta sicuramente il numero di operazioni svolte dal calcolatore.
-Per limitare questo danno si ricorre alla Principal Variation Search.
+% TODO
+migliore da giocare sfruttando Iterative Deepening. Si procede applicando
+MiniMax con profondit\`a sempre maggiore e si restituisce il risultato pi\`u
+recente allo scadere del tempo. Questo non peggiora la complessit\`a in quanto
+il solo costo asintotico di MiniMax alla massima profondit\`a assorbe quello
+di tutte le ricerche precedenti. Si ha un aumento delle operazioni totali svolte
+dal calcolatore, che vinene mitigato dall'utilizzo della Principal Variation Search.
 
-\subsection{Cache}
+\subsection*{Cache}
+
 La cache fa uso della struttura dati HashMap fornita da Java generando le chiavi 
 in modo incrementale tramite la tecnica di \emph{Zobrist}~\cite{zobrist}. A ogni
 chiave sono associate le seguenti informazioni:
 \begin{enumerate}
-  \item Numero di mosse e ultimo simbolo giocato
+  \item Numero di celle marcate e ultimo simbolo giocato
   \item Profondit\`a della ricerca
-  \item Valore della griglia
+  \item Tipo e valore della griglia
 \end{enumerate}
 Poich\`e una board $(m,n)$ pu\`o al pi\`u assumere $3^{mn}$ stati differenti e
-un \verb!long! pu\`o contenere al pi\`u $2^{64} \approx 1.8 \cdot 10^{19}$,
-esistono configurazioni che creano collisioni: ad esempio un gioco $(70, 70, 10)$
-ha un totale di $3^{4900} \approx 7.8 \cdot 10^{2338}$ stati. Per limitare i
-falsi positivi si confrontano il numero di mosse e l'ultimo simbolo giocato.
-La cache viene inizializzata all'inizio della partita in un thread dedicato.
+un \verb!long! pu\`o contenere al pi\`u $2^{64} \approx 1.8 \cdot 10^{19}$ valori distinti,
+esistono configurazioni che creano collisioni: ad esempio un gioco $(8, 8, 4)$
+pu\`o avere fino a $3^{64} \approx 2.3 \cdot 10^{30}$ stati. Per limitare questo
+fenomeno si confrontano il numero di mosse e l'ultimo simbolo giocato.
 
+\subsection*{Principal Variation Search}
 
-\subsection{Principal Variation Search}
-Il cuore del giocatore è l'algoritmo PVS (Principal Variation Search). Questo è 
-una variante del Minimax basata sull'idea che i nodi dell'albero di decisione 
-siano ordinati e che quello in visita correntemente sia gi\`a la scielta migliore.
-PVS fa paritre una ricerca sul nodo in questione con una finestra molto piccola 
-(alpha e beta quasi uguali). Se questa non conferma quanto assunto allora si fa
-partire un'altra ricerca dal nodo in questione, questa volta con una fienstra 
-normale.
+L'algoritmo visita in modo ordinato i figli di ogni stato di gioco, applicando
+limiti Alpha Beta differenti ad ognuno di essi ai fini di aumentare il pruning.
+Si analizza in modo approfondito il nodo pi\`u promettente, denominato Principal
+Variation, per poi visitare i restanti nodi con una ricerca a finestra \emph{nulla}
+(dove i valori $\alpha$-$\beta$ differiscono di $1$). Se essa eccede i limiti
+% TODO
+imposti si ritenta con la procedura classica.
+% TODO IN REALTA' E' EURISTICA QUESTA E FAREBBE BENE METTERLA SOTTO
+Nel caso in cui esista una serie $k-1$ per un qualunque giocatore si provvede a
+riempire la cella mancante, risparmiando ulteriori risorse (viene data la precedenza
+alle serie appartenenti al giocatore che deve svolgere la mossa).
 
-\subsection{Valutazione Euristica}
-Per valutare in modo intelligente gli stati di gioco non terminali viene dato un 
-punteggio ad ognuno secondo il seguente criterio: viene calcolato per
-ogni riga, colonna, diagonale e antidiagonale quante serie di simboli sono presenti
-e si sommano questi valori. In particolare viene scorsa ogni possibile direzione e,
-a gruppi di K elementi, viene tenuto conto di quante celle sono libere, quante
-quante occupate dal primo giocatore e quante dal secondo. Con questi numeri viene 
-calcolato un rapporto e in base a questo si capisce quanto conviene giocare 
-quella serie.
+\subsection*{Componente Euristica}
 
-\pagebreak
+La griglia di gioco mantiene al suo interno una valutazione euristica che viene
+aggiornata progressivamente con l'avanzare della partita. Quando una cella viene
+% TODO
+marcata si valuta la variazione del valore euristico osservando le righe,
+colonne e diaginali che passano per essa. Vengono favorite le serie initerrotte
+di $k-1, k-2$ o $k-3$ elementi, dando un peso inferiore a segmenti pi\`u corti.
+Il valore di una griglia \`e il risultato della differenza tra i valori delle serie
+dei due giocatori. Oltretutto vengono favorite griglie che assumono valori promettenti
+con il minor numero di mosse, dividendo ogni valutazione per la profondit\`a
+dello stato di gioco.
+
 \bibliographystyle{ieeetr}
 \bibliography{report}
 
