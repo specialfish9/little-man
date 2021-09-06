@@ -171,8 +171,7 @@ public class LittleMan implements MNKPlayer {
       */
       int sign = first ? 1 : -1;
       if (n1 + nFree == K) return sign * (seriesValue() + (n1 * n1));
-      else if (n2 + nFree == K)
-        return -sign * (seriesValue() + (n2 * n2));
+      else if (n2 + nFree == K) return -sign * (seriesValue() + (n2 * n2));
       else return 0;
     }
 
