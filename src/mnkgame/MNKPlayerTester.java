@@ -30,22 +30,27 @@ import java.util.concurrent.Executors;
 import java.util.concurrent.Future;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.TimeoutException;
+import java.io.PrintWriter;
+
+import mnkgame.players.LoggedPlayer;
 
 /**
  * Runs a game against two MNKPlayer classes and prints the game scores:
  *
  * <ul>
- *   <li>3 if second player wins (and the first player is not interrupted)
- *   <li>2 if first player wins or if the adversary is interrupted (illegal move or timeout
- *       interrupt)
- *   <li>1 if the game ends in draw
+ * <li>3 if second player wins (and the first player is not interrupted)
+ * <li>2 if first player wins or if the adversary is interrupted (illegal move
+ * or timeout interrupt)
+ * <li>1 if the game ends in draw
  * </ul>
  *
- * <p>Usage: MNKPlayerTester [OPTIONS] &lt;M&gt; &lt;N&gt; &lt;K&gt; &lt;MNKPlayer class name&gt;
- * &lt;MNKPlayer class name&gt;<br>
+ * <p>
+ * Usage: MNKPlayerTester [OPTIONS] &lt;M&gt; &lt;N&gt; &lt;K&gt; &lt;MNKPlayer
+ * class name&gt; &lt;MNKPlayer class name&gt;<br>
  * OPTIONS:<br>
- * &nbsp;&nbsp;-t &lt;timeout&gt; Timeout in seconds</br> &nbsp;&nbsp;-r &lt;rounds&gt; &nbsp;Number
- * of rounds</br> &nbsp;&nbsp;-v
+ * &nbsp;&nbsp;-t &lt;timeout&gt; Timeout in seconds</br>
+ * &nbsp;&nbsp;-r &lt;rounds&gt; &nbsp;Number of rounds</br>
+ * &nbsp;&nbsp;-v
  * &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;Verbose
  */
 public class MNKPlayerTester {
@@ -69,17 +74,15 @@ public class MNKPlayerTester {
   private static int ERRSCORE = 2;
 
   private enum GameState {
-    WINP1,
-    WINP2,
-    DRAW,
-    ERRP1,
-    ERRP2;
+    WINP1, WINP2, DRAW, ERRP1, ERRP2;
   }
 
-  private MNKPlayerTester() {}
+  private MNKPlayerTester() {
+  }
 
   private static void initGame() {
-    if (VERBOSE) System.out.println("Initializing " + M + "," + N + "," + K + " board");
+    if (VERBOSE)
+      System.out.println("Initializing " + M + "," + N + "," + K + " board");
     B = new MNKBoard(M, N, K);
     // Timed-out initializaton of the MNKPlayers
     for (int k = 0; k < 2; k++) {
@@ -87,13 +90,12 @@ public class MNKPlayerTester {
         if (VERBOSE)
           System.out.println("Initializing " + Player[k].playerName() + " as Player " + (k + 1));
       final int i = k; // need to have a final variable here
-      final Runnable initPlayer =
-          new Thread() {
-            @Override
-            public void run() {
-              Player[i].initPlayer(B.M, B.N, B.K, i == 0, TIMEOUT);
-            }
-          };
+      final Runnable initPlayer = new Thread() {
+        @Override
+        public void run() {
+          Player[i].initPlayer(B.M, B.N, B.K, i == 0, TIMEOUT);
+        }
+      };
 
       final ExecutorService executor = Executors.newSingleThreadExecutor();
       final Future future = executor.submit(initPlayer);
@@ -101,18 +103,17 @@ public class MNKPlayerTester {
       try {
         future.get(TIMEOUT, TimeUnit.SECONDS);
       } catch (TimeoutException e) {
-        System.err.println(
-            "Error: "
-                + Player[i].playerName()
-                + " interrupted: initialization takes too much time");
+        System.err.println("Error: " + Player[i].playerName() + " interrupted: initialization takes too much time");
         System.exit(1);
       } catch (Exception e) {
         System.err.println(e);
         System.exit(1);
       }
-      if (!executor.isTerminated()) executor.shutdownNow();
+      if (!executor.isTerminated())
+        executor.shutdownNow();
     }
-    if (VERBOSE) System.out.println();
+    if (VERBOSE)
+      System.out.println();
   }
 
   private static class StoppablePlayer implements Callable<MNKCell> {
@@ -134,7 +135,7 @@ public class MNKPlayerTester {
       int curr = B.currentPlayer();
       final ExecutorService executor = Executors.newSingleThreadExecutor();
       final Future<MNKCell> task = executor.submit(new StoppablePlayer(Player[curr], B));
-      executor.shutdown(); // Makes the  ExecutorService stop accepting new tasks
+      executor.shutdown(); // Makes the ExecutorService stop accepting new tasks
 
       MNKCell c = null;
 
@@ -142,15 +143,9 @@ public class MNKPlayerTester {
         c = task.get(TIMEOUT, TimeUnit.SECONDS);
       } catch (TimeoutException ex) {
         int n = 3; // Wait some more time to see if it stops
-        System.err.println(
-            "Player "
-                + (curr + 1)
-                + " ("
-                + Player[curr].playerName()
-                + ") interrupted due to timeout");
+        System.err.println("Player " + (curr + 1) + " (" + Player[curr].playerName() + ") interrupted due to timeout");
         while (!task.isDone() && n > 0) {
-          System.err.println(
-              "Waiting for " + Player[curr].playerName() + " to stop ... (" + n + ")");
+          System.err.println("Waiting for " + Player[curr].playerName() + " to stop ... (" + n + ")");
           try {
             Thread.sleep(TIMEOUT * 1000);
           } catch (InterruptedException e) {
@@ -159,34 +154,21 @@ public class MNKPlayerTester {
         }
 
         if (n == 0) {
-          System.err.println(
-              "Player "
-                  + (curr + 1)
-                  + " ("
-                  + Player[curr].playerName()
-                  + ") still running: game closed");
+          System.err
+              .println("Player " + (curr + 1) + " (" + Player[curr].playerName() + ") still running: game closed");
           System.exit(1);
         } else {
           System.err.println(
-              "Player "
-                  + (curr + 1)
-                  + " ("
-                  + Player[curr].playerName()
-                  + ") eventually stopped: round closed");
+              "Player " + (curr + 1) + " (" + Player[curr].playerName() + ") eventually stopped: round closed");
           return curr == 0 ? GameState.ERRP1 : GameState.ERRP2;
         }
       } catch (Exception ex) {
         int n = 3; // Wait some more time to see if it stops
-        System.err.println(
-            "Player "
-                + (curr + 1)
-                + " ("
-                + Player[curr].playerName()
-                + ") interrupted due to exception");
+        System.err
+            .println("Player " + (curr + 1) + " (" + Player[curr].playerName() + ") interrupted due to exception");
         System.err.println(" " + ex);
         while (!task.isDone() && n > 0) {
-          System.err.println(
-              "Waiting for " + Player[curr].playerName() + " to stop ... (" + n + ")");
+          System.err.println("Waiting for " + Player[curr].playerName() + " to stop ... (" + n + ")");
           try {
             Thread.sleep(TIMEOUT * 1000);
           } catch (InterruptedException e) {
@@ -194,56 +176,32 @@ public class MNKPlayerTester {
           n--;
         }
         if (n == 0) {
-          System.err.println(
-              "Player "
-                  + (curr + 1)
-                  + " ("
-                  + Player[curr].playerName()
-                  + ") still running: game closed");
+          System.err
+              .println("Player " + (curr + 1) + " (" + Player[curr].playerName() + ") still running: game closed");
           System.exit(1);
         } else {
           System.err.println(
-              "Player "
-                  + (curr + 1)
-                  + " ("
-                  + Player[curr].playerName()
-                  + ") eventually stopped: round closed");
+              "Player " + (curr + 1) + " (" + Player[curr].playerName() + ") eventually stopped: round closed");
           return curr == 0 ? GameState.ERRP1 : GameState.ERRP2;
         }
       }
 
-      if (!executor.isTerminated()) executor.shutdownNow();
+      if (!executor.isTerminated())
+        executor.shutdownNow();
 
       if (B.cellState(c.i, c.j) == MNKCellState.FREE) {
         if (VERBOSE)
-          System.out.println(
-              "Player "
-                  + (curr + 1)
-                  + " ("
-                  + Player[curr].playerName()
-                  + ") -> ["
-                  + c.i
-                  + ","
-                  + c.j
-                  + "]");
+          System.out
+              .println("Player " + (curr + 1) + " (" + Player[curr].playerName() + ") -> [" + c.i + "," + c.j + "]");
         B.markCell(c.i, c.j);
       } else {
-        System.err.println(
-            "Player "
-                + (curr + 1)
-                + " ("
-                + Player[curr].playerName()
-                + ")  selected an illegal move ["
-                + c.i
-                + ","
-                + c.j
-                + "]: round closed");
+        System.err.println("Player " + (curr + 1) + " (" + Player[curr].playerName() + ")  selected an illegal move ["
+            + c.i + "," + c.j + "]: round closed");
         return curr == 0 ? GameState.ERRP1 : GameState.ERRP2;
       }
     }
 
-    return B.gameState() == MNKGameState.DRAW
-        ? GameState.DRAW
+    return B.gameState() == MNKGameState.DRAW ? GameState.DRAW
         : (B.gameState() == MNKGameState.WINP1 ? GameState.WINP1 : GameState.WINP2);
   }
 
@@ -290,13 +248,8 @@ public class MNKPlayerTester {
 
     int n = L.size();
     if (n != 5)
-      throw new IllegalArgumentException(
-          "Missing arguments:"
-              + (n < 1 ? " <M>" : "")
-              + (n < 2 ? " <N>" : "")
-              + (n < 3 ? " <K>" : "")
-              + (n < 4 ? " <MNKPlayer class>" : "")
-              + (n < 5 ? " <MNKPlayer class>" : ""));
+      throw new IllegalArgumentException("Missing arguments:" + (n < 1 ? " <M>" : "") + (n < 2 ? " <N>" : "")
+          + (n < 3 ? " <K>" : "") + (n < 4 ? " <MNKPlayer class>" : "") + (n < 5 ? " <MNKPlayer class>" : ""));
 
     try {
       M = Integer.parseInt(L.get(0));
@@ -317,7 +270,7 @@ public class MNKPlayerTester {
     if (M <= 0 || N <= 0 || K <= 0)
       throw new IllegalArgumentException("Arguments  M, N, K must be larger than 0");
 
-    String[] P = {L.get(3), L.get(4)};
+    String[] P = { L.get(3), L.get(4) };
     for (int i = 0; i < 2; i++) {
       try {
         Player[i] = (MNKPlayer) Class.forName(P[i]).getDeclaredConstructor().newInstance();
@@ -327,18 +280,15 @@ public class MNKPlayerTester {
         throw new IllegalArgumentException(
             "Illegal argument: \'" + P[i] + "\' class does not implement the MNKPlayer interface");
       } catch (NoSuchMethodException e) {
-        throw new IllegalArgumentException(
-            "Illegal argument: \'" + P[i] + "\' class constructor needs to be empty");
+        throw new IllegalArgumentException("Illegal argument: \'" + P[i] + "\' class constructor needs to be empty");
       } catch (Exception e) {
-        throw new IllegalArgumentException(
-            "Illegal argument: \'" + P[i] + "\' class (unexpected exception) " + e);
+        throw new IllegalArgumentException("Illegal argument: \'" + P[i] + "\' class (unexpected exception) " + e);
       }
     }
   }
 
   private static void printUsage() {
-    System.err.println(
-        "Usage: MNKPlayerTester [OPTIONS] <M> <N> <K> <MNKPlayer class> <MNKPlayer class>");
+    System.err.println("Usage: MNKPlayerTester [OPTIONS] <M> <N> <K> <MNKPlayer class> <MNKPlayer class>");
     System.err.println("OPTIONS:");
     System.err.println("  -t <timeout>  Timeout in seconds. Default: " + TIMEOUT);
     System.err.println("  -r <rounds>   Number of rounds. Default: " + ROUNDS);
@@ -346,6 +296,12 @@ public class MNKPlayerTester {
   }
 
   public static void main(String[] args) {
+    PrintWriter writer = null;
+    try {
+      writer = new PrintWriter("log.txt", "UTF-8");
+    } catch (Exception e) {
+    }
+
     int P1SCORE = 0;
     int P2SCORE = 0;
 
@@ -370,9 +326,19 @@ public class MNKPlayerTester {
     }
 
     for (int i = 1; i <= ROUNDS; i++) {
-      if (VERBOSE) System.out.println("\n**** ROUND " + i + " ****");
+      if (VERBOSE)
+        System.out.println("\n**** ROUND " + i + " ****");
       initGame();
       GameState state = runGame();
+
+      if (writer != null) {
+        try {
+          writer.println("" + Player[0].playerName() + " " + ((LoggedPlayer) Player[0]).GetResults());
+        } catch (Exception e) {
+        }
+      } else {
+        System.err.println("Cant write to file");
+      }
 
       switch (state) {
         case WINP1:
@@ -394,19 +360,12 @@ public class MNKPlayerTester {
       }
       if (VERBOSE) {
         System.out.println("\nGame state    : " + state);
-        System.out.println(
-            "Current score : "
-                + Player[0].playerName()
-                + " ("
-                + P1SCORE
-                + ") - "
-                + Player[1].playerName()
-                + " ("
-                + P2SCORE
-                + ")");
+        System.out.println("Current score : " + Player[0].playerName() + " (" + P1SCORE + ") - "
+            + Player[1].playerName() + " (" + P2SCORE + ")");
       }
     }
-    if (VERBOSE) System.out.println("\n**** FINAL SCORE ****");
+    if (VERBOSE)
+      System.out.println("\n**** FINAL SCORE ****");
     System.out.println(Player[0].playerName() + " " + P1SCORE);
     System.out.println(Player[1].playerName() + " " + P2SCORE);
   }
