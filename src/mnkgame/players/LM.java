@@ -1,18 +1,16 @@
 package mnkgame.players;
 
+import java.util.ArrayList;
 import java.util.Deque;
 import java.util.HashMap;
-import java.util.HashSet;
 import java.util.Iterator;
 import java.util.LinkedList;
+import java.util.List;
 import java.util.Map;
 import java.util.Random;
 import java.util.Stack;
 import java.util.concurrent.atomic.AtomicBoolean;
 import mnkgame.*;
-
-import java.util.List;
-import java.util.ArrayList;
 
 // NOTE: the code uses vim's marker folding. Use `za` to toggle folds.
 
@@ -86,7 +84,7 @@ public class LM implements MNKPlayer {
     }
 
     public MNKCellState cs(int i, int j) {
-      return cellState(Math.min(Math.max(i, 0), M-1), Math.min(Math.max(j, 0),N-1));
+      return cellState(Math.min(Math.max(i, 0), M - 1), Math.min(Math.max(j, 0), N - 1));
     }
 
     @Override
@@ -370,16 +368,19 @@ public class LM implements MNKPlayer {
 
   private List<Integer> getQuiescentMoves(MNKCellState player) {
     List<Integer> l = new ArrayList<>();
-    for(int i = 0; i < M; i++)
-      for(int j = 0; j < N; j++)
-        if(board.cellState(i, j) == MNKCellState.FREE && isNear(i, j, player))
+    for (int i = 0; i < M; i++)
+      for (int j = 0; j < N; j++)
+        if (board.cellState(i, j) == MNKCellState.FREE && isNear(i, j, player))
           l.add(i * minMN + j);
 
     return l;
   }
 
   private boolean isNear(int i, int j, MNKCellState s) {
-    return board.cs(i+1, j) == s || board.cs(i-1, j) == s || board.cs(i, j+1) == s || board.cs(i, j-1) == s;
+    return board.cs(i + 1, j) == s
+        || board.cs(i - 1, j) == s
+        || board.cs(i, j + 1) == s
+        || board.cs(i, j - 1) == s;
   }
 
   // negamax withot alpha-beta
@@ -411,8 +412,10 @@ public class LM implements MNKPlayer {
     else if (state == ENEMY_WIN) return -INFTY / board.marked();
     else {
       int val = Math.min(Math.max(board.value(), -(INFTY / 10)), INFTY / 10);
-      if(raw || Math.abs(val) >= LOUD_EVALUATION) return val / board.marked();
-      else return quiescenceSearch((board.currentPlayer() == 0 && ME == MNKCellState.P1) ? 1 : -1, QUIESCENT_DEPTH);
+      if (raw || Math.abs(val) >= LOUD_EVALUATION) return val / board.marked();
+      else
+        return quiescenceSearch(
+            (board.currentPlayer() == 0 && ME == MNKCellState.P1) ? 1 : -1, QUIESCENT_DEPTH);
     }
   }
 
