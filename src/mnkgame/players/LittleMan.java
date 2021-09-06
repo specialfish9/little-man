@@ -133,16 +133,16 @@ public class LittleBoy implements MNKPlayer {
 
       return 0;
     }
-    
+
     // Returns wheter the given (i,j) position is within the bounds of the
     // current board
     private boolean isInBounds(int i, int j) {
       return i >= 0 && i < M && j >= 0 && j < N;
     }
-    
+
     private int pushCell(final int i, final int j, final int dI, final int dJ) {
       if (queueFree + queueP1 + queueP2 >= K) { // useless >
-        MNKCellState s = B[i-dI*(K-1)][j-dJ*(K-1)];
+        MNKCellState s = B[i - dI * (K - 1)][j - dJ * (K - 1)];
         if (s == MNKCellState.FREE) queueFree--;
         else if (s == MNKCellState.P1) queueP1--;
         else if (s == MNKCellState.P2) queueP2--;
@@ -153,20 +153,17 @@ public class LittleBoy implements MNKPlayer {
       else if (B[i][j] == MNKCellState.P1) queueP1++;
       else if (B[i][j] == MNKCellState.P2) queueP2++;
 
-      if(queueP1 + queueFree == K || queueP2 + queueFree == K) {
+      if (queueP1 + queueFree == K || queueP2 + queueFree == K) {
         // Check if the cell after the series is free
-        if(isInBounds(i+dI, j+dJ) && B[i+dI][j+dJ] == MNKCellState.FREE)
-          freeFactor *= 2;
+        if (isInBounds(i + dI, j + dJ) && B[i + dI][j + dJ] == MNKCellState.FREE) freeFactor *= 2;
         // Check if the cell before the series is free
         // NOTE: isInBounds is pedantic here
-        if(isInBounds(i-dI*K, j-dJ*K) && B[i-dI*K][j-dJ*K] == MNKCellState.FREE)
+        if (isInBounds(i - dI * K, j - dJ * K) && B[i - dI * K][j - dJ * K] == MNKCellState.FREE)
           freeFactor *= 2;
 
         int sign = freeFactor * (first ? 1 : -1);
-        if (queueP1 + queueFree == K)
-          return sign * (seriesValue(queueFree) + (queueP1 * queueP1));
-        else
-          return -sign * (seriesValue(queueFree) + (queueP2 * queueP2));
+        if (queueP1 + queueFree == K) return sign * (seriesValue(queueFree) + (queueP1 * queueP1));
+        else return -sign * (seriesValue(queueFree) + (queueP2 * queueP2));
       } else return 0;
     }
 
@@ -301,7 +298,7 @@ public class LittleBoy implements MNKPlayer {
     // the process in a separate thread. We can safely modify the zobrist array
     // across threads as it's only read from after the `isZobristReady` field
     // gets set to true
-    if (i != zobrist.length-1) {
+    if (i != zobrist.length - 1) {
       final int j = i;
       new Thread(
               () -> {
@@ -367,7 +364,7 @@ public class LittleBoy implements MNKPlayer {
     // }
     board.markCell(cc.i, cc.j, false);
     // Look at the result of the enemy marking the initial random cell
-    MNKGameState result = board.markCell(randomCell.i, randomCell.j, false); 
+    MNKGameState result = board.markCell(randomCell.i, randomCell.j, false);
     board.unmarkCell(false);
     board.unmarkCell(false);
     return result == lossState ? randomCell : null;
@@ -414,7 +411,7 @@ public class LittleBoy implements MNKPlayer {
       if (color > 0 ? values[i] > values[m] : values[i] < values[m]) m = i;
 
     // swap vec[m] with vec[start] if we found a new max/min
-    if(m != start) {
+    if (m != start) {
       swap(vec, start, m);
       swap(values, start, m);
     }
@@ -621,14 +618,19 @@ public class LittleBoy implements MNKPlayer {
       // cutoffs
       int max = INFTY / Math.min(board.marked() + maxDepth, 2 * K - 1);
       MNKCell latest = pvsRoot(maxDepth, -max, max);
-    System.out.println(
-        playerName()
-            + "\t: at depth "
-            + maxDepth
-            + " got cell: "
-            + latest
-            + " with value: "
-            + rootValue + " bounds [" + -max + "," + max + "]");
+      System.out.println(
+          playerName()
+              + "\t: at depth "
+              + maxDepth
+              + " got cell: "
+              + latest
+              + " with value: "
+              + rootValue
+              + " bounds ["
+              + -max
+              + ","
+              + max
+              + "]");
 
       if (latest == null) break;
 
@@ -647,8 +649,7 @@ public class LittleBoy implements MNKPlayer {
     stopCleanup();
 
     // Keep track of the opponent's marked cells
-    if (MC.length > 0)
-      board.markCell(MC[MC.length - 1].i, MC[MC.length - 1].j); 
+    if (MC.length > 0) board.markCell(MC[MC.length - 1].i, MC[MC.length - 1].j);
 
     MNKCell result = iterativeDeepening();
     // to avoid catastrophic failures in case anything breaks
