@@ -2,8 +2,24 @@
 \usepackage[utf8]{inputenc}
 \usepackage[italian]{babel}
 \usepackage[T1]{fontenc}
+\usepackage[italian]{varioref}
+\selectlanguage{italian}
+% TODO: vlined?
+\usepackage[ruled,vlined,italiano]{algorithm2e}
 
-\title{Las Mierdas \\
+\DontPrintSemicolon
+\SetKw{KwNot}{not}
+\SetKw{KwOr}{or}
+\SetKw{KwAnd}{and}
+\SetKw{Break}{break}
+\SetKw{KwBack}{back to}
+\SetKw{KwFn}{fn}
+\SetKw{KwTree}{Tree}
+\SetKw{KwQueue}{Queue}
+\SetKw{KwBFS}{BFS}
+\hfuzz=100.0pt  % ignore paragraph lengths warnings
+
+\title{Little Man\\
 \large Relazione del progetto per l'insegnamento di Algoritmi e Strutture di Dati}
 \author{
   Mattia Girolimetto (0000977478),
@@ -65,12 +81,18 @@ esistono configurazioni che creano collisioni: ad esempio un gioco $(8, 8, 4)$
 pu\`o avere fino a $3^{64} \approx 2.3 \cdot 10^{30}$ stati. Per limitare questo
 fenomeno si confrontano il numero di mosse e l'ultimo simbolo giocato.
 
+Inoltre per limitare le collisioni interne alla HashMap di Java (non dovute alle
+limitazioni di Zobrist), dopo aver scelto la cella da giocare, la cache viene
+privata delle \emph{griglie inaccessibili}. Una griglia viene definita
+inacessibile quando ha un numero di celle marcate inferiore a quello del tavolo
+di gioco attuale $+ 1$.
+
 \subsection*{Principal Variation Search}
 
 L'algoritmo visita in modo ordinato i figli di ogni stato di gioco, applicando
 limiti Alpha Beta differenti ad ognuno di essi ai fini di aumentare il pruning.
 Si analizza in modo approfondito il nodo pi\`u promettente, denominato Principal
-Variation, per poi visitare i restanti nodi con una ricerca a finestra \emph{nulla}
+Variation, per poi visitare i restanti nodi con una ricerca a finestra \emph{nulla}~\cite{scout}
 (dove i valori $\alpha$-$\beta$ differiscono di $1$). Se essa eccede i limiti
 % TODO
 imposti si ritenta con la procedura classica.
@@ -82,16 +104,133 @@ alle serie appartenenti al giocatore che deve svolgere la mossa).
 \subsection*{Componente Euristica}
 
 La griglia di gioco mantiene al suo interno una valutazione euristica che viene
-aggiornata progressivamente con l'avanzare della partita. Quando una cella viene
+aggiornata progressivamente con l'avanzare della partita (Algoritmo \vref{eval}). Quando una cella viene
 % TODO
 marcata si valuta la variazione del valore euristico osservando le righe,
 colonne e diaginali che passano per essa. Vengono favorite le serie initerrotte
 di $k-1, k-2$ o $k-3$ elementi, dando un peso inferiore a segmenti pi\`u corti.
-Il valore di una griglia \`e il risultato della differenza tra i valori delle serie
-dei due giocatori. Oltretutto vengono favorite griglie che assumono valori promettenti
-con il minor numero di mosse, dividendo ogni valutazione per la profondit\`a
-dello stato di gioco.
+La quotazione di un tavolo di gioco \`e il risultato della differenza tra i
+valori delle serie dei due giocatori. Oltretutto vengono favorite griglie che
+assumono valori promettenti con il minor numero di mosse, dividendo ogni
+valutazione per la profondit\`a dello stato di gioco.
 
+Questo approccio ricorda quello scelto da Chuan per il gioco di Go~\cite{chuan},
+tuttavia si \`e preferito favorire anche serie di lunghezza inferiore ai fin di
+stimare una pi\`u accurata \emph{Principal Variation}, sopratutto durante le inziali.
+
+\begin{algorithm}[H]
+  \label{eval}
+  \caption{Valutazione eurstica procedurale}
+
+  \SetKwFunction{eval}{eval}
+  \SetKwFunction{cv}{cell\_value}
+  \SetKwFunction{lsc}{long\_series\_constant}
+  \SetKwProg{proc}{begin}{ $\rightarrow$ \KwSty{int}}{end}
+
+  $n_{free}, n_1, n_2 \gets 0$\;
+  \;
+  \proc{\eval{\KwSty{int} i, \KwSty{int} j}}{
+    \KwSty{int} $value \gets 0$\;
+    \For{$(ii, jj) \in$ row $i$}{
+      $value \gets value + \cv{ii, jj, 0, 1}$\;
+    }
+    \For{$(ii, jj) \in$ column $i$}{
+      $value \gets value + \cv{ii, jj, 1, 0}$\;
+    }
+    \For{$(ii, jj) \in$ diagonal at $(i, j)$}{
+      $value \gets value + \cv{ii, jj, 1, 1}$\;
+    }
+    \For{$(ii, jj) \in$ anti-diagonal at $(i, j)$}{
+      $value \gets value + \cv{ii, jj, 1, -1}$\;
+    }
+    \Return $value$\;
+  } \; \proc{\cv{\KwSty{int} i, \KwSty{int} j, \KwSty{int} $\delta_i$, \KwSty{int} $\delta_j$}}{
+    \If{$n_{free} + n_1 + n_2 = k$}{
+      \tcc{Stato della prima cella nella serie. Viene decrementato per fare spazio alla nuova}
+      \KwSty{cell} $s \gets B[i - \delta_i \cdot k][j - \delta_j \cdot k]$\;
+      \uIf{$s = free$}{
+        $n_{free} \gets n_{free} - 1$\;
+      }
+      \uElseIf{$s = player_1$}{
+        $n_1 \gets n_1 - 1$\;
+      }
+      \Else{
+        $n_2 \gets n_2 - 1$\;
+      }
+    }
+    \tcc{Si incrementa il contatore per la cella che si considera attualmente}
+    \uIf{$B[i][j] = free$}{
+      $n_{free} \gets n_{free} + 1$\;
+    }
+    \uElseIf{$B[i][j] = player_1$}{
+      $n_1 \gets n_1 + 1$\;
+    }
+    \Else{
+      $n_2 \gets n_2 - 1$\;
+    }
+    \tcc{Si restituisce la valutazione della serie}
+    \uIf{$n_1 + p_{free} = k$}{
+      \Return $color \cdot (\lsc{$n_{free}$} + n_1^2)$\;
+    }
+    \uElseIf{$n_2 + p_{free} = k$}{
+      \Return $-color \cdot (\lsc{$n_{free}$} + n_2^2)$\;
+    }
+    \Else{
+      \Return $0$\;
+    }
+  }
+\end{algorithm}
+
+\subsection*{Altre euristiche considerate}
+
+In questa sezione saranno presentati approcci che sono stati considerati
+e/o implementati, ma in definitiva scartati in quanto non hanno offerto un
+miglioramento apprezzabile allo stile di gioco dell'algoritmo.
+
+\subsubsection*{Valutazione euristica degli spazi vuoti}
+
+Nel gioco generalizzato del $(m, n, k)$, specialmente per valori di $k \leq \max\{m-2,n-2\}$,
+una sequenza con celle libere ai lati pu\`o rivelarsi pi\`u vantaggiosa di una
+limitata: quando la sequenza \`e del tipo $k-1$ ed ha entrambi i lati liberi
+essa garantisce la vittoria al giocatore. Si pu\`o dunque estendere l'Algoritmo
+\vref{eval} affinch\`e sommi un bonus se la serie sotto analisi contiene celle
+libere attorno a se. Ecco una possibile implementazione che si pu\`o trovare
+anche nel codice sorgente commentata:
+
+\begin{algorithm}[H]
+  \label{eval+free}
+  \caption{Valutazione delle serie favorendo spazi liberi adiacenti}
+
+  \SetKwFunction{cv}{cell\_value}
+  \SetKwFunction{lsc}{long\_series\_constant}
+  \SetKwProg{proc}{begin}{ $\rightarrow$ \KwSty{int}}{end}
+
+  \proc{\cv{\KwSty{int} i, \KwSty{int} j, \KwSty{int} $\delta_i$, \KwSty{int} $\delta_j$}}{
+    $\ldots$\;
+    \tcc{La logica rimane invarata fino alla valutazione della serie attuale}
+    \KwSty{int} $bonus \gets 0$\;
+    \If{$B[i + \delta_i][j + \delta_j] = free$}{
+      $bonus \gets bonus\_constant$\;
+    }
+    \If{$B[i - \delta_i \cdot (k+1)][j - \delta_j \cdot (k+1)] = free$}{
+      $bonus \gets bonus + bonus\_constant$\;
+    }
+    \;
+    \uIf{$n_1 + p_{free} = k$}{
+      \Return $color \cdot (\lsc{$n_{free}$} + n_1^2 + bonus)$\;
+    }
+    \uElseIf{$n_2 + p_{free} = k$}{
+      \Return $-color \cdot (\lsc{$n_{free}$} + n_2^2 + bonus)$\;
+    }
+    \Else{
+      \Return $0$\;
+    }
+  }
+\end{algorithm}
+
+% TODO: parlare di pattern move, non fatto ma simile a favorire le k... .
+
+\pagebreak
 \bibliographystyle{ieeetr}
 \bibliography{report}
 

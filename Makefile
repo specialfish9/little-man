@@ -13,7 +13,7 @@ N:=3
 K:=3
 REPS:=10
 TIME:=2
-BEST:=AlbertEinstein
+BEST:=LittleBoy
 OLD:=SuperGalileoGalileiWithBetterCache
 
 .SUFFIXES: .java .class
