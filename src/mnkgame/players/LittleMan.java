@@ -134,32 +134,34 @@ public class LittleMan implements MNKPlayer {
       return 0;
     }
 
+    /* Used for alternative heuristic
     // Returns wheter the given (i,j) position is within the bounds of the
     // current board
     private boolean isInBounds(int i, int j) {
       return i >= 0 && i < M && j >= 0 && j < N;
     }
+    */
 
     private int pushCell(final int i, final int j, final int dI, final int dJ) {
-      /* Euristica scartata viste le performance
-      if (queueFree + queueP1 + queueP2 >= K) { // useless >
-        MNKCellState s = B[i - dI * (K - 1)][j - dJ * (K - 1)];
+      if (queueFree + queueP1 + queueP2 >= K) {
+        MNKCellState s = B[i - dI * K][j - dJ * K];
         if (s == MNKCellState.FREE) queueFree--;
         else if (s == MNKCellState.P1) queueP1--;
         else if (s == MNKCellState.P2) queueP2--;
       }
 
-      int freeFactor = 0;
       if (B[i][j] == MNKCellState.FREE) queueFree++;
       else if (B[i][j] == MNKCellState.P1) queueP1++;
       else if (B[i][j] == MNKCellState.P2) queueP2++;
 
+      // Alternative evaluation which also takes free cells around the series into account
+      /* 
       if (queueP1 + queueFree == K || queueP2 + queueFree == K) {
         // Check if the cell after the series is free
         if (isInBounds(i + dI, j + dJ) && B[i + dI][j + dJ] == MNKCellState.FREE) freeFactor += 100;
         // Check if the cell before the series is free
         // NOTE: isInBounds is pedantic here
-        if (isInBounds(i - dI * K, j - dJ * K) && B[i - dI * K][j - dJ * K] == MNKCellState.FREE)
+        if (isInBounds(i - dI * (K+1), j - dJ * (K+1)) && B[i - dI * (K+1)][j - dJ * (K+1)] == MNKCellState.FREE)
           freeFactor += 100;
 
         int sign = first ? 1 : -1;
@@ -168,17 +170,6 @@ public class LittleMan implements MNKPlayer {
         else return -sign * (seriesValue(queueFree) + (queueP2 * queueP2) + freeFactor);
       } else return 0;
       */
-      if (queueFree + queueP1 + queueP2 >= K) { // useless >
-        MNKCellState s = B[i - dI * (K - 1)][j - dJ * (K - 1)];
-        if (s == MNKCellState.FREE) queueFree--;
-        else if (s == MNKCellState.P1) queueP1--;
-        else if (s == MNKCellState.P2) queueP2--;
-      }
-
-      if (B[i][j] == MNKCellState.FREE) queueFree++;
-      else if (B[i][j] == MNKCellState.P1) queueP1++;
-      else if (B[i][j] == MNKCellState.P2) queueP2++;
-
       int sign = first ? 1 : -1;
       if (queueP1 + queueFree == K) return sign * (seriesValue(queueFree) + (queueP1 * queueP1));
       else if (queueP2 + queueFree == K) return -sign * (seriesValue(queueFree) + (queueP2 * queueP2));
@@ -190,7 +181,6 @@ public class LittleMan implements MNKPlayer {
 
       // column
       queueP1 = queueP2 = queueFree = 0;
-      // for (int ii = Math.max(i - K, 0); ii <= Math.min(i + K, M - 1); ii++)
       for (int ii = 0; ii < M; ii++) value += pushCell(ii, j, 1, 0);
 
       // row
