@@ -155,7 +155,7 @@ public class LittleMan implements MNKPlayer {
       else n2++;
 
       // Alternative evaluation which also takes free cells around the series into account
-      /* 
+      /*
       if (queueP1 + queueFree == K || queueP2 + queueFree == K) {
         // Check if the cell after the series is free
         if (isInBounds(i + dI, j + dJ) && B[i + dI][j + dJ] == MNKCellState.FREE) freeFactor = 100;
