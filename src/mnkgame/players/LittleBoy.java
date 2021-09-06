@@ -154,6 +154,7 @@ public class LittleBoy implements MNKPlayer {
       jj = j + ku;
       iim = i + kl;
       jjm = j - kl;
+      queueClear();
       for (; ii <= iim && jj <= jjm; ii++, jj--) value += pushCell(B[ii][jj]);
 
       return value;
@@ -165,35 +166,6 @@ public class LittleBoy implements MNKPlayer {
     }
 
     private int pushCell(final MNKCellState state) {
-      /*
-      if (currentSeries.size() >= kPlusTwo) { // useless >
-        MNKCellState s = currentSeries.poll();
-        if (s == MNKCellState.FREE) queueFree--;
-        else if (s == MNKCellState.P1) queueP1--;
-        else if (s == MNKCellState.P2) queueP2--;
-      }
-
-      if (state == MNKCellState.FREE) queueFree++;
-      else if (state == MNKCellState.P1) queueP1++;
-      else if (state == MNKCellState.P2) queueP2++;
-      currentSeries.add(state);
-      int sign = me == MNKCellState.P1 ? 1 : -1;
-      int freeBeforeAfter = 1;
-      if (kPlusTwo >= K+2 && currentSeries.peekFirst() == MNKCellState.FREE) freeBeforeAfter *= 2;
-      if (kPlusTwo >= K+2 && currentSeries.peekLast() == MNKCellState.FREE) freeBeforeAfter *= 2;
-
-      if (queueP1 + queueFree == kPlusTwo) {
-        int result =
-            sign * freeBeforeAfter
-                * (seriesValue(queueFree - (freeBeforeAfter / 2)) + queueP1 * queueP1);
-        return result;
-      } else if (queueP2 + queueFree == kPlusTwo) {
-        int result =
-            -sign * freeBeforeAfter
-                * (seriesValue(queueFree - (freeBeforeAfter / 2)) + queueP2 * queueP2);
-        return result;
-      } else return 0;
-      */
       if (currentSeries.size() >= K) { // useless >
         MNKCellState s = currentSeries.poll();
         if (s == MNKCellState.FREE) queueFree--;

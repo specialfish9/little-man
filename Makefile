@@ -13,8 +13,8 @@ N:=8
 K:=4
 REPS:=10
 TIME:=2
-BEST:=LittleBoy
-OLD:=LittleMan
+BEST:=LittleMan
+OLD:=SuperGalileoGalileiWithBetterCache
 
 .SUFFIXES: .java .class
 .PHONY: build

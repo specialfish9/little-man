@@ -141,6 +141,7 @@ public class LittleMan implements MNKPlayer {
     }
 
     private int pushCell(final int i, final int j, final int dI, final int dJ) {
+      /* Euristica scartata viste le performance
       if (queueFree + queueP1 + queueP2 >= K) { // useless >
         MNKCellState s = B[i - dI * (K - 1)][j - dJ * (K - 1)];
         if (s == MNKCellState.FREE) queueFree--;
@@ -168,6 +169,22 @@ public class LittleMan implements MNKPlayer {
         else
           return -sign * (seriesValue(queueFree) + (queueP2 * queueP2) + freeFactor);
       } else return 0;
+      */
+      if (queueFree + queueP1 + queueP2 >= K) { // useless >
+        MNKCellState s = B[i - dI * (K - 1)][j - dJ * (K - 1)];
+        if (s == MNKCellState.FREE) queueFree--;
+        else if (s == MNKCellState.P1) queueP1--;
+        else if (s == MNKCellState.P2) queueP2--;
+      }
+
+      if (B[i][j] == MNKCellState.FREE) queueFree++;
+      else if (B[i][j] == MNKCellState.P1) queueP1++;
+      else if (B[i][j] == MNKCellState.P2) queueP2++;
+
+      int sign = first ? 1 : -1;
+      if (queueP1 + queueFree == K) return sign * (seriesValue(queueFree) + (queueP1 * queueP1));
+      else if (queueP2 + queueFree == K) return -sign * (seriesValue(queueFree) + (queueP2 * queueP2));
+      else return 0;
     }
 
     private int eval(int i, int j) {
