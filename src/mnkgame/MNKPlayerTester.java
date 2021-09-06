@@ -23,6 +23,7 @@
 package mnkgame;
 
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.List;
 import java.util.concurrent.Callable;
 import java.util.concurrent.ExecutorService;
@@ -30,7 +31,14 @@ import java.util.concurrent.Executors;
 import java.util.concurrent.Future;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.TimeoutException;
-import java.io.PrintWriter;
+import java.io.BufferedWriter;
+import java.io.File;
+import java.io.FileWriter;
+import java.io.IOException;
+import java.nio.charset.StandardCharsets;
+import java.nio.file.Files;
+import java.nio.file.Paths;
+import java.nio.file.StandardOpenOption;
 
 import mnkgame.players.LoggedPlayer;
 
@@ -296,12 +304,6 @@ public class MNKPlayerTester {
   }
 
   public static void main(String[] args) {
-    PrintWriter writer = null;
-    try {
-      writer = new PrintWriter("log.txt", "UTF-8");
-    } catch (Exception e) {
-    }
-
     int P1SCORE = 0;
     int P2SCORE = 0;
 
@@ -324,6 +326,12 @@ public class MNKPlayerTester {
       System.out.println("Rounds    : " + ROUNDS);
       System.out.println("Timeout   : " + TIMEOUT + " secs\n\n");
     }
+    BufferedWriter writer = null;
+    try {
+      writer = new BufferedWriter(new FileWriter(new File("log.txt"), true));
+    } catch (IOException e) {
+    } finally {
+    }
 
     for (int i = 1; i <= ROUNDS; i++) {
       if (VERBOSE)
@@ -333,13 +341,13 @@ public class MNKPlayerTester {
 
       if (writer != null) {
         try {
-          writer.println("" + Player[0].playerName() + " " + ((LoggedPlayer) Player[0]).GetResults());
-        } catch (Exception e) {
-        }
-      } else {
-        System.err.println("Cant write to file");
-      }
+          String s = "" + Player[0].playerName() + " " + ((LoggedPlayer) Player[0]).GetResults();
+          writer.write(s);
+          System.out.println(">>>>>" + s);
 
+        } catch (IOException ex) {
+        }
+      }
       switch (state) {
         case WINP1:
           P1SCORE += WINP1SCORE;

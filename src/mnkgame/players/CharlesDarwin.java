@@ -161,7 +161,6 @@ public class CharlesDarwin extends LoggedPlayer implements MNKPlayer {
     double best = action == Action.MAXIMIZE ? -Double.MAX_VALUE : Double.MAX_VALUE;
     MNKCell best_cell = null;
 
-    this._visited++;
     for (int i = 0; i < board.getFreeCells().length; i++) {
       MNKCell c = board.getFreeCells()[i];
       board.markCell(c);
@@ -216,6 +215,7 @@ public class CharlesDarwin extends LoggedPlayer implements MNKPlayer {
     try {
       Pair<Double, MNKCell> result = minimax(b, Action.MAXIMIZE, 0, -Double.MAX_VALUE, Double.MAX_VALUE);
       System.out.println(playerName() + "\t: visited " + visited + " nodes, ended with result: " + result);
+      this._visited = visited;
       System.out.println(playerName() + "\t: found a total of " + series_found + " free cells in series (up to k-1)");
 
       if (FC.length != b.getFreeCells().length) {
