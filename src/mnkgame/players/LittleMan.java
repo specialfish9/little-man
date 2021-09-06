@@ -155,18 +155,16 @@ public class LittleMan implements MNKPlayer {
 
       if (queueP1 + queueFree == K || queueP2 + queueFree == K) {
         // Check if the cell after the series is free
-        if(isInBounds(i+dI, j+dJ) && B[i+dI][j+dJ] == MNKCellState.FREE)
-          freeFactor += 100;
+        if (isInBounds(i + dI, j + dJ) && B[i + dI][j + dJ] == MNKCellState.FREE) freeFactor += 100;
         // Check if the cell before the series is free
         // NOTE: isInBounds is pedantic here
-        if(isInBounds(i-dI*K, j-dJ*K) && B[i-dI*K][j-dJ*K] == MNKCellState.FREE)
+        if (isInBounds(i - dI * K, j - dJ * K) && B[i - dI * K][j - dJ * K] == MNKCellState.FREE)
           freeFactor += 100;
 
         int sign = first ? 1 : -1;
         if (queueP1 + queueFree == K)
           return sign * (seriesValue(queueFree) + (queueP1 * queueP1) + freeFactor);
-        else
-          return -sign * (seriesValue(queueFree) + (queueP2 * queueP2) + freeFactor);
+        else return -sign * (seriesValue(queueFree) + (queueP2 * queueP2) + freeFactor);
       } else return 0;
     }
 
