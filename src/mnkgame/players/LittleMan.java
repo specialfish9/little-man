@@ -10,7 +10,7 @@ import mnkgame.*;
 
 // NOTE: the code uses vim's marker folding. Use `za` to toggle folds.
 
-public class LittleBoy implements MNKPlayer {
+public class LittleMan implements MNKPlayer {
   private static final int INFTY = 1000000000; // 1 Billion
   // Out of bounds value used to denote a timeout in the search
   private static final int HALT = -INFTY * 2; // -2 Billion
@@ -41,7 +41,7 @@ public class LittleBoy implements MNKPlayer {
   }
 
   public String playerName() {
-    return "Little Boy";
+    return "Little Man";
   }
 
   // {{{ board
@@ -148,7 +148,7 @@ public class LittleBoy implements MNKPlayer {
         else if (s == MNKCellState.P2) queueP2--;
       }
 
-      int freeFactor = 1;
+      int freeFactor = 0;
       if (B[i][j] == MNKCellState.FREE) queueFree++;
       else if (B[i][j] == MNKCellState.P1) queueP1++;
       else if (B[i][j] == MNKCellState.P2) queueP2++;
@@ -156,34 +156,30 @@ public class LittleBoy implements MNKPlayer {
       if(queueP1 + queueFree == K || queueP2 + queueFree == K) {
         // Check if the cell after the series is free
         if(isInBounds(i+dI, j+dJ) && B[i+dI][j+dJ] == MNKCellState.FREE)
-          freeFactor *= 2;
+          freeFactor += 100;
         // Check if the cell before the series is free
         // NOTE: isInBounds is pedantic here
         if(isInBounds(i-dI*K, j-dJ*K) && B[i-dI*K][j-dJ*K] == MNKCellState.FREE)
-          freeFactor *= 2;
+          freeFactor += 100;
 
-        int sign = freeFactor * (first ? 1 : -1);
+        int sign = first ? 1 : -1;
         if (queueP1 + queueFree == K)
-          return sign * (seriesValue(queueFree) + (queueP1 * queueP1));
+          return sign * (seriesValue(queueFree) + (queueP1 * queueP1) + freeFactor);
         else
-          return -sign * (seriesValue(queueFree) + (queueP2 * queueP2));
+          return -sign * (seriesValue(queueFree) + (queueP2 * queueP2) + freeFactor);
       } else return 0;
-    }
-
-    private void queueClear() {
-      queueP1 = queueP2 = queueFree = 0;
     }
 
     private int eval(int i, int j) {
       int value = 0;
 
       // column
-      queueClear();
+      queueP1 = queueP2 = queueFree = 0;
       // for (int ii = Math.max(i - K, 0); ii <= Math.min(i + K, M - 1); ii++)
       for (int ii = 0; ii < M; ii++) value += pushCell(ii, j, 1, 0);
 
       // row
-      queueClear();
+      queueP1 = queueP2 = queueFree = 0;
       for (int jj = 0; jj < N; jj++) value += pushCell(i, jj, 0, 1);
 
       // diagonal
@@ -193,7 +189,7 @@ public class LittleBoy implements MNKPlayer {
           jj = j - ku,
           iim = i + kl,
           jjm = j + kl;
-      queueClear();
+      queueP1 = queueP2 = queueFree = 0;
       for (; ii < iim && jj < jjm; ii++, jj++) value += pushCell(ii, jj, 1, 1);
 
       // counter diagonal
@@ -201,6 +197,7 @@ public class LittleBoy implements MNKPlayer {
       jj = j + ku;
       iim = i + kl;
       jjm = j - kl;
+      queueP1 = queueP2 = queueFree = 0;
       for (; ii < iim && jj < jjm; ii++, jj--) value += pushCell(ii, jj, 1, -1);
 
       return value;

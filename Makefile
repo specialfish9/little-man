@@ -14,7 +14,7 @@ K:=4
 REPS:=10
 TIME:=2
 BEST:=LittleBoy
-OLD:=LM
+OLD:=LittleMan
 
 .SUFFIXES: .java .class
 .PHONY: build
