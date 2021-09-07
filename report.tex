@@ -3,22 +3,16 @@
 \usepackage[italian]{babel}
 \usepackage[T1]{fontenc}
 \usepackage[italian]{varioref}
+\usepackage{datetime}
 \selectlanguage{italian}
-% TODO: vlined?
-\usepackage[ruled,vlined,italiano]{algorithm2e}
+\usepackage[Algoritmo]{algorithm}
+\usepackage{algpseudocode}
 
-\DontPrintSemicolon
-\SetKw{KwNot}{not}
-\SetKw{KwOr}{or}
-\SetKw{KwAnd}{and}
-\SetKw{Break}{break}
-\SetKw{KwBack}{back to}
-\SetKw{KwFn}{fn}
-\SetKw{KwTree}{Tree}
-\SetKw{KwQueue}{Queue}
-\SetKw{KwBFS}{BFS}
 \hfuzz=100.0pt  % ignore paragraph lengths warnings
 
+\usepackage[square,sort,comma,numbers]{natbib}
+
+\newdate{date}{06}{09}{2021}
 \title{Little Man\\
 \large Relazione del progetto per l'insegnamento di Algoritmi e Strutture di Dati}
 \author{
@@ -27,7 +21,7 @@
 }
 \date{
 	Universit\`a di Bologna \\
-  \today
+  \displaydate{date}
 }
 
 \begin{document}
@@ -40,32 +34,34 @@ Lo scopo del progetto \`e quello di implementare un algoritmo efficiente e ottim
 volto alla ricerca delle mosse migliori in un gioco $(m,n,k)$, dove si devono
 allineare $k$ simboli in una griglia $m \times n$.
 
-Si fa uso di una variante dell'algoritmo MiniMax con potatura
-AlphaBeta denominata \emph{Principal Variation Search}~\cite{negascout}. Questa
-prevede  una ricerca limitata in profondit\`a analoga a MiniMax, espandendo 
+Si fa uso di una variante dell'algoritmo \textsc{MiniMax} con potatura
+\textsc{AlphaBeta} denominata \textsc{PrincipalVariationSearch}~\cite{negascout}. Questa
+prevede  una ricerca limitata in profondit\`a analoga a \textsc{AlphaBeta}, espandendo 
 interamente i nodi pi\`u promettenti e parzialmente quelli restanti. Applicando
-un \emph{Iterative Deepening}~\cite{id} si possono ordinare i sottoalberi
+una \textsc{IterativeDeepeningSearch}~\cite{id} si possono ordinare i sottoalberi
 basandosi sui valori euristici delle ricerche precedenti e si pu\`o raggiungere
 la profondit\`a massima nei limiti imposti.
 
 Diverse combinazioni di mosse possono portare a stati gi\`a analizzati
-precedentemente, i quali vengono mantenuti dentro una cache per evitare di
-valutarli pi\`u volte. Il valore degli stati di gioco non finali viene stimato
-da una componente euristica che tiene in considerazione il numero di serie di
-ogni giocatore e la relativa lunghezza.
+precedentemente, i quali vengono mantenuti dentro una tabella delle trasposizioni
+per evitare di valutarli pi\`u volte. Il valore degli stati di gioco non finali
+viene stimato da una componente euristica che tiene in considerazione il numero
+di serie di ogni giocatore, la relativa lunghezza e favorisce quelle di lunghezza
+$k-1$, $k-2$, $k-3$.
 
-\subsection*{Select Cell e Iterative Deepening}
+\subsection*{Iterative Deepening}
 
-Dopo aver aggiornato la copia locale della griglia di gioco si cerca la cella
-% TODO
-migliore da giocare sfruttando Iterative Deepening. Si procede applicando
-MiniMax con profondit\`a sempre maggiore e si restituisce il risultato pi\`u
-recente allo scadere del tempo. Questo non peggiora la complessit\`a in quanto
-il solo costo asintotico di MiniMax alla massima profondit\`a assorbe quello
-di tutte le ricerche precedenti. Si ha un aumento delle operazioni totali svolte
-dal calcolatore, che vinene mitigato dall'utilizzo della Principal Variation Search.
+La ricerca della mossa migliore viene gestita da un algoritmo di
+\textsc{IterativeDeepeningSearch}~\cite{id}, il quale procede applicando MiniMax
+con profondit\`a sempre maggiore e restituisce il risultato pi\`u recente allo
+scadere del tempo. Questo non peggiora la complessit\`a asintotica in quanto il
+solo costo della ricerca alla massima profondit\`a assorbe quello di tutte
+le chiamate precedenti. Si ha tuttavia un aumento delle operazioni totali svolte
+dal calcolatore, che vinene mitigato dall'utilizzo della
+\textsc{PrincipalVariationSearch} e dalle potature che seguono combinando queste
+due tecniche.
 
-\subsection*{Cache}
+\subsection*{Tabella delle trasposizioni}
 
 La cache fa uso della struttura dati HashMap fornita da Java generando le chiavi 
 in modo incrementale tramite la tecnica di \emph{Zobrist}~\cite{zobrist}. A ogni
@@ -79,35 +75,34 @@ Poich\`e una board $(m,n)$ pu\`o al pi\`u assumere $3^{mn}$ stati differenti e
 un \verb!long! pu\`o contenere al pi\`u $2^{64} \approx 1.8 \cdot 10^{19}$ valori distinti,
 esistono configurazioni che creano collisioni: ad esempio un gioco $(8, 8, 4)$
 pu\`o avere fino a $3^{64} \approx 2.3 \cdot 10^{30}$ stati. Per limitare questo
-fenomeno si confrontano il numero di mosse e l'ultimo simbolo giocato.
+fenomeno si verifica che il numero di mosse e l'ultimo simbolo giocato combacino.
 
-Inoltre per limitare le collisioni interne alla HashMap di Java (non dovute alle
-limitazioni di Zobrist), dopo aver scelto la cella da giocare, la cache viene
-privata delle \emph{griglie inaccessibili}. Una griglia viene definita
-inacessibile quando ha un numero di celle marcate inferiore a quello del tavolo
-di gioco attuale $+ 1$.
+Per evitare ulteriori collisioni interne alla HashMap di Java, alla fine di
+ogni turno, la tabella delle trasposizioni viene privata delle griglie \emph{
+inaccessibili}. Una griglia viene definita inacessibile quando ha un numero di
+celle marcate inferiore a quello del tavolo di gioco attuale incrementato di $1$.
 
 \subsection*{Principal Variation Search}
 
 L'algoritmo visita in modo ordinato i figli di ogni stato di gioco, applicando
-limiti Alpha Beta differenti ad ognuno di essi ai fini di aumentare il pruning.
-Si analizza in modo approfondito il nodo pi\`u promettente, denominato Principal
-Variation, per poi visitare i restanti nodi con una ricerca a finestra \emph{nulla}~\cite{scout}
-(dove i valori $\alpha$-$\beta$ differiscono di $1$). Se essa eccede i limiti
-% TODO
-imposti si ritenta con la procedura classica.
+limiti $\alpha$-$\beta$ differenti ad ognuno di essi ai fini di aumentare le potature.
+Si analizza in modo approfondito il nodo pi\`u promettente, denominato \emph{Principal
+Variation}, per poi visitare i restanti nodi con una ricerca a finestra \emph{nulla}~\cite{scout}
+(dove i limiti differiscono di $1$). Se essa restituisce un valore compreso
+negli $\alpha$-$\beta$ originali potrebbe essere d'interesse e dunque viene
+svolta una ricerca classica.
 % TODO IN REALTA' E' EURISTICA QUESTA E FAREBBE BENE METTERLA SOTTO
-Nel caso in cui esista una serie $k-1$ per un qualunque giocatore si provvede a
-riempire la cella mancante, risparmiando ulteriori risorse (viene data la precedenza
-alle serie appartenenti al giocatore che deve svolgere la mossa).
 
-\subsection*{Componente Euristica}
+Nel caso in cui esista una serie $k-1$ per un qualunque giocatore si provvede a
+riempire la cella mancante, evitando la ricerca di forza bruta. Viene data la
+precedenza alle serie appartenenti al giocatore che deve svolgere la mossa.
+
+\subsection*{Valutazione euristica}
 
 La griglia di gioco mantiene al suo interno una valutazione euristica che viene
-aggiornata progressivamente con l'avanzare della partita (Algoritmo \vref{eval}). Quando una cella viene
-% TODO
-marcata si valuta la variazione del valore euristico osservando le righe,
-colonne e diaginali che passano per essa. Vengono favorite le serie initerrotte
+aggiornata progressivamente con l'avanzare della partita (Algoritmo \vref{alg:eval}).
+Quando una cella viene marcata si valuta la variazione del valore euristico osservando
+le righe, colonne e diaginali che passano per essa. Vengono favorite le serie initerrotte
 di $k-1, k-2$ o $k-3$ elementi, dando un peso inferiore a segmenti pi\`u corti.
 La quotazione di un tavolo di gioco \`e il risultato della differenza tra i
 valori delle serie dei due giocatori. Oltretutto vengono favorite griglie che
@@ -115,70 +110,60 @@ assumono valori promettenti con il minor numero di mosse, dividendo ogni
 valutazione per la profondit\`a dello stato di gioco.
 
 Questo approccio ricorda quello scelto da Chuan per il gioco di Go~\cite{chuan},
-tuttavia si \`e preferito favorire anche serie di lunghezza inferiore ai fin di
-stimare una pi\`u accurata \emph{Principal Variation}, sopratutto durante le inziali.
+tuttavia si \`e preferito favorire anche serie di lunghezza inferiore ai fini di
+stimare una pi\`u accurata \emph{Principal Variation}, sopratutto durante le
+mosse iniziali.
 
-\begin{algorithm}[H]
-  \label{eval}
+\begin{algorithm}
   \caption{Valutazione eurstica procedurale}
-
-  \SetKwFunction{eval}{eval}
-  \SetKwFunction{cv}{cell\_value}
-  \SetKwFunction{lsc}{long\_series\_constant}
-  \SetKwProg{proc}{begin}{ $\rightarrow$ \KwSty{int}}{end}
-
-  $n_{free}, n_1, n_2 \gets 0$\;
-  \;
-  \proc{\eval{\KwSty{int} i, \KwSty{int} j}}{
-    \KwSty{int} $value \gets 0$\;
-    \For{$(ii, jj) \in$ row $i$}{
-      $value \gets value + \cv{ii, jj, 0, 1}$\;
-    }
-    \For{$(ii, jj) \in$ column $i$}{
-      $value \gets value + \cv{ii, jj, 1, 0}$\;
-    }
-    \For{$(ii, jj) \in$ diagonal at $(i, j)$}{
-      $value \gets value + \cv{ii, jj, 1, 1}$\;
-    }
-    \For{$(ii, jj) \in$ anti-diagonal at $(i, j)$}{
-      $value \gets value + \cv{ii, jj, 1, -1}$\;
-    }
-    \Return $value$\;
-  } \; \proc{\cv{\KwSty{int} i, \KwSty{int} j, \KwSty{int} $\delta_i$, \KwSty{int} $\delta_j$}}{
-    \If{$n_{free} + n_1 + n_2 = k$}{
-      \tcc{Stato della prima cella nella serie. Viene decrementato per fare spazio alla nuova}
-      \KwSty{cell} $s \gets B[i - \delta_i \cdot k][j - \delta_j \cdot k]$\;
-      \uIf{$s = free$}{
-        $n_{free} \gets n_{free} - 1$\;
-      }
-      \uElseIf{$s = player_1$}{
-        $n_1 \gets n_1 - 1$\;
-      }
-      \Else{
-        $n_2 \gets n_2 - 1$\;
-      }
-    }
-    \tcc{Si incrementa il contatore per la cella che si considera attualmente}
-    \uIf{$B[i][j] = free$}{
-      $n_{free} \gets n_{free} + 1$\;
-    }
-    \uElseIf{$B[i][j] = player_1$}{
-      $n_1 \gets n_1 + 1$\;
-    }
-    \Else{
-      $n_2 \gets n_2 - 1$\;
-    }
-    \tcc{Si restituisce la valutazione della serie}
-    \uIf{$n_1 + p_{free} = k$}{
-      \Return $color \cdot (\lsc{$n_{free}$} + n_1^2)$\;
-    }
-    \uElseIf{$n_2 + p_{free} = k$}{
-      \Return $-color \cdot (\lsc{$n_{free}$} + n_2^2)$\;
-    }
-    \Else{
-      \Return $0$\;
-    }
-  }
+  \label{alg:eval}
+  \begin{algorithmic}[0]
+    \Procedure {Eval}{$i$, $j$}
+      \State $value \gets 0$
+      \For{$(ii, jj) \in$ row $i$}
+        \State $value \gets value + \Call{CellValue}{ii, jj, 0, 1}$
+      \EndFor
+      \For{$(ii, jj) \in$ column $i$}
+        \State $value \gets value + \Call{CellValue}{ii, jj, 1, 0}$
+      \EndFor
+      \For{$(ii, jj) \in$ diagonal at $(i, j)$}
+        \State $value \gets value + \Call{CellValue}{ii, jj, 1, 1}$
+      \EndFor
+      \For{$(ii, jj) \in$ anti-diagonal at $(i, j)$}
+        \State $value \gets value + \Call{CellValue}{ii, jj, 1, -1}$
+      \EndFor
+      \State \Return $value$
+    \EndProcedure
+    \Statex
+    \Procedure {CellValue}{$i$, $j$, $\delta_i$, $\delta_j$}
+      \If{$n_{free} + n_1 + n_2 \geq k$} \Comment{Se la serie \`e troppo lunga}
+        \State $s \gets B[i - \delta_i \cdot k][j - \delta_j \cdot k]$ \Comment{Stato della prima cella nella serie}
+        \If{$s = free$}
+          \State $n_{free} \gets n_{free} - 1$
+        \ElsIf{$s = player_1$}
+          \State $n_1 \gets n_1 - 1$
+        \Else
+          \State $n_2 \gets n_2 - 1$
+        \EndIf
+      \EndIf
+      \If{$B[i][j] = free$}
+        \State $n_{free} \gets n_{free} + 1$
+      \ElsIf{$B[i][j] = player_1$}
+        \State $n_1 \gets n_1 + 1$
+      \Else \Comment{La cella appartiene al giocatore $2$}
+        \State $n_2 \gets n_2 - 1$
+      \EndIf
+      \Statex
+      \If{$n_1 + p_{free} = k$}
+        \Comment{Si restituisce la valutazione della serie}
+        \State \Return $color \cdot (\Call{LargeSeriesConstant}{n_{free}} + n_1^2)$
+      \ElsIf{$n_2 + p_{free} = k$}
+        \State \Return $-color \cdot (\Call{LargeSeriesConstant}{n_{free}} + n_2^2)$
+      \Else
+        \State \Return $0$
+      \EndIf
+    \EndProcedure
+  \end{algorithmic}
 \end{algorithm}
 
 \subsection*{Altre euristiche considerate}
@@ -189,49 +174,91 @@ miglioramento apprezzabile allo stile di gioco dell'algoritmo.
 
 \subsubsection*{Valutazione euristica degli spazi vuoti}
 
-Nel gioco generalizzato del $(m, n, k)$, specialmente per valori di $k \leq \max\{m-2,n-2\}$,
+Nel gioco generalizzato del $(m, n, k)$, specialmente per valori di $k < \max\{m,n\}$,
 una sequenza con celle libere ai lati pu\`o rivelarsi pi\`u vantaggiosa di una
 limitata: quando la sequenza \`e del tipo $k-1$ ed ha entrambi i lati liberi
 essa garantisce la vittoria al giocatore. Si pu\`o dunque estendere l'Algoritmo
-\vref{eval} affinch\`e sommi un bonus se la serie sotto analisi contiene celle
+\vref{alg:eval} affinch\`e sommi un bonus se la serie sotto analisi contiene celle
 libere attorno a se. Ecco una possibile implementazione che si pu\`o trovare
-anche nel codice sorgente commentata:
+commentata anche nel codice sorgente:
 
-\begin{algorithm}[H]
-  \label{eval+free}
+\begin{algorithm}
   \caption{Valutazione delle serie favorendo spazi liberi adiacenti}
+  \label{alg:eval_free}
+  \begin{algorithmic}[0]
+    \Procedure {CellValue}{$i$, $j$, $\delta_i$, $\delta_j$}
+    \Comment{La logica rimane invariata fino alla valutazione della serie attuale}
+    \State $bonus \gets 0$
+    \If{$B[i + \delta_i][j + \delta_j] = free$}
+      \State $bonus \gets bonus + \textsc{BonusConstant}$
+    \EndIf
+    \If{$B[i - \delta_i \cdot (k+1)][j - \delta_j \cdot (k+1)] = free$}
+      \State $bonus \gets bonus + \textsc{BonusConstant}$
+    \EndIf
+    \Statex
+    \If{$n_1 + p_{free} = k$}
+      \State \Return $color \cdot (\Call{LargeSeriesConstant}{n_{free}} + n_1^2 + bonus)$
+    \ElsIf{$n_2 + p_{free} = k$}
+    \State \Return $-color \cdot (\Call{LargeSeriesConstant}{n_{free}} + n_2^2 + bonus)$
+    \Else
+      \State \Return $0$
+    \EndIf
+    \EndProcedure
+  \end{algorithmic}
+\end{algorithm}
 
-  \SetKwFunction{cv}{cell\_value}
-  \SetKwFunction{lsc}{long\_series\_constant}
-  \SetKwProg{proc}{begin}{ $\rightarrow$ \KwSty{int}}{end}
+Va notato nell'Algoritmo~\ref{alg:eval_free} il controllo della validit\`a delle
+posizioni $(i + \delta_i, j + \delta_j)$ e $(i - \delta_i \cdot (k+1), j - \delta_j \cdot (k+1))$
+\`e stato omesso per brevit\`a e chiarezza del codice.
 
-  \proc{\cv{\KwSty{int} i, \KwSty{int} j, \KwSty{int} $\delta_i$, \KwSty{int} $\delta_j$}}{
-    $\ldots$\;
-    \tcc{La logica rimane invarata fino alla valutazione della serie attuale}
-    \KwSty{int} $bonus \gets 0$\;
-    \If{$B[i + \delta_i][j + \delta_j] = free$}{
-      $bonus \gets bonus\_constant$\;
-    }
-    \If{$B[i - \delta_i \cdot (k+1)][j - \delta_j \cdot (k+1)] = free$}{
-      $bonus \gets bonus + bonus\_constant$\;
-    }
-    \;
-    \uIf{$n_1 + p_{free} = k$}{
-      \Return $color \cdot (\lsc{$n_{free}$} + n_1^2 + bonus)$\;
-    }
-    \uElseIf{$n_2 + p_{free} = k$}{
-      \Return $-color \cdot (\lsc{$n_{free}$} + n_2^2 + bonus)$\;
-    }
-    \Else{
-      \Return $0$\;
-    }
-  }
+\subsubsection*{Ricerca quiescente}
+
+Un problema ben noto negli algoritmi di ricerca a profondit\`a limitata \`e
+quello dell'\emph{effetto orizzonte}, causato dall'impossibilt\`a della procedura
+di visitare l'albero oltre un certo margine. Ci\`o porta spesso alla scelta di
+mosse che si rivelano catastrofiche in pochi turni di gioco. Una soluzione al
+problema chiamata \emph{ricerca quiescente} \cite{quiescence} fu per la prima
+volta proposta  da \citeauthor{quiescence} nel \citeyear{quiescence}.
+
+L'idea \`e quella di esplorare ulteriormente gli stati che appaiono "calmi", o
+appunto "quiescenti", poich\`e sono quelli pi\`u proni a degenerare in sconfitte.
+Si pu\`o dunque modificare la funzione di valutazione in modo da applicare una
+\textsc{QuiescensceSearch} come mostrato di seguito:
+
+\begin{algorithm}
+  \caption{Ricerca quiescente con struttura \textsc{NegaMax}}
+  \label{qs}
+  \begin{algorithmic}[0]
+    \Procedure{Evalaute}{$board$, $raw$}
+      \State $eval \gets $ valutazione euristica
+      \If{$raw$ \textbf{or} $|eval| > \textsc{QuiescenceThreshold}$}
+        \State \Return $eval$
+      \Else
+        \State $color \gets 1$
+        \If{next moving player of the $board$ is $enemy$}
+          \State $color \gets -1$
+        \EndIf
+        \State \Return \Call{QuiescenceSearch}{$board$, $color$, \textsc{QuiescenceDepth}}
+      \EndIf
+    \EndProcedure
+    \Statex
+    \Procedure{QuiescenceSearch}{$node$, $color$, $depth$}
+    \If{$depth = 0$ \textbf{or} node is leaf}
+      \State \Return \Call{Evaluate}{$node$, $true$}
+    \EndIf
+    \State $best \gets -\infty$
+    \For{$child$ of $node$}
+      \State $best \gets \max\{best, \Call{QuiescenceSearch}{child, -color, depth-1}\}$
+    \EndFor
+    \State \Return $-best$
+    \EndProcedure
+  \end{algorithmic}
 \end{algorithm}
 
 % TODO: parlare di pattern move, non fatto ma simile a favorire le k... .
 
 \pagebreak
-\bibliographystyle{ieeetr}
 \bibliography{report}
+\bibliographystyle{IEEEtranN}
 
 \end{document}
