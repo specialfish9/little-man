@@ -207,7 +207,7 @@ commentata anche nel codice sorgente:
   \end{algorithmic}
 \end{algorithm}
 
-Va notato nell'Algoritmo~\ref{alg:eval_free} il controllo della validit\`a delle
+Va ricordato che nell'Algoritmo~\ref{alg:eval_free} il controllo della validit\`a delle
 posizioni $(i + \delta_i, j + \delta_j)$ e $(i - \delta_i \cdot (k+1), j - \delta_j \cdot (k+1))$
 \`e stato omesso per brevit\`a e chiarezza del codice.
 
@@ -254,6 +254,22 @@ Si pu\`o dunque modificare la funzione di valutazione in modo da applicare una
     \EndProcedure
   \end{algorithmic}
 \end{algorithm}
+
+In questo modo un ristretto gruppo di nodi selezionati (coloro che hanno valore
+euristico inferiore a \textsc{QuiescenceThreshold}) vengono visitati a maggiore
+profondit\`a nella speranza di stabilizzare la loro valutazione.
+
+Nella pratica questa modifica non ha portato a significativi miglioramenti,
+ma ha caratterizzato l'AI con uno stile di gioco pi\`u difensivo, che ne ha
+peggiorato le prestazioni contro giocatori poco astuti o casuali.
+Si pu\`o imputare questo fallimento a due fattori:
+\begin{enumerate}
+  \item La scarsa precisione della valutazione euristica.
+  \item Le propriet\`a dei giochi $(m,n,k)$ per cui qualunque mossa di un
+    giocatore migliora il proprio punteggio: in questo modo i valori delle
+    valutazioni oscillano e non convergono mai ad una stima appropriata, in
+    particolar modo a basse profondit\`a.
+\end{enumerate}
 
 % TODO: parlare di pattern move, non fatto ma simile a favorire le k... .
 
