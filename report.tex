@@ -133,10 +133,10 @@ l'accuratezza della \emph{Principal Variation}, in particolare durante le mosse 
   \begin{algorithmic}[0]
     \Procedure {Eval}{$i$, $j$}
       \State $value \gets 0$
-      \For{$(ii, jj) \in \Call{Row}{i}$}
+      \For{$(ii, jj) \in \Call{Row}{j}$}
         \State $value \gets value + \Call{CellValue}{ii, jj, 0, 1}$
       \EndFor
-      \For{$(ii, jj) \in \Call{Column}{j}$}
+      \For{$(ii, jj) \in \Call{Column}{i}$}
         \State $value \gets value + \Call{CellValue}{ii, jj, 1, 0}$
       \EndFor
       \For{$(ii, jj) \in \Call{Diagonal}{i, j}$}
