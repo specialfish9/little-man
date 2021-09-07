@@ -14,7 +14,8 @@
 
 \newdate{date}{06}{09}{2021}
 \title{\textsc{LittleMan}\\
-\large Relazione del progetto per l'insegnamento di Algoritmi e Strutture di Dati}
+%\large Relazione del progetto per l'insegnamento di Algoritmi e Strutture di Dati}
+\large Relazione del progetto per il corso di Algoritmi e Strutture di Dati}
 \author{
   Mattia Girolimetto (0000977478),
   Luca Tagliavini (0000971133)
@@ -36,60 +37,68 @@ allineare $k$ simboli in una griglia $m \times n$.
 
 Si fa uso di una variante dell'algoritmo \textsc{MiniMax} con potatura
 \textsc{AlphaBeta} denominata \textsc{PrincipalVariationSearch}~\cite{negascout}. Questa
-prevede  una ricerca limitata in profondit\`a analoga a \textsc{AlphaBeta}, espandendo 
+consiste in una ricerca limitata in profondit\`a analoga ad \textsc{AlphaBeta}, espandendo 
 interamente i nodi pi\`u promettenti e parzialmente quelli restanti. Applicando
-una \textsc{IterativeDeepeningSearch}~\cite{id} si possono ordinare i sottoalberi
+un' \textsc{IterativeDeepeningSearch}~\cite{id} si possono ordinare i sottoalberi
 basandosi sui valori euristici delle ricerche precedenti e si pu\`o raggiungere
 la profondit\`a massima nei limiti imposti.
 
-Diverse combinazioni di mosse possono portare a stati gi\`a analizzati
-precedentemente, i quali vengono mantenuti dentro una tabella delle trasposizioni
-per evitare di valutarli pi\`u volte. Il valore degli stati di gioco non finali
+Comuputando l'albero si nota facilmente che diverse combinazioni di
+mosse possono portare alla stessa situazione di gioco.
+Per evitare di analizzarli pi\`u volte, gli stati di gioco vengono quindi mantenuti 
+dentro una \emph{tabella delle trasposizioni}. Il valore di quelli non finali
+%Diverse combinazioni di mosse possono portare a stati gi\`a analizzati
+%precedentemente, i quali vengono mantenuti dentro una tabella delle trasposizioni
+%per evitare di valutarli pi\`u volte. Il valore degli stati di gioco non finali
 viene stimato da una componente euristica che tiene in considerazione il numero
-di serie di ogni giocatore, la relativa lunghezza e favorisce quelle di lunghezza
-$k-1$, $k-2$, $k-3$.
+%di serie di ogni giocatore, la relativa lunghezza e favorisce quelle di lunghezza
+di serie di ogni giocatore e la relativa lunghezza favorendo quelle di lunghezza
+$k-1$, $k-2$ e $k-3$.
 
 \subsection*{Iterative Deepening}
 
 La ricerca della mossa migliore viene gestita da un algoritmo di
-\textsc{IterativeDeepeningSearch}~\cite{id}, il quale procede applicando MiniMax
-con profondit\`a sempre maggiore e restituisce il risultato pi\`u recente allo
+\textsc{IterativeDeepeningSearch}~\cite{id}, il quale procede applicando MiniMax % non pvs?
+%con profondit\`a sempre maggiore e restituisce il risultato pi\`u recente allo
+con profondit\`a sempre maggiore e restituisce l'ultimo risultato trovato prima dello
 scadere del tempo. Questo non peggiora la complessit\`a asintotica in quanto il
 solo costo della ricerca alla massima profondit\`a assorbe quello di tutte
 le chiamate precedenti. Si ha tuttavia un aumento delle operazioni totali svolte
-dal calcolatore, che vinene mitigato dall'utilizzo della
-\textsc{PrincipalVariationSearch} e dalle potature che derivano dall'ordinamento
-dei nodi ottenuto grazie a questa tecnica.
+dal calcolatore, mitigato per\`o dall'utilizzo della \textsc{PrincipalVariationSearch} 
+e dalle potature derivate dall'ordinamento dei nodi ottenuto grazie a questa tecnica.
 
 \subsection*{Tabella delle trasposizioni}
 
 La cache fa uso della struttura dati HashMap fornita da Java generando le chiavi 
-in modo incrementale tramite la tecnica di \emph{Zobrist}~\cite{zobrist}. A ogni
-chiave sono associate le seguenti informazioni:
+in modo incrementale tramite la tecnica di \emph{Zobrist}~\cite{zobrist}. 
+%Ad ogni chiave sono associate le seguenti informazioni:
+Ad ogniuna di esse sono associate le seguenti informazioni:
 \begin{enumerate}
   \item Numero di celle marcate e ultimo simbolo giocato
   \item Profondit\`a della ricerca
   \item Tipo e valore della griglia
 \end{enumerate}
 Poich\`e una board $(m,n)$ pu\`o al pi\`u assumere $3^{mn}$ stati differenti e
-un \verb!long! pu\`o contenere al pi\`u $2^{64} \approx 1.8 \cdot 10^{19}$ valori distinti,
+un \verb!long! in Java pu\`o contenere al pi\`u $2^{64} \approx 1.8 \cdot 10^{19}$ valori distinti,
 esistono configurazioni che creano collisioni: ad esempio un gioco $(8, 8, 4)$
 pu\`o avere fino a $3^{64} \approx 2.3 \cdot 10^{30}$ stati. Per limitare questo
-fenomeno si verifica che il numero di mosse e l'ultimo simbolo giocato combacino.
+fenomeno si verifica che il numero di mosse e l'ultimo simbolo giocato combacino. % come si fa a confrontare un numero con un simbolo?
 
-Per evitare ulteriori collisioni interne alla HashMap di Java, alla fine di
-ogni turno, la tabella delle trasposizioni viene privata delle griglie \emph{
-inaccessibili}. Una griglia viene definita inacessibile quando ha un numero di
+Per evitare ulteriori collisioni interne alla HashMap, alla fine di
+% ogni turno, la tabella delle trasposizioni viene privata delle griglie \emph{
+ogni turno, vengono rimosse dalla tabella delle trasposizioni tutte le griglie \emph{
+inaccessibili}. Una griglia viene definita inaccessibile quando ha un numero di
 celle marcate inferiore a quello del tavolo di gioco attuale incrementato di $1$.
 
 \subsection*{Principal Variation Search}
 
-L'algoritmo visita in modo ordinato i figli di ogni stato di gioco, applicando
-limiti $\alpha$-$\beta$ differenti ad ognuno di essi ai fini di aumentare le potature.
+L'algoritmo visita in modo ordinato i figli di ogni stato di gioco applicando
+limiti $\alpha$-$\beta$ differenti ad ognuno di essi al fine di aumentare il numero di potature.
 Si analizza in modo approfondito il nodo pi\`u promettente, denominato \emph{Principal
 Variation}, per poi visitare i restanti nodi con una ricerca a finestra \emph{nulla}~\cite{scout}
-(dove i limiti differiscono di $1$). Se essa restituisce un valore compreso
-negli $\alpha$-$\beta$ originali potrebbe essere d'interesse e dunque viene
+(dove i due limiti differiscono di $1$). Se questa restituisce un valore compreso
+tra gli $\alpha$ e $\beta$ originali potrebbe essere d'interesse dunque viene
+% negli $\alpha$-$\beta$ originali potrebbe essere d'interesse e dunque viene
 svolta una ricerca classica.
 % TODO IN REALTA' E' EURISTICA QUESTA E FAREBBE BENE METTERLA SOTTO
 
@@ -99,20 +108,24 @@ precedenza alle serie appartenenti al giocatore che deve svolgere la mossa.
 
 \subsection*{Valutazione euristica}
 
-La griglia di gioco mantiene al suo interno una valutazione euristica che viene
+La griglia di gioco mantiene al suo interno una valutazione euristica 
 aggiornata progressivamente con l'avanzare della partita (Algoritmo \vref{alg:eval}).
 Quando una cella viene marcata si valuta la variazione del valore euristico osservando
-le righe, colonne e diaginali che passano per essa. Vengono favorite le serie initerrotte
+le righe, colonne e diagonali passanti per essa. Vengono favorite le serie consecutive 
 di $k-1, k-2$ o $k-3$ elementi, dando un peso inferiore a segmenti pi\`u corti.
 La quotazione di un tavolo di gioco \`e il risultato della differenza tra i
-valori delle serie dei due giocatori. Oltretutto vengono favorite griglie che
-assumono valori promettenti con il minor numero di mosse, dividendo ogni
-valutazione per la profondit\`a dello stato di gioco.
+%valori delle serie dei due giocatori. Oltretutto vengono favorite griglie che
+%assumono valori promettenti con il minor numero di mosse, dividendo ogni
+%valutazione per la profondit\`a dello stato di gioco.
+valori delle serie dei due giocatori. Inoltre, per favorire le griglie che
+assumono valori promettenti con il minor numero di mosse, ogni
+valutazione viene divisa per la profondit\`a dello stato di gioco.
 
-Questo approccio ricorda quello scelto da Chuan per il gioco di Go~\cite{chuan},
-tuttavia si \`e preferito favorire anche serie di lunghezza inferiore ai fini di
-stimare una pi\`u accurata \emph{Principal Variation}, sopratutto durante le
-mosse iniziali.
+Questo approccio ricorda quello scelto da Chuan per il gioco di Go~\cite{chuan}, % Chuan è il nome completo?
+% tuttavia si \`e preferito favorire anche serie di lunghezza inferiore ai fini di
+% stimare una pi\`u accurata \emph{Principal Variation}, sopratutto durante le  - Soprattutto va con 4 't'!
+tuttavia si \`e preferito favorire anche serie di lunghezza inferiore per migliorare 
+l'accuratezza della \emph{Principal Variation}, soprattutto durante le mosse iniziali.
 
 \begin{algorithm}[H]
   \caption{Valutazione eurstica procedurale}
@@ -156,7 +169,8 @@ mosse iniziali.
 
 \subsection*{Altre euristiche considerate}
 
-In questa sezione saranno presentati approcci che sono stati considerati,
+% In questa sezione saranno presentati approcci che sono stati considerati,
+In questa sezione sono presentati approcci che sono stati considerati e
 implementati, ma in definitiva scartati in quanto non hanno offerto un
 miglioramento apprezzabile allo stile di gioco dell'algoritmo.
 
@@ -164,10 +178,14 @@ miglioramento apprezzabile allo stile di gioco dell'algoritmo.
 
 Nel gioco generalizzato del $(m, n, k)$, specialmente per valori di $k < \max\{m,n\}$,
 una sequenza con celle libere ai lati pu\`o rivelarsi pi\`u vantaggiosa di una
-limitata: quando la sequenza \`e del tipo $k-1$ ed ha entrambi i lati liberi
-essa garantisce la vittoria al giocatore. Si pu\`o dunque estendere l'Algoritmo
-\vref{alg:eval} affinch\`e sommi un bonus se la serie sotto analisi contiene celle
-libere attorno a se. Ecco una possibile implementazione che si pu\`o trovare
+% limitata: quando la sequenza \`e del tipo $k-1$ ed ha entrambi i lati liberi
+% essa garantisce la vittoria al giocatore. Si pu\`o dunque estendere l'Algoritmo
+limitata. Ad esempio quando una sequenza \`e del tipo $k-1$ ed ha entrambi i lati liberi
+garantisce la vittoria al giocatore. Si pu\`o dunque estendere l'Algoritmo
+%\vref{alg:eval} affinch\`e sommi un bonus se la serie sotto analisi contiene celle
+% libere attorno a se. Ecco una possibile implementazione che si pu\`o trovare
+\vref{alg:eval} affinch\`e sommi un bonus al valore di questo tipo di serie. 
+Ecco una possibile implementazione che si pu\`o trovare
 commentata anche nel codice sorgente:
 
 \begin{algorithm}[H]
@@ -202,13 +220,18 @@ posizioni $(i + \delta_i, j + \delta_j)$ e $(i - \delta_i \cdot (k+1), j - \delt
 \subsubsection*{Ricerca quiescente}
 
 Un problema ben noto negli algoritmi di ricerca a profondit\`a limitata \`e
-quello dell'\emph{effetto orizzonte}, causato dall'impossibilt\`a della procedura
-di visitare l'albero oltre un certo margine. Ci\`o porta spesso alla scelta di
-mosse che si rivelano catastrofiche in pochi turni di gioco. Una soluzione al
-problema chiamata \emph{ricerca quiescente} \cite{quiescence} fu per la prima
-volta proposta  da \citeauthor{quiescence} nel \citeyear{quiescence}.
+%quello dell'\emph{effetto orizzonte}, causato dall'impossibilt\`a della procedura
+%di visitare l'albero oltre un certo margine. Ci\`o porta spesso alla scelta di   
+quello dell'\emph{effetto orizzonte}, causato dall'impossibilt\`a 
+di visitare l'albero di gioco oltre un certo livello. Ci\`o porta spesso l'algoritmo a scegliere 
+mosse che si rivelano catastrofiche in pochi turni di gioco. 
+%Una soluzione al problema chiamata \emph{ricerca quiescente} \cite{quiescence} fu per la prima
+%volta proposta  da \citeauthor{quiescence} nel \citeyear{quiescence}.
+\citeauthor{quiescence} nel \citeyear{quiescence} per primo propose una soluzione 
+al problema: la \emph{ricerca quiescente}. % oppure: al problema chiamata \emph{...} 
 
-L'idea \`e quella di esplorare ulteriormente gli stati che appaiono "calmi", o
+
+L'idea \`e quella di esplorare ulteriormente gli stati che appaiono "calmi", o  % spiegare come capisco se un nodo è calmo
 appunto "quiescenti", poich\`e sono quelli pi\`u proni a degenerare in sconfitte.
 Si pu\`o dunque modificare la funzione di valutazione in modo da applicare una
 \textsc{QuiescensceSearch} come mostrato di seguito:
@@ -243,12 +266,13 @@ Si pu\`o dunque modificare la funzione di valutazione in modo da applicare una
   \end{algorithmic}
 \end{algorithm}
 
+% spostare e riformulare queste 3 righe sopra allo pseudocodice. Vedi commento sopra
 In questo modo un ristretto gruppo di nodi selezionati (coloro che hanno valore
 euristico inferiore a \textsc{QuiescenceThreshold}) vengono visitati a maggiore
 profondit\`a nella speranza di stabilizzare la loro valutazione.
 
-Nella pratica questa modifica non ha portato a significativi miglioramenti,
-ma ha caratterizzato l'AI con uno stile di gioco pi\`u difensivo, che ne ha
+Nella pratica questa modifica non ha portato a significativi miglioramenti
+ma ha caratterizzato l'AI con uno stile di gioco pi\`u difensivo, il quale ne ha
 peggiorato le prestazioni contro giocatori poco astuti o casuali.
 Si pu\`o imputare questo fallimento a due fattori:
 \begin{enumerate}
@@ -261,22 +285,25 @@ Si pu\`o imputare questo fallimento a due fattori:
 
 \subsection*{Miglioramenti futuri}
 
-Sono note in letteratura una serie di algoritmi e valutazioni euristiche utili
-nel gioco $(m, n, k)$ che potrebbero portare significativi miglioramenti alle
-performance attuali del giocatore. Ecco alcuni dei pi\`u significativi:
+Sono noti in letteratura una serie di algoritmi e valutazioni euristiche utili
+nel gioco $(m, n, k)$ che potrebbero migliorare le prestazioni 
+%nel gioco $(m, n, k)$ che potrebbero portare significativi miglioramenti alle performance
+attuali del giocatore. Ecco un elenco dei pi\`u significativi:
 
 \begin{enumerate}
-  \item Adottare una euristica per la valutazione pi\`u raffinata avrebbe
+  \item Adottare un' euristica per la valutazione pi\`u raffinata. Questa avrebbe 
+  %\item Adottare una euristica per la valutazione pi\`u raffinata avrebbe
     probabilmente il maggiore impatto: una valutazione delle minacce~\cite{heur}
     analoga a quella proposta da \citeauthor{heur} migliorerebbe significativamente
     la precisione sugli stati pi\`u avanzati del gioco. \label{newheur}
-  \item Con una euristica in grado di tenere traccia delle minacce, come quella
-    descritta nel punto \vref{newheur}, potrebbe rivelarsi importante l'apporto
+  \item Adottare un' euristica in grado di tenere traccia delle minacce. Con una come quella
+  %\item Con una euristica in grado di tenere traccia delle minacce, come quella
+    descritta nel punto \vref{newheur}, potrebbe rivelarsi importante l'utilizzo
     della \textsc{QuiescenceSearch}.
   \item \`E stato infine mostrato come altre variazioni di \textsc{AlphaBeta} e
     \textsc{IterativeDeepeningSearch} come MTD(f)~\cite{mtdf} possono portare a
     risultati ancora migliori nel gioco degli scacchi. Riteniamo sia prima
-    necessario compiere il passo \vref{newheur} affinch\`e si riveli efficace nel nostro ambito.
+    necessario compiere il passo \vref{newheur} affinch\`e si riveli efficace anche nel nostro ambito.
 \end{enumerate}
 
 % \pagebreak
