@@ -58,8 +58,8 @@ scadere del tempo. Questo non peggiora la complessit\`a asintotica in quanto il
 solo costo della ricerca alla massima profondit\`a assorbe quello di tutte
 le chiamate precedenti. Si ha tuttavia un aumento delle operazioni totali svolte
 dal calcolatore, che vinene mitigato dall'utilizzo della
-\textsc{PrincipalVariationSearch} e dalle potature che seguono combinando queste
-due tecniche.
+\textsc{PrincipalVariationSearch} e dalle potature che derivano dall'ordinamento
+dei nodi ottenuto grazie a questa tecnica.
 
 \subsection*{Tabella delle trasposizioni}
 
@@ -156,8 +156,8 @@ mosse iniziali.
 
 \subsection*{Altre euristiche considerate}
 
-In questa sezione saranno presentati approcci che sono stati considerati
-e/o implementati, ma in definitiva scartati in quanto non hanno offerto un
+In questa sezione saranno presentati approcci che sono stati considerati,
+implementati, ma in definitiva scartati in quanto non hanno offerto un
 miglioramento apprezzabile allo stile di gioco dell'algoritmo.
 
 \subsubsection*{Valutazione euristica degli spazi vuoti}
@@ -259,9 +259,27 @@ Si pu\`o imputare questo fallimento a due fattori:
     particolar modo a basse profondit\`a.
 \end{enumerate}
 
-% TODO: parlare di pattern move, non fatto ma simile a favorire le k... .
+\subsection*{Miglioramenti futuri}
 
-\pagebreak
+Sono note in letteratura una serie di algoritmi e valutazioni euristiche utili
+nel gioco $(m, n, k)$ che potrebbero portare significativi miglioramenti alle
+performance attuali del giocatore. Ecco alcuni dei pi\`u significativi:
+
+\begin{enumerate}
+  \item Adottare una euristica per la valutazione pi\`u raffinata avrebbe
+    probabilmente il maggiore impatto: una valutazione delle minacce~\cite{heur}
+    analoga a quella proposta da \citeauthor{heur} migliorerebbe significativamente
+    la precisione sugli stati pi\`u avanzati del gioco. \label{newheur}
+  \item Con una euristica in grado di tenere traccia delle minacce, come quella
+    descritta nel punto \vref{newheur}, potrebbe rivelarsi importante l'apporto
+    della \textsc{QuiescenceSearch}.
+  \item \`E stato infine mostrato come altre variazioni di \textsc{AlphaBeta} e
+    \textsc{IterativeDeepeningSearch} come MTD(f)~\cite{mtdf} possono portare a
+    risultati ancora migliori nel gioco degli scacchi. Riteniamo sia prima
+    necessario compiere il passo \vref{newheur} affinch\`e si riveli efficace nel nostro ambito.
+\end{enumerate}
+
+% \pagebreak
 \bibliography{report}
 \bibliographystyle{IEEEtranN}
 

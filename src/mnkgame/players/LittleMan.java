@@ -324,7 +324,7 @@ public class LittleMan implements MNKPlayer {
   // {{{ one-cell threats
 
   // Looks at all cells and finds the one which completes a k-1 series to achieve
-  // the given `winState`. Cost: O(free cells) = O(M*N) in the worst case
+  // the given `winState`. Cost: O(free cells), O(M*N) in the worst case
   private MNKCell findOneMoveWin(final MNKGameState winState) {
     for (MNKCell c : board.getFreeCells()) {
       MNKGameState result = board.markCell(c.i, c.j, false);
@@ -335,7 +335,7 @@ public class LittleMan implements MNKPlayer {
   }
 
   // Tries any available cell and returns it if it doesn't change the
-  // immediate outcome of the game. Cost: O(free cells) = O(M*N) in the worst case.
+  // immediate outcome of the game. Cost: O(free cells), O(M*N) in the worst case.
   private MNKCell pickRandomNonClosingCell(MNKCell previous) {
     for (MNKCell c : board.getFreeCells()) {
       MNKGameState result = board.markCell(c.i, c.j, false);
@@ -347,7 +347,7 @@ public class LittleMan implements MNKPlayer {
   }
 
   // Finds a possible cell with which the enemy can complete a k-1 series and win
-  // Cost: O(M*N)
+  // Cost: O(free cells), O(M*N) in the worst case
   private MNKCell findOneMoveLoss(final MNKGameState lossState) {
     MNKCell randomCell = null;
     // Can't check two moves ahead when there aren't enough moves
