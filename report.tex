@@ -26,7 +26,8 @@ allineare $k$ simboli in una griglia $m \times n$.
 
 Si fa uso di una variante dell'algoritmo MiniMax con potatura
 AlphaBeta denominata \emph{Principal Variation Search}~\cite{negascout}. Questa
-prevede  una ricerca limitata in profondit\`a analoga a minimax, espandendo 
+prevede una ricerca analoga a minimax limitata in profondit\`a, espandendo 
+% prevede una ricerca limitata in profondit\`a analoga a minimax, espandendo 
 interamente i nodi pi\`u promettenti e parzialmente quelli restanti. Applicando
 un \emph{Iterative Deepening}~\cite{id} si possono ordinare i sottoalberi
 basandosi sui valori euristici delle ricerche precedenti e si pu\`o raggiungere
@@ -34,26 +35,29 @@ la profondit\`a massima nei limiti imposti.
 
 Diverse combinazioni di mosse possono portare a stati gi\`a analizzati
 precedentemente, i quali vengono mantenuti dentro una cache per evitare di
-valutarli pi\`u volte. Il valore degli stati di gioco non finali viene stimato
+valutarli pi\`u volte. Il valore degli stati di gioco non finali viene stimato % Qua si passa dalla cache all'euristica. Meglio separare?
 da una componente euristica che tiene in considerazione il numero di serie di
 ogni giocatore assieme alla relativa lunghezza e alla vicinanza ad altre celle
 libere.
 
 \section{Scelte Progettuali}
 
-\subsection{Select Cell e Iterative Deepening}
-Dopo aver aggiornato la copia locale della griglia di gioco si cerca la cella
+\subsection{Metodo Select Cell e Iterative Deepening}
+% \subsection{Select Cell e Iterative Deepening}
+Dopo aver aggiornato la copia locale della griglia di gioco si cerca la cella % Aggiornato con cosa?
 migliore da giocare sfruttando Iterative Deepening. 
 In questo modo si eseguono ricerche MiniMax con profondit\`a sempre maggiore
 e si restituisce il risultato pi\`u recente. Questo non
 peggiora la complessit\`a in quanto il solo costo asintotico di MiniMax alla
-massima profondit\`a assorbe quello di tutte le ricerche precedenti.
-Tuttavia aumenta sicuramente il numero di operazioni svolte dal calcolatore.
+% massima profondit\`a assorbe quello di tutte le ricerche precedenti.
+%Tuttavia aumenta sicuramente il numero di operazioni svolte dal calcolatore. https://initaliano.wordpress.com/2010/01/25/iniziare-con-tuttavia-ma-pero/
+massima profondit\`a assorbe quello di tutte le ricerche precedenti, aumentando 
+per\`o il numero di operazioni svolte dal calcolatore. 
 Per limitare questo danno si ricorre alla Principal Variation Search.
 
 \subsection{Cache}
 La cache fa uso della struttura dati HashMap fornita da Java generando le chiavi 
-in modo incrementale tramite la tecnica di \emph{Zobrist}~\cite{zobrist}. A ogni
+in modo incrementale tramite la tecnica di \emph{Zobrist}~\cite{zobrist}. Ad ogni
 chiave sono associate le seguenti informazioni:
 \begin{enumerate}
   \item Numero di mosse e ultimo simbolo giocato
@@ -64,9 +68,8 @@ Poich\`e una board $(m,n)$ pu\`o al pi\`u assumere $3^{mn}$ stati differenti e
 un \verb!long! pu\`o contenere al pi\`u $2^{64} \approx 1.8 \cdot 10^{19}$,
 esistono configurazioni che creano collisioni: ad esempio un gioco $(70, 70, 10)$
 ha un totale di $3^{4900} \approx 7.8 \cdot 10^{2338}$ stati. Per limitare i
-falsi positivi si confrontano il numero di mosse e l'ultimo simbolo giocato.
-La cache viene inizializzata all'inizio della partita in un thread dedicato.
-
+falsi positivi si confrontano il numero di mosse e l'ultimo simbolo giocato. % Falsi positivi in corsivetto. So che non ti piace ma è un modo di dire strano...
+% La cache viene inizializzata all'inizio della partita in un thread dedicato. Avevamo detto di levare questa frase
 
 \subsection{Principal Variation Search}
 Il cuore del giocatore è l'algoritmo PVS (Principal Variation Search). Questo è 
