@@ -34,31 +34,33 @@ Lo scopo del progetto \`e quello di implementare un algoritmo efficiente e ottim
 volto alla ricerca delle mosse migliori in un gioco $(m,n,k)$, dove si devono
 allineare $k$ simboli in una griglia $m \times n$.
 
-Supponendo non esistano stati invalidi il nodo iniziale (la griglia vuota)
+Assumendo non esistano stati invalidi il nodo iniziale (la griglia vuota)
 ha $m \times n$ figli, i quali avranno a loro volta $(m \times n)-1$ figli e cos\`i
-via fino a profondit\`a $mn$ dove ci saranno tutte le foglie. Il numero totale
+via fino a profondit\`a $mn$ dove si avranno tutte le foglie. Il numero totale
 dei nodi \`e dunque superiormente limitato da $O((m \times n) \cdot ((m \times n)-1)
 \cdot \ldots \cdot 1) = O((m \times n)!)$.
-Il fattore di diramazione \`e dunque molto alto ad ogni stato della partita,
-il che impone a un qualunque algoritmo di ricerca per forza bruta la
-limitazione in profondit\`a su griglie non banali. 
+Il fattore di diramazione \`e dunque elevato ad ogni stato della partita, il che
+impone a un qualunque algoritmo di ricerca per forza bruta la limitazione in
+profondit\`a su griglie non banali. L'impossibilit\`a di raggiungere le foglie
+richiede una valutazione euristica per poter assegnare un valore a nodi intermedi
+senza esplorarli.
 
 \section*{Soluzione adottata}
 
-La soluzione fa uso di una variante dell'algoritmo \textsc{MiniMax} con potatura
-\textsc{AlphaBeta} denominata \textsc{PrincipalVariationSearch}~\cite{negascout}. Questa
-prevede  una ricerca limitata in profondit\`a analoga a \textsc{AlphaBeta}, espandendo 
-interamente i nodi pi\`u promettenti e parzialmente quelli restanti. Applicando
-una \textsc{IterativeDeepeningSearch}~\cite{id} si possono ordinare i sottoalberi
-basandosi sui valori euristici delle ricerche precedenti e si pu\`o raggiungere
-la profondit\`a massima nei limiti imposti.
+Il giocatore implementato fa uso di una variante dell'algoritmo \textsc{MiniMax}
+con potatura \textsc{AlphaBeta} denominata \textsc{PrincipalVariationSearch}~\cite{negascout}.
+Questa prevede  una ricerca limitata in profondit\`a analoga a \textsc{AlphaBeta},
+espandendo  interamente i nodi pi\`u promettenti e parzialmente quelli restanti.
+Applicando una \textsc{IterativeDeepeningSearch}~\cite{id} si possono ordinare i
+sottoalberi basandosi sui valori euristici delle ricerche precedenti e si pu\`o
+raggiungere la profondit\`a massima nei limiti imposti.
 
 Diverse combinazioni di mosse possono portare a stati gi\`a analizzati
 precedentemente, i quali vengono mantenuti dentro una tabella delle trasposizioni
 per evitare di valutarli pi\`u volte. Il valore degli stati di gioco non finali
 viene stimato da una componente euristica che tiene in considerazione il numero
 di serie di ogni giocatore, la relativa lunghezza e favorisce quelle di lunghezza
-$k-1$, $k-2$, $k-3$.
+$k-3$, $k-2$ e $k-1$.
 
 \subsection*{Iterative Deepening}
 
@@ -264,10 +266,10 @@ peggiorato le prestazioni contro giocatori poco astuti o casuali.
 Si pu\`o imputare questo fallimento a due fattori:
 \begin{enumerate}
   \item La scarsa precisione della valutazione euristica.
-  \item Le propriet\`a dei giochi $(m,n,k)$ per cui qualunque mossa di un
-    giocatore migliora il proprio punteggio: in questo modo i valori delle
-    valutazioni oscillano e non convergono mai ad una stima appropriata, in
-    particolar modo a basse profondit\`a.
+  \item Nei giochi $(m, n, k)$ una qualunque mossa di un giocatore migliora sempre
+    e soltanto il proprio punteggio: in questo modo i valori delle valutazioni
+    oscillano e non convergono mai ad una stima appropriata, in particolar modo
+    nelle fasi iniziali della partita.
 \end{enumerate}
 
 \subsection*{Miglioramenti futuri}
