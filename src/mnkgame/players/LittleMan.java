@@ -211,6 +211,7 @@ public class LittleMan implements MNKPlayer {
       return value;
     }
   }
+
   // }}}
 
   // {{{ transposition cleanup
@@ -266,9 +267,11 @@ public class LittleMan implements MNKPlayer {
     }
     cleanupThread = null;
   }
+
   // }}}
 
   // {{{ init
+
   public void initPlayer(int M, int N, int K, boolean first, int timeoutInSecs) {
     this.M = M;
     this.N = N;
@@ -315,12 +318,13 @@ public class LittleMan implements MNKPlayer {
           .start();
     } else isZobristReady.set(true);
   }
+
   // }}}
 
   // {{{ one-cell threats
 
   // Looks at all cells and finds the one which completes a k-1 series to achieve
-  // the given `winState`. Cost: O(M*N)
+  // the given `winState`. Cost: O(free cells) = O(M*N) in the worst case
   private MNKCell findOneMoveWin(final MNKGameState winState) {
     for (MNKCell c : board.getFreeCells()) {
       MNKGameState result = board.markCell(c.i, c.j, false);
@@ -331,8 +335,7 @@ public class LittleMan implements MNKPlayer {
   }
 
   // Tries any available cell and returns it if it doesn't change the
-  // immediate outcome of the game. Cost: O(M*N), in practice it'll most often
-  // do less operations.
+  // immediate outcome of the game. Cost: O(free cells) = O(M*N) in the worst case.
   private MNKCell pickRandomNonClosingCell(MNKCell previous) {
     for (MNKCell c : board.getFreeCells()) {
       MNKGameState result = board.markCell(c.i, c.j, false);
@@ -360,12 +363,6 @@ public class LittleMan implements MNKPlayer {
     // Get a new random cell, different from the previous, and try with that
     MNKCell cc = pickRandomNonClosingCell(randomCell);
     if (cc == null) return null;
-    // TODO: remove, should be granted from the condition above
-    // if (board.markCell(cc.i, cc.j, false) != MNKGameState.OPEN) {
-    //   // The newrandomCell puts us in a draw, ignore that
-    //   board.unmarkCell(false);
-    //   return null;
-    // }
     board.markCell(cc.i, cc.j, false);
     // Look at the result of the enemy marking the initial random cell
     MNKGameState result = board.markCell(randomCell.i, randomCell.j, false);
@@ -373,6 +370,7 @@ public class LittleMan implements MNKPlayer {
     board.unmarkCell(false);
     return result == lossState ? randomCell : null;
   }
+
   // }}}
 
   // {{{ moves ordering
@@ -396,7 +394,7 @@ public class LittleMan implements MNKPlayer {
     vec[b] = tmp;
   }
 
-  // Swaps vec[a] with vec[b]. Cost: \Tehta(1)
+  // Swaps vec[a] with vec[b]. Cost: O(1)
   // Copy of the above with native type
   private void swap(int[] vec, int a, int b) {
     int tmp = vec[a];
@@ -428,11 +426,16 @@ public class LittleMan implements MNKPlayer {
     if (i != start) swap(vec, start, i);
   }
 
+  // Rates the moves based on previous iterations and "divides" the array into
+  // two sections. From [0,j-1] we have moves which are available in the
+  // transposition table, from [j,length-1] we have moves which are unvalued.
+  // Cost: O(n) where n = cells.length assuming transposition lookup is constant
   private int rateMoves(MNKCell[] cells, int[] ratings, int searchDepth) {
-    int j = cells.length, i = 0; // limits for the [a,b] set containing all not-yet-looked-at cells
+    // i is the index for the next rated cell. j is the index for the next unrated cell.
+    int j = cells.length, i = 0;
     while (i < j) {
       int entry[] =
-          cacheEntry(
+          transposition(
               board.nextZobrist(cells[i].i, cells[i].j),
               board.marked() + 1,
               cells[i].i * minMN + cells[i].j,
@@ -448,22 +451,27 @@ public class LittleMan implements MNKPlayer {
     }
     return j;
   }
+
   // }}}
 
   // {{{ Principal Variation Search for subtrees
-  private int[] cacheEntry(int searchDepth) {
+
+  // Retrieves an entry from the transposition table if available. Otherwise falls
+  // back to a mock entry which can be filled and later saved. Cost: O(1)
+  private int[] transposition(int searchDepth) {
     MNKCell[] c = board.getMarkedCells();
-    return cacheEntry(
+    return transposition(
         board.zobrist(),
         board.marked(),
         c[c.length - 1].i * minMN + c[c.length - 1].j,
         searchDepth);
   }
 
-  // returns a cache entry for the current board. If the current board is already
-  // cached the entry contains the proper data, otherwhise the entry fields 2,3 are
-  // dummy. A non-cached board can be identified by entry[3] == 2
-  private int[] cacheEntry(long hash, int marked, int lastCell, int searchDepth) {
+  // Returns a cache entry for the current board. If the current board is already
+  // in the transposition table the entry contains the actual data, otherwhise
+  // its fields 2,3 are dummy. A non-cached board can be therefore identified
+  // by entry[3] == 2. Cost: O(1)
+  private int[] transposition(long hash, int marked, int lastCell, int searchDepth) {
     if (isZobristReady.get() && cache.containsKey(hash)) {
       int[] cached = cache.get(hash);
       // Make sure the board has the same number of marked symbols and the last
@@ -478,13 +486,13 @@ public class LittleMan implements MNKPlayer {
     return new int[] {marked, lastCell, searchDepth, 2, -INFTY};
   }
 
+  // Principal Variation Search with a NegaMax-like framework for bounds.
   private int pvs(int color, int depth, int alpha, int beta) {
     MNKCell c;
     int prevAlpha = alpha, value = -INFTY;
 
-    // Look up for the current board inside the transposition table. As described
-    // in `cacheEntry(4)` entry[2] == 2 notes a cache miss.
-    int[] entry = cacheEntry(depth);
+    // Transposition table lookup
+    int[] entry = transposition(depth);
     if (entry[3] != 2) {
       if (entry[3] == EXACT_VALUE) return entry[4];
       else if (entry[3] == LOWER_BOUND) alpha = Math.max(alpha, entry[4]);
@@ -504,24 +512,28 @@ public class LittleMan implements MNKPlayer {
     } else {
       MNKCell[] moves = board.getFreeCells();
       int[] ratings = new int[moves.length];
+      // Moves are sorted up to the given intereger
       int sortUpTo = rateMoves(moves, ratings, depth);
+
       for (int i = 0; i < moves.length; i++) {
+        // If we are 0 <= i < sortedUpTo we can find the best sorted move via a
+        // selectionSort call. Otherwise we pick a random one from [sortedUpTo, length-1]
         if (i < sortUpTo) selectionSort(moves, ratings, i, sortUpTo, color);
         else randomSelection(moves, i, moves.length);
 
-        // NOTE: alpha is only updated when we make a proper full window search
-        // to avoid wrong bounds.
+        // NOTE: alpha is only updated when we have a full window search result
+        // to avoid messing up bounds.
         board.markCell(moves[i].i, moves[i].j);
         int score;
         if (i == 0) {
           score = -pvs(-color, depth - 1, -beta, -alpha);
           alpha = Math.max(alpha, score);
         } else {
-          // Try first a null window search on non-PV nodes with bounds [-alpha-1, -alpha]
+          // Try a null window search on non-PV nodes with bounds [-alpha-1, -alpha]
           score = -pvs(-color, depth - 1, -alpha - 1, -alpha);
 
           // If the search failed inside the [alpha, beta] bounds the result may
-          // be meaningful so we need to do a proper search
+          // be meaningful so we need to do a proper search.
           if (score > alpha && score < beta && value != HALT) {
             score = -pvs(-color, depth - 1, -beta, -alpha);
             alpha = Math.max(alpha, score);
@@ -529,6 +541,8 @@ public class LittleMan implements MNKPlayer {
         }
         board.unmarkCell();
 
+        // To catch HALT signals we treat them as an always-better score value.
+        // We're fine with this as the search will be ignored by Iterative Deepening.
         if (score > value || score == HALT || score == -HALT) value = score;
         if (value >= beta || value == HALT || value == -HALT) break;
       }
@@ -544,12 +558,13 @@ public class LittleMan implements MNKPlayer {
     cache.put(board.zobrist(), entry);
     return value;
   }
+
   // }}}
 
   // {{{ Principal Variation Search on root
 
-  private int rootValue = -INFTY;
-
+  // pvsRoot runs a standard Principal Variation Search on the root node,
+  // keeping track of both the best score and its relative cell.
   private MNKCell pvsRoot(int depth, int alpha, int beta) {
     MNKCell cell = null;
     int value = -INFTY;
@@ -564,6 +579,8 @@ public class LittleMan implements MNKPlayer {
     } else {
       MNKCell[] moves = board.getFreeCells();
       int[] ratings = new int[moves.length];
+
+      // Moves ordering is identical to non-root subtrees
       int sortUpTo = rateMoves(moves, ratings, depth);
       for (int i = 0; i < moves.length; i++) {
         if (i < sortUpTo) selectionSort(moves, ratings, i, sortUpTo, 1);
@@ -577,7 +594,7 @@ public class LittleMan implements MNKPlayer {
           score = -pvs(-1, depth - 1, -beta, -alpha);
           alpha = Math.max(alpha, score);
         } else {
-          // Try first a null window search on non-PV nodes with bounds [-alpha-1, -alpha]
+          // Try a null window search on non-PV nodes with bounds [-alpha-1, -alpha]
           score = -pvs(-1, depth - 1, -alpha - 1, -alpha);
 
           // If the search failed inside the [alpha, beta] bounds the result may
@@ -598,48 +615,33 @@ public class LittleMan implements MNKPlayer {
       }
     }
 
-    rootValue = value;
     return cell;
   }
+
   // }}}
 
   // {{{ iterative deepening
 
-  // Iterative Deppening calls the pvsRoot depth-first search algorithm with an
+  // Iterative Deepening calls the pvsRoot depth-first search algorithm with an
   // ever-increasing maximum depth, to search the tree as deep as we can and
   // provide insights about move ordering for future searches.
-  // We stop the search if we either timeout or we find a certain win.
+  // The search is stopped on timeout or when the maximum depth is reached.
   public MNKCell iterativeDeepening() {
     int len = board.getFreeCells().length;
     MNKCell value = null;
 
     int maxDepth = 1;
     while (!shouldHalt() && maxDepth <= len) {
-      // the alpha and beta values are given by the highest and lowest possible
-      // achievable values with our evaluation function. Because of how it's coded
-      // (as it takes into account the absolute depth of the board) we can compute
-      // a much tighter maximum value for alpha/beta and use this to achieve higher
-      // cutoffs
+      // The alpha and beta values are given by the highest and lowest possible
+      // achievable values with our evaluation function. We can lower these bounds
+      // from INFTY as our evaluation function takes into account depth, and
+      // therefore get more cutoffs.
       int max = INFTY / Math.min(board.marked() + maxDepth, 2 * K - 1);
       MNKCell latest = pvsRoot(maxDepth, -max, max);
-      System.out.println(
-          playerName()
-              + "\t: at depth "
-              + maxDepth
-              + " got cell: "
-              + latest
-              + " with value: "
-              + rootValue
-              + " bounds ["
-              + -max
-              + ","
-              + max
-              + "]");
 
       if (latest == null) break;
-
+      // Save the latest value and increment the depth for the next iteration
       value = latest;
-
       maxDepth++;
     }
 
@@ -649,18 +651,26 @@ public class LittleMan implements MNKPlayer {
 
   // {{{ selectCell
   public MNKCell selectCell(MNKCell[] FC, MNKCell[] MC) {
+    // Prepare the transposition table and the timeout handling for the new search
     startTime = System.currentTimeMillis();
     stopCleanup();
 
     // Keep track of the opponent's marked cells
     if (MC.length > 0) board.markCell(MC[MC.length - 1].i, MC[MC.length - 1].j);
 
+    // Search the best move with an iterative deepening framework
     MNKCell result = iterativeDeepening();
-    // to avoid catastrophic failures in case anything breaks
+
+    // Avoid catastrophic failures in case anything breaks.
+    // This condition should never be reached. Nonetheless it safer having it.
     if (result == null) result = FC[new Random().nextInt(FC.length)];
 
+    // If the game is not over and we are not in the closing moves of a game
+    // start the cleanup of the cache in another thread. It will run during the
+    // enemy's turn.
     if (board.markCell(result.i, result.j) == MNKGameState.OPEN && board.marked() < M * N - 3)
       cleanup(System.currentTimeMillis() + (long) (timeout * SAFETY_THRESHOLD), board.marked());
+
     return result;
   }
   // }}}

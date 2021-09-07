@@ -22,10 +22,6 @@
 
 package mnkgame;
 
-import java.io.BufferedWriter;
-import java.io.File;
-import java.io.FileWriter;
-import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.concurrent.Callable;
@@ -34,7 +30,6 @@ import java.util.concurrent.Executors;
 import java.util.concurrent.Future;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.TimeoutException;
-import mnkgame.players.LoggedPlayer;
 
 /**
  * Runs a game against two MNKPlayer classes and prints the game scores:
@@ -139,7 +134,7 @@ public class MNKPlayerTester {
       int curr = B.currentPlayer();
       final ExecutorService executor = Executors.newSingleThreadExecutor();
       final Future<MNKCell> task = executor.submit(new StoppablePlayer(Player[curr], B));
-      executor.shutdown(); // Makes the ExecutorService stop accepting new tasks
+      executor.shutdown(); // Makes the  ExecutorService stop accepting new tasks
 
       MNKCell c = null;
 
@@ -373,27 +368,12 @@ public class MNKPlayerTester {
       System.out.println("Rounds    : " + ROUNDS);
       System.out.println("Timeout   : " + TIMEOUT + " secs\n\n");
     }
-    BufferedWriter writer = null;
-    try {
-      writer = new BufferedWriter(new FileWriter(new File("log.txt"), true));
-    } catch (IOException e) {
-    } finally {
-    }
 
     for (int i = 1; i <= ROUNDS; i++) {
       if (VERBOSE) System.out.println("\n**** ROUND " + i + " ****");
       initGame();
       GameState state = runGame();
 
-      if (writer != null) {
-        try {
-          String s = "" + Player[0].playerName() + " " + ((LoggedPlayer) Player[0]).GetResults();
-          writer.write(s);
-          System.out.println(">>>>>" + s);
-
-        } catch (IOException ex) {
-        }
-      }
       switch (state) {
         case WINP1:
           P1SCORE += WINP1SCORE;

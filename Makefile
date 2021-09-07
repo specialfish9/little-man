@@ -8,13 +8,13 @@ CLASSES=$(wildcard *.java)
 PKG=mnkgame
 MAIN=$(PKG).MNKGame 
 PLAYERS=$(PKG).players
-M:=3
-N:=3
-K:=3
+M:=6
+N:=6
+K:=4
 REPS:=10
 TIME:=2
-BEST:=LittleBoy
-OLD:=SuperGalileoGalileiWithBetterCache
+BEST:=LittleMan
+OLD:=LittleBoy
 
 .SUFFIXES: .java .class
 .PHONY: build
