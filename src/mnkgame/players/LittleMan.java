@@ -126,7 +126,7 @@ public class LittleMan implements MNKPlayer {
     // Assigns aribrary high values to k-3, k-2, and k-1 series to make them
     // stand out from others and help the search move towards creating longer
     // streaks
-    private int seriesValue() {
+    private int largeSeriesConstant() {
       if (K > 4 && nFree == 3) return 1000; // 1k
       if (K > 3 && nFree == 2) return 100000; // 100k
       if (K > 2 && nFree == 1) return 10000000; // 10M
@@ -134,13 +134,11 @@ public class LittleMan implements MNKPlayer {
       return 0;
     }
 
-    /* Used for alternative heuristic
     // Returns wheter the given (i,j) position is within the bounds of the
     // current board
     private boolean isInBounds(int i, int j) {
       return i >= 0 && i < M && j >= 0 && j < N;
     }
-    */
 
     private int cellValue(final int i, final int j, final int dI, final int dJ) {
       if (nFree + n1 + n2 >= K) {
@@ -155,24 +153,25 @@ public class LittleMan implements MNKPlayer {
       else n2++;
 
       // Alternative evaluation which also takes free cells around the series into account
-      /*
-      if (queueP1 + queueFree == K || queueP2 + queueFree == K) {
+      if (n1 + nFree == K || n2 + nFree == K) {
+        int freeFactor = 0;
         // Check if the cell after the series is free
-        if (isInBounds(i + dI, j + dJ) && B[i + dI][j + dJ] == MNKCellState.FREE) freeFactor = 100;
+        if (isInBounds(i + dI, j + dJ) && B[i + dI][j + dJ] == MNKCellState.FREE)
+          freeFactor += 100;
         // Check if the cell before the series is free
-        if (isInBounds(i - dI * (K+1), j - dJ * (K+1)) && B[i - dI * (K+1)][j - dJ * (K+1)] == MNKCellState.FREE)
+        if (isInBounds(i - dI * K, j - dJ * K) && B[i - dI * K][j - dJ * K] == MNKCellState.FREE)
           freeFactor += 100;
 
         int sign = first ? 1 : -1;
-        if (queueP1 + queueFree == K)
-          return sign * (seriesValue(queueFree) + (queueP1 * queueP1) + freeFactor);
-        else return -sign * (seriesValue(queueFree) + (queueP2 * queueP2) + freeFactor);
+        if (n1 + nFree == K) return sign * (largeSeriesConstant() + (n1 * n1) + freeFactor);
+        else return -sign * (largeSeriesConstant() + (n2 * n2) + freeFactor);
       } else return 0;
-      */
+      /*
       int sign = first ? 1 : -1;
-      if (n1 + nFree == K) return sign * (seriesValue() + (n1 * n1));
-      else if (n2 + nFree == K) return -sign * (seriesValue() + (n2 * n2));
+      if (n1 + nFree == K) return sign * (largeSeriesConstant() + (n1 * n1));
+      else if (n2 + nFree == K) return -sign * (largeSeriesConstant() + (n2 * n2));
       else return 0;
+      */
     }
 
     private int eval(int i, int j) {
@@ -188,13 +187,13 @@ public class LittleMan implements MNKPlayer {
 
       // diagonal
       int ku = Math.min(i, j),
-          kl = Math.min(M - i, N - j),
+          kl = Math.min(M - i - 1, N - j - 1),
           ii = i - ku,
           jj = j - ku,
           iim = i + kl,
           jjm = j + kl;
       n1 = n2 = nFree = 0;
-      for (; ii < iim && jj < jjm; ii++, jj++) value += cellValue(ii, jj, 1, 1);
+      for (; ii <= iim && jj <= jjm; ii++, jj++) value += cellValue(ii, jj, 1, 1);
 
       // counter diagonal
       ii = i - ku;
@@ -202,7 +201,7 @@ public class LittleMan implements MNKPlayer {
       iim = i + kl;
       jjm = j - kl;
       n1 = n2 = nFree = 0;
-      for (; ii < iim && jj < jjm; ii++, jj--) value += cellValue(ii, jj, 1, -1);
+      for (; ii <= iim && jj <= jjm; ii++, jj--) value += cellValue(ii, jj, 1, -1);
 
       return value;
     }
@@ -305,7 +304,7 @@ public class LittleMan implements MNKPlayer {
     // the process in a separate thread. We can safely modify the zobrist array
     // across threads as it's only read from after the `isZobristReady` field
     // gets set to true
-    if (i != zobrist.length - 1) {
+    if (i < zobrist.length - 1) {
       final int j = i;
       new Thread(
               () -> {
