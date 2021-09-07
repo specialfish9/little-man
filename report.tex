@@ -35,7 +35,18 @@ Lo scopo del progetto \`e quello di implementare un algoritmo efficiente e ottim
 volto alla ricerca delle mosse migliori in un gioco $(m,n,k)$, dove si devono
 allineare $k$ simboli in una griglia $m \times n$.
 
-Si fa uso di una variante dell'algoritmo \textsc{MiniMax} con potatura
+Supponendo non esistano stati invalidi il nodo iniziale (la griglia vuota)
+ha $m \times n$ figli, i quali avranno a loro volta $(m \times n)-1$ figli e cos\`i
+via fino a profondit\`a $mn$ dove ci saranno tutte le foglie. Il numero totale
+dei nodi \`e dunque superiormente limitato da $O((m \times n) \cdot ((m \times n)-1)
+\cdot \ldots \cdot 1) = O((m \times n)!)$.
+Il fattore di diramazione \`e dunque molto alto ad ogni stato della partita,
+il che impone a un qualunque algoritmo di ricerca per forza bruta la
+limitazione in profondit\`a su griglie non banali. 
+
+\section*{Soluzione adottata}
+
+La soluzione fa uso di una variante dell'algoritmo \textsc{MiniMax} con potatura
 \textsc{AlphaBeta} denominata \textsc{PrincipalVariationSearch}~\cite{negascout}. Questa
 consiste in una ricerca limitata in profondit\`a analoga ad \textsc{AlphaBeta}, espandendo 
 interamente i nodi pi\`u promettenti e parzialmente quelli restanti. Applicando
