@@ -13,7 +13,7 @@
 \usepackage[square,sort,comma,numbers]{natbib}
 
 \newdate{date}{06}{09}{2021}
-\title{Little Man\\
+\title{\textsc{LittleMan}\\
 \large Relazione del progetto per l'insegnamento di Algoritmi e Strutture di Dati}
 \author{
   Mattia Girolimetto (0000977478),
@@ -114,22 +114,22 @@ tuttavia si \`e preferito favorire anche serie di lunghezza inferiore ai fini di
 stimare una pi\`u accurata \emph{Principal Variation}, sopratutto durante le
 mosse iniziali.
 
-\begin{algorithm}
+\begin{algorithm}[H]
   \caption{Valutazione eurstica procedurale}
   \label{alg:eval}
   \begin{algorithmic}[0]
     \Procedure {Eval}{$i$, $j$}
       \State $value \gets 0$
-      \For{$(ii, jj) \in$ row $i$}
+      \For{$(ii, jj) \in \Call{Row}{i}$}
         \State $value \gets value + \Call{CellValue}{ii, jj, 0, 1}$
       \EndFor
-      \For{$(ii, jj) \in$ column $i$}
+      \For{$(ii, jj) \in \Call{Column}{j}$}
         \State $value \gets value + \Call{CellValue}{ii, jj, 1, 0}$
       \EndFor
-      \For{$(ii, jj) \in$ diagonal at $(i, j)$}
+      \For{$(ii, jj) \in \Call{Diagonal}{i, j}$}
         \State $value \gets value + \Call{CellValue}{ii, jj, 1, 1}$
       \EndFor
-      \For{$(ii, jj) \in$ anti-diagonal at $(i, j)$}
+      \For{$(ii, jj) \in \Call{AntiDiagonal}{i, j}$}
         \State $value \gets value + \Call{CellValue}{ii, jj, 1, -1}$
       \EndFor
       \State \Return $value$
@@ -138,21 +138,9 @@ mosse iniziali.
     \Procedure {CellValue}{$i$, $j$, $\delta_i$, $\delta_j$}
       \If{$n_{free} + n_1 + n_2 \geq k$} \Comment{Se la serie \`e troppo lunga}
         \State $s \gets B[i - \delta_i \cdot k][j - \delta_j \cdot k]$ \Comment{Stato della prima cella nella serie}
-        \If{$s = free$}
-          \State $n_{free} \gets n_{free} - 1$
-        \ElsIf{$s = player_1$}
-          \State $n_1 \gets n_1 - 1$
-        \Else
-          \State $n_2 \gets n_2 - 1$
-        \EndIf
+        \State decrement $n_{free}, n_1, n_2$ by $1$ based on $s$
       \EndIf
-      \If{$B[i][j] = free$}
-        \State $n_{free} \gets n_{free} + 1$
-      \ElsIf{$B[i][j] = player_1$}
-        \State $n_1 \gets n_1 + 1$
-      \Else \Comment{La cella appartiene al giocatore $2$}
-        \State $n_2 \gets n_2 - 1$
-      \EndIf
+      \State increment $n_{free}, n_1, n_2$ by $1$ based on $B[i][j]$
       \Statex
       \If{$n_1 + p_{free} = k$}
         \Comment{Si restituisce la valutazione della serie}
@@ -182,7 +170,7 @@ essa garantisce la vittoria al giocatore. Si pu\`o dunque estendere l'Algoritmo
 libere attorno a se. Ecco una possibile implementazione che si pu\`o trovare
 commentata anche nel codice sorgente:
 
-\begin{algorithm}
+\begin{algorithm}[H]
   \caption{Valutazione delle serie favorendo spazi liberi adiacenti}
   \label{alg:eval_free}
   \begin{algorithmic}[0]
@@ -225,7 +213,7 @@ appunto "quiescenti", poich\`e sono quelli pi\`u proni a degenerare in sconfitte
 Si pu\`o dunque modificare la funzione di valutazione in modo da applicare una
 \textsc{QuiescensceSearch} come mostrato di seguito:
 
-\begin{algorithm}
+\begin{algorithm}[H]
   \caption{Ricerca quiescente con struttura \textsc{NegaMax}}
   \label{qs}
   \begin{algorithmic}[0]
