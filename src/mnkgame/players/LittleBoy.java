@@ -609,14 +609,6 @@ public class LittleBoy implements MNKPlayer {
 
       maxDepth++;
     }
-    System.out.println(
-        playerName()
-            + "\t: at depth "
-            + maxDepth
-            + " got cell: "
-            + value
-            + " with value: "
-            + rootValue);
 
     return value;
   }

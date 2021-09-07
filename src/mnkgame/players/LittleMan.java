@@ -134,11 +134,13 @@ public class LittleMan implements MNKPlayer {
       return 0;
     }
 
+    /* Used in the alternative evaluation technique
     // Returns wheter the given (i,j) position is within the bounds of the
     // current board
     private boolean isInBounds(int i, int j) {
       return i >= 0 && i < M && j >= 0 && j < N;
     }
+    */
 
     private int cellValue(final int i, final int j, final int dI, final int dJ) {
       if (nFree + n1 + n2 >= K) {
@@ -152,6 +154,7 @@ public class LittleMan implements MNKPlayer {
       else if (B[i][j] == MNKCellState.P1) n1++;
       else n2++;
 
+      /*
       // Alternative evaluation which also takes free cells around the series into account
       if (n1 + nFree == K || n2 + nFree == K) {
         int freeFactor = 0;
@@ -166,12 +169,11 @@ public class LittleMan implements MNKPlayer {
         if (n1 + nFree == K) return sign * (largeSeriesConstant() + (n1 * n1) + freeFactor);
         else return -sign * (largeSeriesConstant() + (n2 * n2) + freeFactor);
       } else return 0;
-      /*
+      */
       int sign = first ? 1 : -1;
       if (n1 + nFree == K) return sign * (largeSeriesConstant() + (n1 * n1));
       else if (n2 + nFree == K) return -sign * (largeSeriesConstant() + (n2 * n2));
       else return 0;
-      */
     }
 
     private int eval(int i, int j) {
