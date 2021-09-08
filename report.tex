@@ -7,10 +7,10 @@
 \selectlanguage{italian}
 \usepackage[Algoritmo]{algorithm}
 \usepackage{algpseudocode}
+\usepackage[square,sort,comma,numbers]{natbib}
+\usepackage[nottoc,notlot,notlof]{tocbibind}
 
 \hfuzz=100.0pt  % ignore paragraph lengths warnings
-
-\usepackage[square,sort,comma,numbers]{natbib}
 
 \newdate{date}{06}{09}{2021}
 \title{\textsc{LittleMan}\\
@@ -26,9 +26,14 @@
 
 \begin{document}
 
+\pagenumbering{roman}
 \maketitle
+\pagebreak
+\tableofcontents
+\pagebreak
 
-\section*{Problema computazionale}
+\pagenumbering{arabic}
+\section{Problema computazionale}
 
 Lo scopo del progetto \`e quello di implementare un algoritmo efficiente e ottimale
 volto alla ricerca delle mosse migliori in un gioco $(m,n,k)$, dove si devono
@@ -45,7 +50,7 @@ profondit\`a su griglie non banali. L'impossibilit\`a di raggiungere le foglie
 richiede una valutazione euristica per poter assegnare un valore a nodi intermedi
 senza esplorarli.
 
-\section*{Soluzione adottata}
+\section{Soluzione adottata}
 
 Il giocatore implementato fa uso di una variante dell'algoritmo \textsc{MiniMax} con potatura
 \textsc{AlphaBeta} denominata \textsc{PrincipalVariationSearch}~\cite{negascout}. Questa
@@ -63,18 +68,18 @@ viene stimato da una componente euristica che tiene in considerazione il numero
 di serie di ogni giocatore e la relativa lunghezza, favorendo quelle di lunghezza
 $k-1$, $k-2$ e $k-3$.
 
-\subsection*{Iterative Deepening}
+\subsection{Iterative Deepening}
 
 La ricerca della mossa migliore viene gestita da un algoritmo di
 \textsc{IterativeDeepeningSearch}~\cite{id}, il quale procede applicando \textsc{MiniMax} 
 con profondit\`a sempre maggiore e restituisce l'ultimo risultato trovato prima dello
-scadere del tempo. Questo non peggiora la complessit\`a asintotica in quanto il
+scadere del tempo. \label{cost:id} Questo non peggiora la complessit\`a asintotica in quanto il
 solo costo della ricerca alla massima profondit\`a assorbe quello di tutte
 le chiamate precedenti. Si ha tuttavia un aumento delle operazioni totali svolte
 dal calcolatore, mitigato per\`o dall'utilizzo della \textsc{PrincipalVariationSearch} 
 e dalle potature derivate dall'ordinamento dei nodi ottenuto grazie a questa tecnica.
 
-\subsection*{Tabella delle trasposizioni}
+\subsection{Tabella delle trasposizioni}
 
 La cache fa uso della struttura dati HashMap fornita da Java generando le chiavi 
 in modo incrementale tramite la tecnica di \emph{Zobrist}~\cite{zobrist}. 
@@ -96,7 +101,7 @@ vengono rimosse dalla tabella delle trasposizioni tutte le tabelle di gioco
 \emph{inaccessibili}. Una griglia viene definita inaccessibile quando ha un numero di
 celle marcate inferiore a quello del tavolo di gioco attuale incrementato di $1$.
 
-\subsection*{Principal Variation Search}
+\subsection{Principal Variation Search}
 
 L'algoritmo visita in modo ordinato i figli di ogni stato di gioco applicando
 limiti $\alpha$-$\beta$ differenti ad ognuno di essi al fine di aumentare il numero di potature.
@@ -105,13 +110,58 @@ Variation}, per poi visitare i restanti nodi con una ricerca a finestra \emph{nu
 (dove i due limiti differiscono di $1$). Se questa restituisce un valore compreso
 nell'intervallo $\alpha$-$\beta$ originale potrebbe essere d'interesse e dunque viene
 svolta una ricerca classica.
-% TODO IN REALTA' E' EURISTICA QUESTA E FAREBBE BENE METTERLA SOTTO
-
 Nel caso in cui esista una serie $k-1$ per un qualunque giocatore si provvede a
 riempire la cella mancante, evitando la ricerca di forza bruta. Viene data la
 precedenza alle serie appartenenti al giocatore che deve svolgere la mossa.
 
-\subsection*{Valutazione euristica}
+\begin{algorithm}[H]
+  \caption{\textsc{PrincipalVariationSearch}}
+  \label{alg:pvs}
+  \begin{algorithmic}[0]
+    \Procedure {PVS}{$node$, $color$, $depth$, $\alpha$, $\beta$}
+      \State $best\_cell \gets null, best\_value \gets -\infty$
+      \If{$depth = 0$ \textbf{or} $node$ is a leaf}
+        \State \Return $color \cdot \Call{Evaluate}{node}$
+      \ElsIf{$best\_cell \gets \Call{FindClosingCell}{node}$ is \textbf{not} $null$}
+        \State $\Call{mark}{node, best\_cell}$
+        \State $(best\_value, \_) \gets -\Call{PVS}{node, -color, depth-1, -\beta, -\alpha}$
+        \State $\Call{UnMark}{node}$
+      \Else
+        \For{$child$ \textbf{in} \Call{Sorted}{\textrm{children of} $node$}}
+          \If{$child$ is the first}
+            \Comment{\`e la \emph{Principal Variation}}
+            \State $score \gets -\Call{PVS}{child, -color, depth-1, -\beta, -\alpha}\}$
+            \State $\alpha \gets \max\{\alpha, score\}$
+          \Else
+            \State $score \gets -\Call{PVS}{child, -color, depth-1, -\alpha-1, -\alpha}\}$
+            \If{$\alpha < score < \beta$}
+              \State $score \gets -\Call{PVS}{child, -color, depth-1, -\beta, -\alpha}\}$
+              \State $\alpha \gets \max\{\alpha, score\}$
+            \EndIf
+          \EndIf
+          \If{$score > value$}
+            \State $best\_value \gets score$
+            \State $best\_cell \gets $ the last move of $child$
+          \EndIf
+          \If{$value \geq \beta$}
+            \Comment{potatura $\alpha$-$\beta$}
+            \State \textbf{break}
+          \EndIf
+        \EndFor
+      \EndIf
+      \State \Return $(best\_value, best\_cell)$
+    \EndProcedure
+  \end{algorithmic}
+\end{algorithm}
+
+Si noti che la logica per la gestione del tempo rimanente e tutti gli accessi
+alla tabella delle trasposizioni sono stati omessa per semplificare la lettura.
+
+Nella pratica, se non abbiamo alcuna informazione sull'ordinamento dei figli
+essi vengono scelti in modo casuale, per avere pi\`u possibilt\`a di scoprire
+eventuali potature fortuite.
+
+\subsection{Valutazione euristica}
 
 La griglia di gioco mantiene al suo interno una valutazione euristica 
 aggiornata progressivamente con l'avanzare della partita (Algoritmo \vref{alg:eval}).
@@ -123,37 +173,37 @@ valori delle serie dei due giocatori. Inoltre, per favorire le griglie che
 assumono valori promettenti con il minor numero di mosse, ogni
 valutazione viene divisa per il numero di simboli sulla griglia.
 
-Questo approccio ricorda quello scelto da \citeauthor{chuan} per il gioco di Go~\cite{chuan},
-tuttavia si \`e preferito favorire anche serie di lunghezza inferiore per migliorare 
-l'accuratezza della \emph{Principal Variation}, in particolare durante le mosse iniziali.
-
 \begin{algorithm}[H]
-  \caption{Valutazione eurstica procedurale}
+  \caption{Valutazione eurstica incrementale}
   \label{alg:eval}
   \begin{algorithmic}[0]
+    \State $n_{free}, n_1, n_2 \gets 0$
     \Procedure {Eval}{$i$, $j$}
       \State $value \gets 0$
+      \State $n_{free}, n_1, n_2 \gets 0$
       \For{$(ii, jj) \in \Call{Row}{j}$}
         \State $value \gets value + \Call{CellValue}{ii, jj, 0, 1}$
       \EndFor
+      \State $n_{free}, n_1, n_2 \gets 0$
       \For{$(ii, jj) \in \Call{Column}{i}$}
         \State $value \gets value + \Call{CellValue}{ii, jj, 1, 0}$
       \EndFor
+      \State $n_{free}, n_1, n_2 \gets 0$
       \For{$(ii, jj) \in \Call{Diagonal}{i, j}$}
         \State $value \gets value + \Call{CellValue}{ii, jj, 1, 1}$
       \EndFor
+      \State $n_{free}, n_1, n_2 \gets 0$
       \For{$(ii, jj) \in \Call{AntiDiagonal}{i, j}$}
         \State $value \gets value + \Call{CellValue}{ii, jj, 1, -1}$
       \EndFor
       \State \Return $value$
     \EndProcedure
-    \Statex
     \Procedure {CellValue}{$i$, $j$, $\delta_i$, $\delta_j$}
       \If{$n_{free} + n_1 + n_2 \geq k$} \Comment{Se la serie \`e troppo lunga}
         \State $s \gets B[i - \delta_i \cdot k][j - \delta_j \cdot k]$ \Comment{Stato della prima cella nella serie}
-        \State decrement $n_{free}, n_1, n_2$ by $1$ based on $s$
+        \State decrement one of $n_{free}, n_1, n_2$ by $1$ based on $s$
       \EndIf
-      \State increment $n_{free}, n_1, n_2$ by $1$ based on $B[i][j]$
+      \State increment one of $n_{free}, n_1, n_2$ by $1$ based on $B[i][j]$
       \Statex
       \If{$n_1 + p_{free} = k$}
         \Comment{Si restituisce la valutazione della serie}
@@ -167,13 +217,13 @@ l'accuratezza della \emph{Principal Variation}, in particolare durante le mosse 
   \end{algorithmic}
 \end{algorithm}
 
-\subsection*{Altre euristiche considerate}
+\subsection{Altre euristiche considerate}
 
-In questa sezione sono presentati approcci che sono stati considerati e
-implementati, ma in definitiva scartati in quanto non hanno offerto un
+In questa sezione sono presentati approcci che sono stati considerati,
+implementati ma in definitiva scartati in quanto non hanno offerto un
 miglioramento apprezzabile allo stile di gioco dell'algoritmo.
 
-\subsubsection*{Valutazione euristica degli spazi vuoti}
+\subsubsection{Valutazione euristica degli spazi vuoti}
 
 Nel gioco generalizzato del $(m, n, k)$, specialmente per valori di $k < \max\{m,n\}$,
 una sequenza con celle libere ai lati pu\`o rivelarsi pi\`u vantaggiosa di una
@@ -193,7 +243,7 @@ commentata anche nel codice sorgente:
     \If{$B[i + \delta_i][j + \delta_j] = free$}
       \State $bonus \gets bonus + \textsc{BonusConstant}$
     \EndIf
-    \If{$B[i - \delta_i \cdot (k+1)][j - \delta_j \cdot (k+1)] = free$}
+    \If{$B[i - \delta_i \cdot k][j - \delta_j \cdot k] = free$}
       \State $bonus \gets bonus + \textsc{BonusConstant}$
     \EndIf
     \Statex
@@ -212,7 +262,17 @@ Va ricordato che nell'Algoritmo~\ref{alg:eval_free} il controllo della validit\`
 posizioni $(i + \delta_i, j + \delta_j)$ e $(i - \delta_i \cdot (k+1), j - \delta_j \cdot (k+1))$
 \`e stato omesso per brevit\`a e chiarezza del codice.
 
-\subsubsection*{Ricerca quiescente}
+% TODO: spiegare perche' non e' stata scelta.
+
+\subsubsection{Analisi limitata ad un intorno}
+
+Per limitare il numero di nodi visitati si \`e pensato di tenere conto solo di
+quelli in un raggio di $K$ attorno alle celle marcate. Tuttavia, con l'avanzare
+della partita e con l'aumento delle profondit\`a di ricerca, il numero di visite
+risparmiate non \`e abbastanza alto da giustificare il costo $\Theta(n)$ del
+filtraggio (dove $n$ \`e il numero di celle libere).
+
+\subsubsection{Ricerca quiescente}
 
 Un problema ben noto negli algoritmi di ricerca a profondit\`a limitata \`e
 quello dell'\emph{effetto orizzonte}, causato dall'impossibilt\`a 
@@ -245,11 +305,11 @@ applichi una \textsc{QuiescensceSearch} ove necessario, come mostrato di seguito
     \EndProcedure
     \Statex
     \Procedure{QuiescenceSearch}{$node$, $color$, $depth$}
-    \If{$depth = 0$ \textbf{or} node is leaf}
-      \State \Return \Call{Evaluate}{$node$, $true$}
+    \If{$depth = 0$ \textbf{or} node is a leaf}
+      \State \Return $color \cdot \Call{Evaluate}{node, true}$
     \EndIf
     \State $best \gets -\infty$
-    \For{$child$ of $node$}
+    \For{$child$ \textbf{of} $node$}
       \State $best \gets \max\{best, \Call{QuiescenceSearch}{child, -color, depth-1}\}$
     \EndFor
     \State \Return $-best$
@@ -261,22 +321,51 @@ La funzione \textsc{Evaluate} viene chiamata dall'algoritmo di ricerca con il va
 dell'argomento $raw$ uguale a $false$.
 
 Nella pratica questa modifica non ha portato a significativi miglioramenti
-ma ha caratterizzato l'AI con uno stile di eccesivamente difensivo, il quale ne
-ha peggiorato le prestazioni contro giocatori poco astuti o casuali.
+ma ha caratterizzato l'AI con uno stile di gioco eccesivamente difensivo, il
+quale ne ha peggiorato le prestazioni contro automi poco astuti o casuali.
 Si pu\`o imputare questo fallimento a due fattori:
 \begin{enumerate}
   \item La scarsa precisione della valutazione euristica.
   \item Nei giochi $(m, n, k)$ una qualunque mossa di un giocatore migliora sempre
-    e soltanto il proprio punteggio: in questo modo i valori delle valutazioni
-    oscillano e non convergono mai ad una stima appropriata, in particolar modo
-    nelle fasi iniziali della partita.
+    il proprio punteggio: di conseguenza i valori delle valutazioni oscillano e
+    non convergono mai ad una stima appropriata, in particolar modo nelle fasi
+    iniziali della partita.
 \end{enumerate}
 
-\subsection*{Miglioramenti futuri}
+\section{Conclusioni}
+
+\subsection{Costo computazionale}
+
+Per la comprensione del paragrafo che segue defniamo:
+\begin{itemize}
+  \item $b$ come \emph{fattore di diramazione}, ovvero il numero medio di
+    sottoalberi appartenenti ad ogni nodo.
+  \item $d$ per la profondit\`a a cui viene svolta la ricerca.
+\end{itemize}
+
+La complessit\`a del metodo \verb!selectCell! \`e dominata dal costo di
+\textsc{IterativeDeepening} e \textsc{AlphaBeta}. Come gi\`a analizzato in \ref{cost:id}
+il primo ha valore trascurabile rispetto al secondo. Il peso della ricerca \`e
+compreso tra quello di \textsc{MiniMax} ($O(b^d)$), dove tutti i rami vengono
+analizzati, e quello di \textsc{AlphaBeta} \emph{con ordinamento perfetto}
+($O(\sqrt{b^d})$), dove solo i nodi strettamente necessari vengono visitati.
+Grazie alla combinazione \textsc{IterativeDeepening}-\textsc{PVS} si pu\`o
+ottenere un ordinamento ottimo nella quasi totalit\`a dei casi, il che ci avvicina
+alla classe di costo $O(\sqrt{b^d})$.
+
+\`E necessario anche quantificare l'apporto significativo delle euristiche,
+le quali vengono invocate ogni iterazione. Giocare una mossa ha costo
+$O(\max\{m, n\})$ a causa dell'euristica di valutaizone e del controllo
+dell'esito della partita. Per la ricerca della cella che riempie una sequenza
+$k-1$ il costo \`e pari a $O(m \times n)$ poich\`e vengono controllate tutte le celle libere.
+Invece il costo per la generazione delle chiavi e l'accesso alla tabella delle
+trasposizioni \`e costante. La complessit\`a totale di queste operazioni
+ammonta dunque a $O(\max\{m,n\}) + O(m \times n) = O(m \times n)$.
+\subsection{Miglioramenti futuri}
 
 Sono noti in letteratura una serie di algoritmi e valutazioni euristiche utili
-nel gioco $(m, n, k)$ che potrebbero migliorare le prestazioni dell'attuale
-giocatore. Ecco un elenco dei pi\`u significativi:
+nel gioco $(m, n, k)$ o del Go, che potrebbero migliorare le prestazioni
+dell'attuale giocatore. Ecco un elenco dei pi\`u significativi:
 \begin{enumerate}
   \item Adottare un'euristica per la valutazione pi\`u raffinata. Questo cambiamento
     avrebbe il maggiore impatto: un conteggio delle minacce~\cite{heur}
@@ -288,13 +377,16 @@ giocatore. Ecco un elenco dei pi\`u significativi:
     per le necessit\`a del gioco. Ad esempio implementando una semplice cache
     ad indirizzamento diretto, usando i bit centrali della hash di \emph{Zobrist}
     come chiavi e indagando la strategia di rimpiazzamento pi\`u adatta.
+  \item Per evitare l'approccio a forza bruta si potrebbe considerare
+    la \emph{Ricerca di Monte Carlo}, la quale sfrutta il campionamento casuale
+    per stimare la probabilit\`a di vittoria di una data mossa.
   \item \`E stato infine mostrato come altre variazioni di \textsc{AlphaBeta} e
     \textsc{IterativeDeepeningSearch} come MTD(f)~\cite{mtdf} possono portare a
     risultati ancora migliori nel gioco degli scacchi. Riteniamo sia prima
     necessario compiere il passo \vref{newheur} affinch\`e si riveli efficace anche nel nostro ambito.
 \end{enumerate}
 
-% \pagebreak
+\pagebreak
 \bibliography{report}
 \bibliographystyle{IEEEtranN}
 
