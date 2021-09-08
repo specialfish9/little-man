@@ -36,7 +36,7 @@
 \section{Problema computazionale}
 
 Lo scopo del progetto \`e quello di implementare un algoritmo efficiente e ottimale
-volto alla ricerca delle mosse migliori in un gioco $(m,n,k)$, dove si devono
+volto alla ricerca delle mosse migliori in un gioco $(m,n,k)$ dove si devono
 allineare $k$ simboli in una griglia $m \times n$.
 
 Assumendo non esistano stati invalidi il nodo iniziale (la griglia vuota)
@@ -47,7 +47,7 @@ dei nodi \`e dunque superiormente limitato da $O((m \times n) \cdot ((m \times n
 Il fattore di diramazione \`e dunque elevato ad ogni stato della partita, il che
 impone a un qualunque algoritmo di ricerca per forza bruta la limitazione in
 profondit\`a su griglie non banali. L'impossibilit\`a di raggiungere le foglie
-richiede una valutazione euristica per poter assegnare un valore a nodi intermedi
+richiede una valutazione euristica per poter assegnare un valore ai nodi intermedi
 senza esplorarli.
 
 \section{Soluzione adottata}
@@ -62,7 +62,7 @@ la profondit\`a massima nei limiti imposti.
 
 Si nota facilmente che diverse combinazioni di mosse possono portare alla stessa 
 situazione di gioco.
-Per evitare di analizzarli pi\`u volte, gli stati di gioco vengono quindi mantenuti 
+Per evitare di analizzarle pi\`u volte, gli stati di gioco vengono quindi mantenuti 
 dentro una \emph{tabella delle trasposizioni}. Il valore di quelli non finali
 viene stimato da una componente euristica che tiene in considerazione il numero
 di serie di ogni giocatore e la relativa lunghezza, favorendo quelle di lunghezza
@@ -75,9 +75,9 @@ La ricerca della mossa migliore viene gestita da un algoritmo di
 con profondit\`a sempre maggiore e restituisce l'ultimo risultato trovato prima dello
 scadere del tempo. \label{cost:id} Questo non peggiora la complessit\`a asintotica in quanto il
 solo costo della ricerca alla massima profondit\`a assorbe quello di tutte
-le chiamate precedenti. Si ha tuttavia un aumento delle operazioni totali svolte
-dal calcolatore, mitigato per\`o dall'utilizzo della \textsc{PrincipalVariationSearch} 
-e dalle potature derivate dall'ordinamento dei nodi ottenuto grazie a questa tecnica.
+le chiamate precedenti. Tuttavia si ha un aumento delle operazioni totali svolte
+dal calcolatore, mitigato dall'utilizzo della \textsc{PrincipalVariationSearch} 
+e dalle potature che derivano dall'ordinamento dei nodi.
 
 \subsection{Tabella delle trasposizioni}
 
