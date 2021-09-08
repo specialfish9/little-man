@@ -140,8 +140,7 @@ public class LittleMan implements MNKPlayer {
     }
 
     // Used in the alternative evaluation technique
-    /*
-     * // Returns wheter the given (i,j) position is within the bounds of the
+    /* // Returns wheter the given (i,j) position is within the bounds of the
      * // current board. Cost: O(1)
      * private boolean isInBounds(int i, int j) {
      *   return i >= 0 && i < M && j >= 0 && j < N;
@@ -171,8 +170,7 @@ public class LittleMan implements MNKPlayer {
 
       // Alternative evaluation which also takes free cells around the series
       // into account.
-      /*
-       * if (n1 + nFree == K || n2 + nFree == K) {
+      /* if (n1 + nFree == K || n2 + nFree == K) {
        *   int freeFactor = 0;
        *   // Check if the cell after the series is free
        *   if (isInBounds(i + dI, j + dJ) &&
