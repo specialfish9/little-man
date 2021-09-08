@@ -284,6 +284,10 @@ giocatore. Ecco un elenco dei pi\`u significativi:
     la precisione sugli stati pi\`u avanzati del gioco. \label{newheur}
   \item La \textsc{QuiescenceSearch} potrebbe portare ulteriori vantaggi se
     abbinata a una strategia analoga a quella descritta nel punto \vref{newheur}.
+  \item Abbadonare la HashMap di Java a favore di una soluzione su misura
+    per le necessit\`a del gioco. Ad esempio implementando una semplice cache
+    ad indirizzamento diretto, usando i bit centrali della hash di \emph{Zobrist}
+    come chiavi e indagando la strategia di rimpiazzamento pi\`u adatta.
   \item \`E stato infine mostrato come altre variazioni di \textsc{AlphaBeta} e
     \textsc{IterativeDeepeningSearch} come MTD(f)~\cite{mtdf} possono portare a
     risultati ancora migliori nel gioco degli scacchi. Riteniamo sia prima
