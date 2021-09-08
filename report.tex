@@ -97,8 +97,8 @@ fenomeno ci si assicura che il numero di mosse e l'ultimo simbolo giocato
 corrispondano con i valori della griglia attuale.
 
 Per evitare ulteriori collisioni interne alla HashMap, alla fine di ogni turno,
-vengono rimosse dalla tabella delle trasposizioni tutte le tabelle di gioco % TODO 
-\emph{inaccessibili}. Una griglia viene definita inaccessibile quando ha un numero di
+vengono rimosse dalla cache tutte le tabelle di gioco \emph{inaccessibili}.
+Una griglia viene definita inaccessibile quando ha un numero di
 celle marcate inferiore a quello del tavolo di gioco attuale incrementato di $1$.
 
 \subsection{Principal Variation Search}
@@ -221,16 +221,17 @@ valutazione viene divisa per il numero di simboli sulla griglia.
 \subsection{Altre euristiche considerate}
 
 In questa sezione sono presentati approcci che sono stati considerati,
-implementati, ma in definitiva scartati in quanto non hanno offerto un
+implementati ma in definitiva scartati in quanto non hanno offerto un
 miglioramento apprezzabile allo stile di gioco dell'algoritmo.
 
 \subsubsection{Valutazione euristica degli spazi vuoti}
 
 Nel gioco generalizzato del $(m, n, k)$, specialmente per valori di $k < \max\{m-1,n-1\}$,
 una sequenza con celle libere ai lati pu\`o rivelarsi pi\`u vantaggiosa di una
-limitata. Ad esempio quando una successione \`e del tipo $k-1$ ed ha entrambi i lati liberi
+limitata. Ad esempio quando un allineamento \`e del tipo $k-1$ ed ha entrambi i lati liberi
 garantisce la vittoria al giocatore. Si pu\`o dunque estendere l'Algoritmo
 \vref{alg:eval} affinch\`e sommi un bonus a serie di questo tipo.
+
 Ecco una possibile implementazione che si pu\`o trovare
 commentata anche nel codice sorgente:
 
@@ -263,7 +264,9 @@ Va ricordato che nell'Algoritmo~\ref{alg:eval_free} il controllo della validit\`
 posizioni $(i + \delta_i, j + \delta_j)$ e $(i - \delta_i \cdot (k+1), j - \delta_j \cdot (k+1))$
 \`e stato omesso per brevit\`a e chiarezza del codice.
 
-% TODO: spiegare perche' non e' stata scelta.
+Questa modifica \`e stata omessa poich\`e nelle simulazioni svolte il
+giocare presentava prestazioni inferiori, tuttavia non abbiamo avuto modo di
+comprenderne il motivo.
 
 \subsubsection{Analisi limitata ad un intorno}
 
@@ -369,7 +372,7 @@ che potrebbero migliorare le prestazioni
 dell'attuale giocatore. Ecco un elenco dei pi\`u significativi:
 \begin{enumerate}
   \item Adottare un'euristica per la valutazione pi\`u raffinata. Questo cambiamento
-    avrebbe un maggior impatto: un conteggio delle minacce~\cite{heur}
+    avrebbe il maggior impatto: un conteggio delle minacce~\cite{heur}
     analoga a quella proposta da \citeauthor{heur} migliorerebbe significativamente
     la precisione sugli stati pi\`u avanzati del gioco. \label{newheur}
   \item La \textsc{QuiescenceSearch} potrebbe portare ulteriori vantaggi se
