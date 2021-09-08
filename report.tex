@@ -39,16 +39,16 @@ Lo scopo del progetto \`e quello di implementare un algoritmo efficiente e ottim
 volto alla ricerca delle mosse migliori in un gioco $(m,n,k)$ dove si devono
 allineare $k$ simboli in una griglia $m \times n$.
 
-Assumendo non esistano stati invalidi il nodo iniziale (la griglia vuota)
-ha $m \times n$ figli, i quali avranno a loro volta $(m \times n)-1$ figli e cos\`i
-via fino a profondit\`a $mn$ dove si avranno tutte le foglie. Il numero totale
-dei nodi \`e dunque superiormente limitato da $O((m \times n) \cdot ((m \times n)-1)
+Assumendo non esistano stati invalidi, la radice dell'albero di gioco
+ha $m \times n$ figli, i quali a loro volta hanno ne avranno $(m \times n)-1$
+e cos\`i via fino a profondit\`a $m \cdot n$ dove si trovano tutte le foglie.
+Ne segue che il numero totale dei nodi \`e $O((m \times n) \cdot ((m \times n)-1)
 \cdot \ldots \cdot 1) = O((m \times n)!)$.
-Il fattore di diramazione \`e di conseguenza elevato ad ogni stato della partita, il che
-impone a un qualunque algoritmo di ricerca per forza bruta la limitazione in
-profondit\`a su griglie non banali. L'impossibilit\`a di raggiungere le foglie
-richiede una valutazione euristica per poter assegnare un valore ai nodi intermedi
-senza esplorarli.
+Il fattore di diramazione \`e di conseguenza elevato nel caso medio, il che
+impone ad un qualunque algoritmo di ricerca per forza bruta una limitazione in
+profondit\`a su griglie non banali. Inoltre, l'impossibilit\`a di raggiungere
+le foglie richiede una valutazione euristica per poter assegnare un valore
+ai nodi intermedi senza esplorarli.
 
 \section{Soluzione adottata}
 
@@ -73,7 +73,7 @@ $k-1$, $k-2$ e $k-3$.
 La ricerca della mossa migliore viene gestita da un algoritmo di
 \textsc{IterativeDeepeningSearch}~\cite{id}, il quale procede applicando \textsc{MiniMax} 
 con profondit\`a sempre maggiore e restituisce l'ultimo risultato trovato prima dello
-scadere del tempo. \label{cost:id} Questo non peggiora la complessit\`a asintotica in quanto il
+scadere del tempo. \label{cost:id} ci\`o non peggiora la complessit\`a asintotica in quanto il
 solo costo della ricerca alla massima profondit\`a assorbe quello di tutte
 le chiamate precedenti. Tuttavia si ha un aumento delle operazioni totali svolte
 dal calcolatore, mitigato dall'utilizzo della \textsc{PrincipalVariationSearch} 
@@ -97,7 +97,7 @@ fenomeno ci si assicura che il numero di mosse e l'ultimo simbolo giocato
 corrispondano con i valori della griglia attuale.
 
 Per evitare ulteriori collisioni interne alla HashMap, alla fine di ogni turno,
-vengono rimosse dalla tabella delle trasposizioni tutte le tabelle di gioco
+vengono rimosse dalla tabella delle trasposizioni tutte le tabelle di gioco % TODO 
 \emph{inaccessibili}. Una griglia viene definita inaccessibile quando ha un numero di
 celle marcate inferiore a quello del tavolo di gioco attuale incrementato di $1$.
 
@@ -158,8 +158,8 @@ precedenza alle serie appartenenti al giocatore che deve svolgere la mossa.
 Si noti che la logica per la gestione del tempo rimanente e tutti gli accessi
 alla tabella delle trasposizioni sono stati omessi per semplificare la lettura.
 
-Nella pratica, se non abbiamo alcuna informazione sull'ordinamento dei figli
-essi vengono analizzati in modo casuale, per avere pi\`u possibilt\`a di scoprire
+Nella pratica, se non si ha alcuna informazione sull'ordinamento dei figli
+essi vengono scelti in modo casuale, per avere pi\`u possibilt\`a di scoprire
 eventuali potature fortuite.
 
 \subsection{Valutazione euristica}
@@ -221,14 +221,14 @@ valutazione viene divisa per il numero di simboli sulla griglia.
 \subsection{Altre euristiche considerate}
 
 In questa sezione sono presentati approcci che sono stati considerati,
-implementati ma in definitiva scartati in quanto non hanno offerto un
+implementati, ma in definitiva scartati in quanto non hanno offerto un
 miglioramento apprezzabile allo stile di gioco dell'algoritmo.
 
 \subsubsection{Valutazione euristica degli spazi vuoti}
 
 Nel gioco generalizzato del $(m, n, k)$, specialmente per valori di $k < \max\{m-1,n-1\}$,
 una sequenza con celle libere ai lati pu\`o rivelarsi pi\`u vantaggiosa di una
-limitata. Ad esempio quando una sequenza \`e del tipo $k-1$ ed ha entrambi i lati liberi
+limitata. Ad esempio quando una successione \`e del tipo $k-1$ ed ha entrambi i lati liberi
 garantisce la vittoria al giocatore. Si pu\`o dunque estendere l'Algoritmo
 \vref{alg:eval} affinch\`e sommi un bonus a serie di questo tipo.
 Ecco una possibile implementazione che si pu\`o trovare
@@ -278,10 +278,9 @@ filtraggio (dove $n$ \`e il numero di celle libere).
 Un problema ben noto negli algoritmi di ricerca a profondit\`a limitata \`e
 quello dell'\emph{effetto orizzonte}, causato dall'impossibilt\`a 
 di visitare l'albero di gioco oltre un certo livello. Ci\`o porta spesso a scegliere 
-mosse che si rivelano catastrofiche in pochi. Una soluzione al problema chiamata
-\emph{ricerca quiescente} \cite{quiescence} fu per la prima volta proposta da
-\citeauthor{quiescence} nel \citeyear{quiescence}.
-
+mosse che si rivelano catastrofiche in pochi turni. Una soluzione al problema
+chiamata \emph{ricerca quiescente} \cite{quiescence} fu per la prima volta
+proposta da \citeauthor{quiescence} nel \citeyear{quiescence}.
 L'idea \`e quella di esplorare ulteriormente gli stati che appaiono "calmi", o
 appunto "quiescenti", poich\`e sono quelli pi\`u proni a degenerare in sconfitte.
 Uno stato di gioco viene ritenuto calmo quando il suo valore euristico \`e inferiore
@@ -338,7 +337,7 @@ Si pu\`o imputare questo fallimento a due fattori:
 
 \subsection{Costo computazionale}
 
-Per la comprensione del paragrafo che segue defniamo:
+Per la comprensione del paragrafo che segue definiamo:
 \begin{itemize}
   \item $b$ come \emph{fattore di diramazione}, ovvero il numero medio di
     sottoalberi appartenenti ad ogni nodo.
@@ -356,7 +355,7 @@ ottenere un ordinamento ottimo nella quasi totalit\`a dei casi, il che ci avvici
 alla classe di costo $O(\sqrt{b^d})$.
 
 \`E necessario anche quantificare l'apporto significativo delle euristiche,
-le quali vengono invocate ogni iterazione. Giocare una mossa ha costo
+le quali vengono invocate ad ogni iterazione. Giocare una mossa ha costo
 $O(\max\{m, n\})$ a causa dell'euristica di valutaizone e del controllo
 dell'esito della partita. Per la ricerca della cella che riempie una sequenza
 $k-1$ il costo \`e pari a $O(m \times n)$ poich\`e vengono controllate tutte le celle libere.
@@ -366,15 +365,15 @@ ammonta dunque a $O(\max\{m,n\}) + O(m \times n) = O(m \times n)$.
 \subsection{Miglioramenti futuri}
 
 Sono noti in letteratura una serie di algoritmi e valutazioni euristiche utili
-nel gioco $(m, n, k)$ o del Go, che potrebbero migliorare le prestazioni
+che potrebbero migliorare le prestazioni
 dell'attuale giocatore. Ecco un elenco dei pi\`u significativi:
 \begin{enumerate}
   \item Adottare un'euristica per la valutazione pi\`u raffinata. Questo cambiamento
-    avrebbe il maggiore impatto: un conteggio delle minacce~\cite{heur}
+    avrebbe un maggior impatto: un conteggio delle minacce~\cite{heur}
     analoga a quella proposta da \citeauthor{heur} migliorerebbe significativamente
     la precisione sugli stati pi\`u avanzati del gioco. \label{newheur}
   \item La \textsc{QuiescenceSearch} potrebbe portare ulteriori vantaggi se
-    abbinata a una strategia analoga a quella descritta nel punto \vref{newheur}.
+    abbinata ad una strategia analoga a quella descritta nel punto \vref{newheur}.
   \item Abbadonare la HashMap di Java a favore di una soluzione su misura
     per le necessit\`a del gioco. Ad esempio implementando una semplice cache
     ad indirizzamento diretto, usando i bit centrali della hash di \emph{Zobrist}
@@ -383,7 +382,7 @@ dell'attuale giocatore. Ecco un elenco dei pi\`u significativi:
     la \emph{Ricerca di Monte Carlo}, la quale sfrutta il campionamento casuale
     per stimare la probabilit\`a di vittoria di una data mossa.
   \item \`E stato infine mostrato come altre variazioni di \textsc{AlphaBeta} e
-    \textsc{IterativeDeepeningSearch} come MTD(f)~\cite{mtdf} possono portare a
+    \textsc{IterativeDeepeningSearch} come MTD(f)~\cite{mtdf} possano portare a
     risultati ancora migliori nel gioco degli scacchi. Riteniamo sia prima
     necessario compiere il passo \vref{newheur} affinch\`e si riveli efficace anche nel nostro ambito.
 \end{enumerate}
