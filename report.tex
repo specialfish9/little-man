@@ -82,18 +82,18 @@ e dalle potature che derivano dall'ordinamento dei nodi.
 \subsection{Tabella delle trasposizioni}
 
 La cache fa uso della struttura dati HashMap fornita da Java generando le chiavi 
-in modo incrementale tramite la tecnica di \emph{Zobrist}~\cite{zobrist}. 
+in modo incrementale tramite la tecnica di \emph{Zobrist}~\cite{zobrist} che restituisce un \verb!long!. 
 Ad ognuna di esse sono associate le seguenti informazioni:
 \begin{enumerate}
-  \item Numero di celle marcate e ultimo simbolo giocato
-  \item Profondit\`a della ricerca
-  \item Tipo e valore della griglia
+  \item Numero di celle marcate e l'ultimo simbolo giocato
+  \item La profondit\`a della ricerca
+  \item Il tipo ed il valore della griglia
 \end{enumerate}
-Poich\`e una tavola di gioco $(m,n)$ pu\`o al pi\`u assumere $3^{mn}$ stati differenti e
+Poich\`e una tavola di gioco $(m,n)$ pu\`o al pi\`u assumere $3^{m \cdot n}$ stati differenti e
 un \verb!long! pu\`o contenere al pi\`u $2^{64} \approx 1.8 \cdot 10^{19}$ valori distinti,
 esistono configurazioni che creano collisioni: ad esempio un gioco $(8, 8, 4)$
 pu\`o avere fino a $3^{64} \approx 2.3 \cdot 10^{30}$ stati. Per limitare questo
-fenomeno si verifica che il numero di mosse e l'ultimo simbolo giocato
+fenomeno ci si assicura che il numero di mosse e l'ultimo simbolo giocato
 corrispondano con i valori della griglia attuale.
 
 Per evitare ulteriori collisioni interne alla HashMap, alla fine di ogni turno,
@@ -119,13 +119,12 @@ precedenza alle serie appartenenti al giocatore che deve svolgere la mossa.
   \label{alg:pvs}
   \begin{algorithmic}[0]
     \Procedure {PVS}{$node$, $color$, $depth$, $\alpha$, $\beta$}
-      \State $best\_cell \gets null, best\_value \gets -\infty$
+      \State $best\_cell \gets null, \, best\_value \gets -\infty$
       \If{$depth = 0$ \textbf{or} $node$ is a leaf}
         \State \Return $color \cdot \Call{Evaluate}{node}$
       \ElsIf{$best\_cell \gets \Call{FindClosingCell}{node}$ is \textbf{not} $null$}
-        \State $\Call{mark}{node, best\_cell}$
-        \State $(best\_value, \_) \gets -\Call{PVS}{node, -color, depth-1, -\beta, -\alpha}$
-        \State $\Call{UnMark}{node}$
+        \State $child \gets \Call{mark}{node, best\_cell}$
+        \State $(best\_value, \_) \gets -\Call{PVS}{child, -color, depth-1, -\beta, -\alpha}$
       \Else
         \For{$child$ \textbf{in} \Call{Sorted}{\textrm{children of} $node$}}
           \If{$child$ is the first}
@@ -133,8 +132,10 @@ precedenza alle serie appartenenti al giocatore che deve svolgere la mossa.
             \State $score \gets -\Call{PVS}{child, -color, depth-1, -\beta, -\alpha}\}$
             \State $\alpha \gets \max\{\alpha, score\}$
           \Else
+            \Comment{proviamo con una \emph{ricerca a finestra nulla}}
             \State $score \gets -\Call{PVS}{child, -color, depth-1, -\alpha-1, -\alpha}\}$
             \If{$\alpha < score < \beta$}
+              \Comment{\`e un nodo interessante}
               \State $score \gets -\Call{PVS}{child, -color, depth-1, -\beta, -\alpha}\}$
               \State $\alpha \gets \max\{\alpha, score\}$
             \EndIf
@@ -155,10 +156,10 @@ precedenza alle serie appartenenti al giocatore che deve svolgere la mossa.
 \end{algorithm}
 
 Si noti che la logica per la gestione del tempo rimanente e tutti gli accessi
-alla tabella delle trasposizioni sono stati omessa per semplificare la lettura.
+alla tabella delle trasposizioni sono stati omessi per semplificare la lettura.
 
 Nella pratica, se non abbiamo alcuna informazione sull'ordinamento dei figli
-essi vengono scelti in modo casuale, per avere pi\`u possibilt\`a di scoprire
+essi vengono analizzati in modo casuale, per avere pi\`u possibilt\`a di scoprire
 eventuali potature fortuite.
 
 \subsection{Valutazione euristica}
