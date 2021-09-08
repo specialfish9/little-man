@@ -130,11 +130,11 @@ public class LittleMan implements MNKPlayer {
     // streaks
     private int largeSeriesConstant() {
       if (K > 4 && nFree == 3)
-        return 1000; // 1k
+        return 1_000; // 1k
       if (K > 3 && nFree == 2)
-        return 100000; // 100k
+        return 100_000; // 100k
       if (K > 2 && nFree == 1)
-        return 10000000; // 10M
+        return 10_000_000; // 10M
 
       return 0;
     }
