@@ -8,11 +8,11 @@ CLASSES=$(wildcard *.java)
 PKG=mnkgame
 MAIN=$(PKG).MNKGame 
 PLAYERS=$(PKG).players
-M:=70
-N:=70
-K:=10
-REPS:=2
-TIME:=2
+M:=4
+N:=4
+K:=4
+REPS:=5
+TIME:=10
 BEST:=LittleMan
 OLD:=LittleBoy
 
